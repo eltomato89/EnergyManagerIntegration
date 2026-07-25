@@ -171,6 +171,12 @@ class ConsumerRuntime:
     *Bedingung*, nicht auf den Schaltzustand.
     """
 
+    priority: float = 5.0
+    """Rang, 1 = höchste. Wird über die number-Entität bedient."""
+
+    managed: bool = True
+    """Nimmt an der Automatik teil. Wird über die switch-Entität bedient."""
+
     last_switch_ts: float | None = None
     """Zeitpunkt der letzten von DIESER Integration ausgelösten Schaltung."""
 
@@ -191,6 +197,8 @@ class ConsumerRuntime:
 
     def as_dict(self) -> dict[str, Any]:
         return {
+            "priority": self.priority,
+            "managed": self.managed,
             "last_switch_ts": self.last_switch_ts,
             "last_switch_to": self.last_switch_to,
             "on_condition_since": self.on_condition_since,
@@ -202,6 +210,8 @@ class ConsumerRuntime:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ConsumerRuntime:
         return cls(
+            priority=data.get("priority", 5.0),
+            managed=data.get("managed", True),
             last_switch_ts=data.get("last_switch_ts"),
             last_switch_to=data.get("last_switch_to"),
             on_condition_since=data.get("on_condition_since"),

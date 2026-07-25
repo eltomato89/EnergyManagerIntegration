@@ -130,6 +130,35 @@
       }
     }
   },
+  "entity": {
+    "sensor": {
+      "surplus": { "name": "Surplus" },
+      "surplus_raw": { "name": "Surplus unsmoothed" },
+      "status": {
+        "name": "Status",
+        "state": {
+          "starting": "starting",
+          "running": "running",
+          "paused": "paused",
+          "sensor_error": "sensor error",
+          "on_ok": "running, covered",
+          "on_deficit": "running, drawing from grid",
+          "off_ready": "ready",
+          "off_close": "almost enough",
+          "off_insufficient": "not enough",
+          "unavailable": "unavailable"
+        }
+      },
+      "locked_until": { "name": "Locked until" }
+    },
+    "number": {
+      "priority": { "name": "Priority" }
+    },
+    "switch": {
+      "automation": { "name": "Automation" },
+      "managed": { "name": "Automation" }
+    }
+  },
   "selector": {
     "meter_mode": {
       "options": {

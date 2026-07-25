@@ -130,6 +130,35 @@
       }
     }
   },
+  "entity": {
+    "sensor": {
+      "surplus": { "name": "Überschuss" },
+      "surplus_raw": { "name": "Überschuss ungeglättet" },
+      "status": {
+        "name": "Status",
+        "state": {
+          "starting": "startet",
+          "running": "aktiv",
+          "paused": "pausiert",
+          "sensor_error": "Sensorfehler",
+          "on_ok": "läuft, gedeckt",
+          "on_deficit": "läuft, Netzbezug",
+          "off_ready": "bereit",
+          "off_close": "fast ausreichend",
+          "off_insufficient": "reicht nicht",
+          "unavailable": "nicht verfügbar"
+        }
+      },
+      "locked_until": { "name": "Gesperrt bis" }
+    },
+    "number": {
+      "priority": { "name": "Priorität" }
+    },
+    "switch": {
+      "automation": { "name": "Automatik" },
+      "managed": { "name": "Automatik" }
+    }
+  },
   "selector": {
     "meter_mode": {
       "options": {
