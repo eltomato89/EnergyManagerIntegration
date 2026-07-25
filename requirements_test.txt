@@ -1,0 +1,6 @@
+# Die Version muss zur Ziel-HA-Version passen: das Paket wird täglich gegen die
+# veröffentlichten HA-Releases neu gebaut und bringt Home Assistant als
+# Abhängigkeit mit. Ein Update hier bedeutet, gegen eine andere HA-Version zu
+# testen — deshalb fest gepinnt.
+pytest-homeassistant-custom-component==0.13.316
+ruff==0.14.6

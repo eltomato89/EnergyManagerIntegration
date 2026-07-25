@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: pip install -r requirements_test.txt
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Tests
+        run: pytest tests/ -q
+      - name: Manifest-Version muss zum Tag passen
+        # Greift nur bei Releases; verhindert die HACS-Updateschleife, die
+        # entsteht, wenn Tag und manifest.json auseinanderlaufen.
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          MANIFEST=$(python -c "import json;print(json.load(open('custom_components/energy_manager/manifest.json'))['version'])")
+          TAG="${GITHUB_REF_NAME#v}"
+          test "$MANIFEST" = "$TAG" || { echo "manifest.json=$MANIFEST != Tag=$TAG"; exit 1; }
