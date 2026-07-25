@@ -232,6 +232,34 @@ async def test_ausgefallener_sensor_fuehrt_in_den_sicheren_zustand(
     assert coordinator.data.surplus.usable is False
 
 
+async def test_attribute_genuegen_der_karte(
+    hass: HomeAssistant, entry_mit_verbrauchern: MockConfigEntry
+) -> None:
+    """Die Karte muss allein aus den Attributen darstellen können.
+
+    Fehlt hier etwas, müsste sie dieselbe Verbraucherliste ein zweites Mal
+    führen — genau die doppelte Pflege, die die Integration abschafft.
+    """
+    await setup_integration(hass, entry_mit_verbrauchern)
+
+    status = hass.states.get("sensor.wallbox_status")
+    assert status is not None
+    attrs = status.attributes
+
+    # Zuordnung zum echten Gerät
+    assert attrs["switch_entity"] == "switch.wallbox"
+    assert attrs["consumer_name"] == "Wallbox"
+    assert "consumer_id" in attrs
+    # Bewertung und Grenzwerte
+    for key in ("rank", "managed", "is_on", "power_w", "required_w", "max_power"):
+        assert key in attrs, f"{key} fehlt"
+
+    hub = hass.states.get("sensor.energy_manager_surplus")
+    assert hub is not None
+    for key in ("grid_w", "battery_w", "battery_soc", "coverage", "smoothing_window"):
+        assert key in hub.attributes, f"{key} fehlt am Hub-Sensor"
+
+
 async def test_unload_hinterlaesst_keine_listener(
     hass: HomeAssistant, entry_mit_verbrauchern: MockConfigEntry
 ) -> None:

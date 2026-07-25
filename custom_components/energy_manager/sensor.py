@@ -76,19 +76,26 @@ class SurplusSensor(EnergyManagerEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, object]:
-        """Diagnose — vor allem der tatsächliche Zählerwert.
+        """Alles, was eine Anzeige über die Energielage wissen muss.
 
-        Ohne ihn liest sich ein Defizit wie Netzbezug in gleicher Höhe.
+        Der tatsächliche Zählerwert steht hier, weil sich ein Defizit sonst wie
+        Netzbezug in gleicher Höhe liest. Ladestand und Mittelungsfenster kommen
+        dazu, damit die Karte diese Sensoren nicht ein zweites Mal benennen muss.
         """
-        if self.coordinator.data is None:
+        data = self.coordinator.data
+        if data is None:
             return {}
-        surplus = self.coordinator.data.surplus
+
+        surplus = data.surplus
         return {
             "grid_w": surplus.grid_w,
             "battery_w": surplus.battery_w,
+            "battery_soc": self.coordinator.battery_soc(),
             "battery_correction_w": surplus.battery_correction,
             "degraded": surplus.degraded,
-            "coverage": round(self.coordinator.data.coverage, 2),
+            "coverage": round(data.coverage, 2),
+            "smoothing_window": self.coordinator.smoothing_window,
+            "automation_enabled": self.coordinator.automation_enabled,
             "errors": [e.value for e in surplus.errors],
         }
 
@@ -150,15 +157,35 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, object]:
+        """Alles, was eine Anzeige über diesen Verbraucher wissen muss.
+
+        Bewusst vollständig: Die Energy Manager Card stellt die Verbraucher
+        allein aus diesen Attributen dar. Ohne ``switch_entity`` müsste sie
+        dieselbe Liste ein zweites Mal führen — genau die doppelte Pflege, die
+        die Integration abschaffen soll.
+        """
         view = self.view
         if view is None:
             return {}
+
+        consumer = view.config
         return {
+            # Zuordnung — hierüber findet eine Anzeige das eigentliche Gerät.
+            "consumer_id": consumer.subentry_id,
+            "consumer_name": consumer.name,
+            "switch_entity": consumer.switch_entity,
+            "power_entity": consumer.power_entity,
+            # Bewertung
             "rank": view.rank + 1,
             "managed": view.managed,
+            "is_on": view.is_on,
             "power_w": view.power_w,
             "required_w": view.required_w,
             "headroom_w": view.headroom_w,
+            # Grenzwerte, damit die Anzeige "max. 2,0 kW" schreiben kann,
+            # ohne die Konfiguration zu kennen.
+            "min_power": consumer.min_power,
+            "max_power": consumer.max_power,
         }
 
 

@@ -397,6 +397,16 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             return DEFAULT_SMOOTHING_WINDOW
         return float(entry.options.get(CONF_SMOOTHING_WINDOW, DEFAULT_SMOOTHING_WINDOW))
 
+    @property
+    def smoothing_window(self) -> float:
+        """Mittelungsfenster in Sekunden — auch für die Anzeige."""
+        return self._smoothing_window()
+
+    def battery_soc(self) -> float | None:
+        """Aktueller Ladestand, oder None ohne Batterie."""
+        data = dict(self.config_entry.data) if self.config_entry else {}
+        return read_percent(self.hass, data.get(CONF_BATTERY_SOC_ENTITY))
+
     # -- Speichern -----------------------------------------------------------
 
     @callback
