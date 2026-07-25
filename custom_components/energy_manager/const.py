@@ -79,6 +79,14 @@ TICK_INTERVAL: Final = 10
 # eine eigene Schaltung auslöst.
 DEBOUNCE_COOLDOWN: Final = 3.0
 
+MIN_COVERAGE: Final = 0.5
+"""Anteil des Mittelungsfensters, der gefüllt sein muss, bevor geschaltet wird.
+
+Direkt nach dem Start stützt sich der Mittelwert auf wenige Sekunden und
+schwankt entsprechend. Auf dieser Grundlage zu schalten hieße, die Glättung
+gerade dann zu übergehen, wenn sie am nötigsten ist.
+"""
+
 # --- Speicher ---------------------------------------------------------------
 
 STORAGE_VERSION: Final = 1

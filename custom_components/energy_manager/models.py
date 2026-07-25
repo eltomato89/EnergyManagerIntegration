@@ -91,6 +91,13 @@ class SurplusResult:
 
     errors: tuple[SurplusError, ...] = ()
 
+    anticipated_w: float = 0.0
+    """Bereits von ``available`` abgezogene, noch nicht gemessene Last.
+
+    Nur zur Nachvollziehbarkeit: Weicht der angezeigte Überschuss kurz nach
+    einer Schaltung vom Zähler ab, steht hier warum.
+    """
+
     @property
     def usable(self) -> bool:
         """Darf auf dieser Grundlage geschaltet werden?"""
@@ -192,6 +199,18 @@ class ConsumerRuntime:
     settle_until: float | None = None
     """Bis dahin wird dieser Verbraucher nicht angefasst."""
 
+    anticipated_w: float = 0.0
+    """Gerade geschaltete Leistung, die im Messwert noch nicht steckt.
+
+    Positiv nach dem Ein-, negativ nach dem Ausschalten. Gilt bis
+    ``settle_until`` und wird bis dahin vom Überschuss abgezogen.
+
+    Ohne das reagiert die Automatik auf ihre eigene Wirkung: Zwischen dem
+    Zuschalten und dem Zeitpunkt, an dem Zähler und Glättung das zeigen,
+    vergehen Sekunden bis Minuten — in denen derselbe Überschuss ein zweites
+    Mal vergeben würde.
+    """
+
     force_until: float | None = None
     """Zwangsfreigabe bis zu diesem Zeitpunkt. Noch ohne Funktion."""
 
@@ -204,6 +223,7 @@ class ConsumerRuntime:
             "on_condition_since": self.on_condition_since,
             "off_condition_since": self.off_condition_since,
             "settle_until": self.settle_until,
+            "anticipated_w": self.anticipated_w,
             "force_until": self.force_until,
         }
 
@@ -217,6 +237,7 @@ class ConsumerRuntime:
             on_condition_since=data.get("on_condition_since"),
             off_condition_since=data.get("off_condition_since"),
             settle_until=data.get("settle_until"),
+            anticipated_w=data.get("anticipated_w", 0.0),
             force_until=data.get("force_until"),
         )
 
@@ -249,5 +270,20 @@ class ManagerState:
     coverage: float = 0.0
     """Anteil des Mittelungsfensters mit gültigen Daten, 0..1."""
 
-    running: bool = False
-    """Automatik ist aktiv und darf schalten."""
+    started: bool = False
+    """Home Assistant ist durchgestartet; alle Zustände liegen vor."""
+
+    may_switch: bool = False
+    """Alle Bedingungen zum Schalten sind erfüllt.
+
+    Getrennt von ``started``, weil die Gründe verschieden sind und der Nutzer
+    sie unterscheiden können muss: "startet noch" ist vorübergehend,
+    "pausiert" ist eine Entscheidung, "sensor_error" ein Fehler.
+    """
+
+    blockers: dict[str, str] = field(default_factory=dict)
+    """Je Verbraucher der Grund, warum eine sinnvolle Schaltung unterbleibt.
+
+    Ohne diese Begründung sieht eine ausbleibende Schaltung wie ein Fehler aus —
+    die häufigste Rückfrage bei jeder Überschusssteuerung.
+    """

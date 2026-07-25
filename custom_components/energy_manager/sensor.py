@@ -96,6 +96,11 @@ class SurplusSensor(EnergyManagerEntity, SensorEntity):
             "coverage": round(data.coverage, 2),
             "smoothing_window": self.coordinator.smoothing_window,
             "automation_enabled": self.coordinator.automation_enabled,
+            # Weicht der Wert kurz nach einer Schaltung vom Zähler ab, steht
+            # hier warum: die neue Last ist schon abgezogen, aber noch nicht
+            # gemessen.
+            "anticipated_w": surplus.anticipated_w,
+            "may_switch": data.may_switch,
             "errors": [e.value for e in surplus.errors],
         }
 
@@ -129,15 +134,23 @@ class ManagerStatusSensor(EnergyManagerEntity, SensorEntity):
 
     @property
     def native_value(self) -> str:
+        """Der Zustand, den der Nutzer zuerst nachschaut, wenn nichts passiert.
+
+        Die Reihenfolge ist die der Dringlichkeit: Ein Sensorfehler wiegt
+        schwerer als der Hauptschalter, denn dann kann gar nicht entschieden
+        werden — auch nicht nach dem Scharfschalten.
+        """
         data = self.coordinator.data
-        if data is None or not data.running:
+        if data is None or not data.started:
             return "starting"
-        # Fehlende oder falsch konfigurierte Sensoren wiegen schwerer als der
-        # Hauptschalter: sie bedeuten, dass gar nicht entschieden werden kann.
         if not data.surplus.usable:
             return "sensor_error"
         if not self.coordinator.automation_enabled:
             return "paused"
+        # Automatik an, Sensoren gut — aber das Mittelungsfenster ist noch zu
+        # dünn besetzt, um darauf zu schalten.
+        if not data.may_switch:
+            return "starting"
         return "running"
 
 
@@ -186,7 +199,17 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
             # ohne die Konfiguration zu kennen.
             "min_power": consumer.min_power,
             "max_power": consumer.max_power,
+            # Warum hier gerade nichts geschieht, obwohl es sinnvoll wäre.
+            # Ohne diese Angabe ist "die Automatik tut nichts" nicht von einem
+            # Fehler zu unterscheiden — die häufigste Rückfrage überhaupt.
+            "blocked_by": self._blocked_by(),
         }
+
+    def _blocked_by(self) -> str | None:
+        data = self.coordinator.data
+        if data is None:
+            return None
+        return data.blockers.get(self._subentry_id)
 
 
 class ConsumerLockedUntilSensor(ConsumerEntity, SensorEntity):

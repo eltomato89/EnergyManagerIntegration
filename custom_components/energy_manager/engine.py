@@ -54,6 +54,24 @@ def order_consumers(
     )
 
 
+def anticipated_w(runtimes: dict[str, ConsumerRuntime], now: float) -> float:
+    """Summe der gerade geschalteten Leistung, die im Messwert noch fehlt.
+
+    Positiv, wenn per Saldo zugeschaltet wurde — dieser Betrag ist vom
+    gemessenen Überschuss abzuziehen, weil der Zähler ihn noch nicht zeigt.
+
+    Ohne diese Korrektur reagiert die Automatik auf ihre eigene Wirkung: Sie
+    schaltet 2 kW zu, sieht sekundenlang unverändert 2 kW Überschuss und
+    schaltet weiter. Bei mehreren Verbrauchern reicht das Beruhigungsfenster
+    allein nicht, denn es schützt nur den gerade geschalteten.
+    """
+    total = 0.0
+    for runtime in runtimes.values():
+        if runtime.settle_until is not None and now < runtime.settle_until:
+            total += runtime.anticipated_w
+    return total
+
+
 def compute_lock(
     consumer: ConsumerConfig,
     runtime: ConsumerRuntime,

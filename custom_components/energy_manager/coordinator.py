@@ -11,12 +11,25 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import replace
 from datetime import timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import CALLBACK_TYPE, Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    EVENT_HOMEASSISTANT_STARTED,
+    SERVICE_TURN_OFF,
+    SERVICE_TURN_ON,
+)
+from homeassistant.core import (
+    CALLBACK_TYPE,
+    Event,
+    EventStateChangedData,
+    HomeAssistant,
+    callback,
+)
+from homeassistant.core import DOMAIN as HA_DOMAIN
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.storage import Store
@@ -39,18 +52,22 @@ from .const import (
     CONF_METER_MODE,
     CONF_POWER_ENTITY,
     CONF_PRODUCTION_ENTITY,
+    CONF_SETTLE_TIME,
     CONF_SMOOTHING_WINDOW,
     CONF_SWITCH_ENTITY,
     DEBOUNCE_COOLDOWN,
+    DEFAULT_SETTLE_TIME,
     DEFAULT_SMOOTHING_WINDOW,
     DOMAIN,
     METER_MODE_GRID,
+    MIN_COVERAGE,
     STORAGE_MINOR_VERSION,
     STORAGE_SAVE_DELAY,
     STORAGE_VERSION,
     SUBENTRY_TYPE_CONSUMER,
     TICK_INTERVAL,
 )
+from .engine import Decision, Evaluation, anticipated_w, build_views, decide
 from .models import (
     ConsumerConfig,
     ConsumerRuntime,
@@ -256,18 +273,128 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         """
         async with self._lock:
             now = dt_util.utcnow().timestamp()
-            surplus = self._compute(now)
+            measured = self._compute(now)
+            surplus = self._with_anticipation(measured, anticipated_w(self.runtime, now))
+            views = self._build_views(surplus)
 
-            state = ManagerState(
+            # Immer auswerten, auch bei ausgeschalteter Automatik: Die
+            # Bedingungszähler müssen mitlaufen, damit nach dem Scharfschalten
+            # nicht bei null begonnen wird, und die Begründungen erscheinen in
+            # den Status-Attributen. Nur ausgeführt wird dann nichts.
+            evaluation = decide(views, self.runtime, now)
+            may_switch = self._may_switch(surplus, now)
+            self._publish(surplus, views, evaluation, now, may_switch)
+
+            if not may_switch or evaluation.action is None:
+                return
+
+            await self._execute(evaluation.action, views, now)
+
+            # Der eben veröffentlichte Zustand ist bereits überholt: Die
+            # Schaltung ist erfolgt, das Budget dahinter vergeben. Ohne diese
+            # zweite Runde zeigte die Anzeige bis zum nächsten Ereignis Budget
+            # an, das es nicht mehr gibt — und der Zähler bestätigt es erst in
+            # einigen Sekunden.
+            after = self._with_anticipation(measured, anticipated_w(self.runtime, now))
+            self._publish(after, self._build_views(after), evaluation, now, may_switch)
+
+    @callback
+    def _publish(
+        self,
+        surplus: SurplusResult,
+        views: list[ConsumerView],
+        evaluation: Evaluation,
+        now: float,
+        may_switch: bool,
+    ) -> None:
+        self.async_set_updated_data(
+            ManagerState(
                 surplus=surplus,
-                consumers=self._build_views(surplus),
+                consumers=views,
                 coverage=self._window.coverage(now),
-                running=self._started,
+                started=self._started,
+                may_switch=may_switch,
+                blockers={key: str(value) for key, value in evaluation.blockers.items()},
             )
-            self.async_set_updated_data(state)
+        )
+
+    def _may_switch(self, surplus: SurplusResult, now: float) -> bool:
+        """Darf jetzt überhaupt geschaltet werden?
+
+        Vier Bedingungen, die alle gelten müssen. Jede einzelne davon würde ein
+        Schalten zum falschen Zeitpunkt erlauben:
+
+        - **Hauptschalter an.** Sonst beobachtet die Integration nur.
+        - **HA ist durchgestartet.** Während des Starts meldet nicht jede
+          Entität einen Zustand; auf halb gefüllten Daten zu entscheiden ist der
+          schlechteste denkbare Zeitpunkt.
+        - **Der Überschuss ist brauchbar.** Ein ausgefallener oder falsch
+          konfigurierter Sensor darf nicht als 0 W durchgehen.
+        - **Das Mittelungsfenster ist gefüllt.** Direkt nach dem Start stützt
+          sich der Mittelwert auf wenige Sekunden und schwankt entsprechend.
+        """
+        if not self.automation_enabled or not self._started:
+            return False
+        if not surplus.usable:
+            return False
+        return self._window.coverage(now) >= MIN_COVERAGE
+
+    async def _execute(self, action: Decision, views: list[ConsumerView], now: float) -> None:
+        """Führt genau eine Schaltung aus und merkt sie sich."""
+        view = next(
+            (v for v in views if v.config.subentry_id == action.subentry_id),
+            None,
+        )
+        if view is None:
+            return
+
+        runtime = self.runtime_for(action.subentry_id)
+        settle = self._settle_time()
+
+        # Erst merken, dann schalten. Andersherum könnte das Zustandsereignis
+        # der eigenen Schaltung eine zweite Auswertung anstoßen, bevor das
+        # Beruhigungsfenster steht.
+        runtime.last_switch_ts = now
+        runtime.last_switch_to = action.turn_on
+        runtime.settle_until = now + settle
+        # Beim Einschalten fehlt die neue Last im Messwert, beim Ausschalten
+        # ist die alte noch enthalten — deshalb das umgekehrte Vorzeichen.
+        runtime.anticipated_w = (
+            view.required_w if action.turn_on else -(view.power_w or view.required_w)
+        )
+        runtime.on_condition_since = None
+        runtime.off_condition_since = None
+        self.schedule_save()
+
+        _LOGGER.info(
+            "%s wird %s (%s, %.0f W, Beruhigung %.0f s)",
+            view.config.name,
+            "eingeschaltet" if action.turn_on else "ausgeschaltet",
+            action.reason,
+            view.required_w,
+            settle,
+        )
+
+        await self.hass.services.async_call(
+            HA_DOMAIN,
+            SERVICE_TURN_ON if action.turn_on else SERVICE_TURN_OFF,
+            {ATTR_ENTITY_ID: view.config.switch_entity},
+            blocking=True,
+        )
+
+    def _settle_time(self) -> float:
+        entry = self.config_entry
+        if entry is None:
+            return float(DEFAULT_SETTLE_TIME)
+        return float(entry.options.get(CONF_SETTLE_TIME, DEFAULT_SETTLE_TIME))
 
     def _compute(self, now: float) -> SurplusResult:
-        """Überschuss aus den aktuellen Zuständen, geglättet."""
+        """Der gemessene Überschuss, geglättet.
+
+        Ohne Antizipation — die kommt getrennt dazu, weil sie sich innerhalb
+        eines Durchlaufs ändert: nach einer Schaltung gilt ein anderer Wert als
+        davor, obwohl derselbe Messwert zugrunde liegt.
+        """
         instant = self._instant_surplus()
         self._window.set_window(self._smoothing_window())
         self._window.push(instant.raw, now)
@@ -297,6 +424,27 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             battery_w=instant.battery_w,
             degraded=instant.degraded,
             errors=instant.errors,
+        )
+
+    @staticmethod
+    def _with_anticipation(surplus: SurplusResult, pending: float) -> SurplusResult:
+        """Zieht die gerade geschaltete, noch nicht gemessene Last ab.
+
+        Bewusst auf dem ausgewiesenen Wert und nicht nur intern: "verfügbarer
+        Überschuss" heißt "was sich noch zusätzlich einschalten lässt". Eine
+        gerade zugeschaltete Last gehört abgezogen, ob der Zähler sie schon
+        zeigt oder nicht — sonst zeigte die Karte für eine knappe Minute Budget
+        an, das längst vergeben ist.
+
+        ``raw`` bleibt unangetastet: er ist der Diagnosewert und soll den
+        Messwert wiedergeben.
+        """
+        if not pending or surplus.available is None:
+            return surplus
+        return replace(
+            surplus,
+            available=round(surplus.available - pending),
+            anticipated_w=round(pending),
         )
 
     def _instant_surplus(self) -> SurplusResult:
@@ -347,9 +495,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         )
 
     def _build_views(self, surplus: SurplusResult) -> list[ConsumerView]:
-        """Bewertet die Verbraucher. Die Ampellogik folgt in Schritt 5."""
-        from .engine import build_views  # lokal, um einen Ringbezug zu vermeiden
-
+        """Bewertet die Verbraucher in Prioritätsreihenfolge."""
         return build_views(self.hass, self, surplus.available)
 
     # -- Hilfen für Entitäten ------------------------------------------------

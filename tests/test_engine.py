@@ -10,6 +10,7 @@ import pytest
 
 from custom_components.energy_manager.engine import (
     Blocker,
+    anticipated_w,
     compute_lock,
     decide,
     decide_for,
@@ -313,3 +314,31 @@ class TestDecide:
         # Erst 120 s nach der Unterbrechung wird geschaltet.
         result = decide(bereit, runtimes, NOW + 240)
         assert result.action is not None
+
+
+class TestAnticipation:
+    """Die Korrektur, ohne die die Automatik auf ihre eigene Wirkung reagiert."""
+
+    def test_zaehlt_nur_laufende_beruhigungsfenster(self) -> None:
+        runtimes = {
+            "a": ConsumerRuntime(settle_until=NOW + 30, anticipated_w=2000.0),
+            # Abgelaufen: die Last steckt inzwischen im Messwert.
+            "b": ConsumerRuntime(settle_until=NOW - 1, anticipated_w=1500.0),
+        }
+        assert anticipated_w(runtimes, NOW) == 2000.0
+
+    def test_ohne_fenster_keine_korrektur(self) -> None:
+        runtimes = {"a": ConsumerRuntime(anticipated_w=2000.0)}
+        assert anticipated_w(runtimes, NOW) == 0.0
+
+    def test_ein_und_ausschalten_heben_sich_auf(self) -> None:
+        # Gleichzeitig 2000 W zu- und 2000 W abgeschaltet: per Saldo ändert
+        # sich nichts, und die Automatik soll auch nichts korrigieren.
+        runtimes = {
+            "a": ConsumerRuntime(settle_until=NOW + 30, anticipated_w=2000.0),
+            "b": ConsumerRuntime(settle_until=NOW + 30, anticipated_w=-2000.0),
+        }
+        assert anticipated_w(runtimes, NOW) == 0.0
+
+    def test_leere_liste(self) -> None:
+        assert anticipated_w({}, NOW) == 0.0
