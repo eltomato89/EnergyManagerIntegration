@@ -2,10 +2,15 @@
 
 Die Ampellogik ist eine Portierung von ``src/lib/device-status.ts`` der Karte —
 mit **einer bewussten Abweichung**, siehe :func:`build_views`.
+
+Die Schaltentscheidung (:func:`decide`) kommt hinzu: sie wertet die vier
+Zeitfelder aus und liefert höchstens **eine** Aktion je Durchlauf.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from homeassistant.core import HomeAssistant
@@ -149,3 +154,156 @@ def build_views(
         )
 
     return views
+
+
+# --- Schaltentscheidung -----------------------------------------------------
+
+
+class Blocker(StrEnum):
+    """Warum eine an sich sinnvolle Schaltung unterbleibt.
+
+    Wird protokolliert und in den Status-Attributen ausgewiesen — ohne diese
+    Begründung wirkt eine ausbleibende Schaltung wie ein Fehler.
+    """
+
+    NOT_MANAGED = "not_managed"
+    UNAVAILABLE = "unavailable"
+    SETTLING = "settling"
+    MIN_RUNTIME = "min_runtime"
+    MIN_OFF_TIME = "min_off_time"
+    TURN_ON_DELAY = "turn_on_delay"
+    TURN_OFF_DELAY = "turn_off_delay"
+
+
+@dataclass(frozen=True, slots=True)
+class Decision:
+    """Was mit einem Verbraucher geschehen soll."""
+
+    subentry_id: str
+    turn_on: bool
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class Evaluation:
+    """Ergebnis eines Durchlaufs."""
+
+    action: Decision | None = None
+    blockers: dict[str, Blocker] = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.blockers is None:
+            object.__setattr__(self, "blockers", {})
+
+
+def update_conditions(
+    view: ConsumerView,
+    runtime: ConsumerRuntime,
+    now: float,
+) -> None:
+    """Schreibt fort, seit wann eine Bedingung ununterbrochen gilt.
+
+    Der Kern der Verzögerungslogik: Sobald die Bedingung einmal nicht erfüllt
+    ist, beginnt die Zeit von vorn. Nur so bedeutet "ununterbrochen" auch
+    ununterbrochen — ein Zähler, der bei jeder Lücke stehen bliebe, würde die
+    Verzögerung nach ein paar Wolken wirkungslos machen.
+    """
+    wants_on = not view.is_on and view.status is DeviceStatus.OFF_READY
+    wants_off = view.is_on and view.status is DeviceStatus.ON_DEFICIT
+
+    if wants_on:
+        if runtime.on_condition_since is None:
+            runtime.on_condition_since = now
+    else:
+        runtime.on_condition_since = None
+
+    if wants_off:
+        if runtime.off_condition_since is None:
+            runtime.off_condition_since = now
+    else:
+        runtime.off_condition_since = None
+
+
+def check_blockers(
+    view: ConsumerView,
+    runtime: ConsumerRuntime,
+    now: float,
+) -> Blocker | None:
+    """Prüft, was gegen eine Schaltung spricht — unabhängig von der Richtung."""
+    if not view.managed:
+        return Blocker.NOT_MANAGED
+    if not view.available:
+        return Blocker.UNAVAILABLE
+    if runtime.settle_until is not None and now < runtime.settle_until:
+        return Blocker.SETTLING
+    return None
+
+
+def decide_for(
+    view: ConsumerView,
+    runtime: ConsumerRuntime,
+    now: float,
+) -> tuple[Decision | None, Blocker | None]:
+    """Entscheidet für einen einzelnen Verbraucher."""
+    if (blocker := check_blockers(view, runtime, now)) is not None:
+        return None, blocker
+
+    consumer = view.config
+
+    # Einschalten: Der Überschuss muss lange genug gereicht haben.
+    if runtime.on_condition_since is not None:
+        elapsed = now - runtime.on_condition_since
+        if elapsed < consumer.turn_on_delay:
+            return None, Blocker.TURN_ON_DELAY
+        # Sperre aus der letzten Ausschaltung.
+        if view.locked_until is not None and now < view.locked_until:
+            return None, Blocker.MIN_OFF_TIME
+        return Decision(consumer.subentry_id, True, "surplus_sufficient"), None
+
+    # Ausschalten: Das Defizit muss lange genug angehalten haben.
+    if runtime.off_condition_since is not None:
+        elapsed = now - runtime.off_condition_since
+        if elapsed < consumer.turn_off_delay:
+            return None, Blocker.TURN_OFF_DELAY
+        if view.locked_until is not None and now < view.locked_until:
+            return None, Blocker.MIN_RUNTIME
+        return Decision(consumer.subentry_id, False, "deficit_persists"), None
+
+    return None, None
+
+
+def decide(
+    views: list[ConsumerView],
+    runtimes: dict[str, ConsumerRuntime],
+    now: float,
+) -> Evaluation:
+    """Wählt höchstens **eine** Aktion aus.
+
+    Nur eine je Durchlauf, weil jede Schaltung den Überschuss verändert, auf den
+    die nächste Entscheidung sich stützen würde. Wer drei Geräte gleichzeitig
+    zuschaltet, rechnet dreimal mit demselben Budget.
+
+    Ausschalten hat Vorrang vor Einschalten: ein anhaltendes Defizit zu beenden
+    ist dringender, als zusätzlichen Überschuss zu nutzen.
+    """
+    blockers: dict[str, Blocker] = {}
+    turn_on: Decision | None = None
+    turn_off: Decision | None = None
+
+    for view in views:
+        runtime = runtimes.setdefault(view.config.subentry_id, ConsumerRuntime())
+        update_conditions(view, runtime, now)
+
+        decision, blocker = decide_for(view, runtime, now)
+        if blocker is not None:
+            blockers[view.config.subentry_id] = blocker
+        if decision is None:
+            continue
+
+        # views ist bereits nach Priorität sortiert; der erste Treffer gewinnt.
+        if decision.turn_on and turn_on is None:
+            turn_on = decision
+        elif not decision.turn_on and turn_off is None:
+            turn_off = decision
+
+    return Evaluation(action=turn_off or turn_on, blockers=blockers)
