@@ -3,11 +3,145 @@
     "step": {
       "user": {
         "title": "Energy Manager",
-        "description": "Configure where the surplus is measured."
+        "description": "Where should the surplus be calculated from?",
+        "data": { "meter_mode": "Meter source" }
+      },
+      "reconfigure": {
+        "title": "Change meter source",
+        "data": { "meter_mode": "Meter source" }
+      },
+      "grid": {
+        "title": "Grid sensor",
+        "description": "A bidirectional sensor: positive when importing, negative when exporting.",
+        "data": {
+          "grid_entity": "Grid sensor",
+          "invert_grid": "Invert sign"
+        },
+        "data_description": {
+          "invert_grid": "Enable if the sensor reports positive values while exporting."
+        }
+      },
+      "split": {
+        "title": "Separate sensors",
+        "description": "Both values must always be positive.",
+        "data": {
+          "production_entity": "Solar production",
+          "consumption_entity": "House consumption",
+          "consumption_includes_battery": "Consumption includes battery charging"
+        },
+        "data_description": {
+          "consumption_includes_battery": "Enable if the consumption sensor already counts battery charging."
+        }
+      },
+      "battery": {
+        "title": "Home battery",
+        "description": "Optional — leave empty and confirm if you have none.",
+        "data": {
+          "battery_soc_entity": "State of charge",
+          "battery_power_entity": "Battery power",
+          "battery_invert": "Invert sign",
+          "battery_charge_entity": "Charge power",
+          "battery_discharge_entity": "Discharge power",
+          "battery_mode": "Discharging in the surplus",
+          "battery_min_soc": "Minimum state of charge",
+          "battery_reserve_w": "Battery reserve"
+        },
+        "data_description": {
+          "battery_power_entity": "A bidirectional sensor: positive when charging, negative when discharging.",
+          "battery_charge_entity": "Alternative to the bidirectional sensor: two always-positive sensors.",
+          "battery_mode": "Charging power always counts as available. The question is whether discharging should reduce the surplus.",
+          "battery_min_soc": "Below this, charging takes priority and no surplus is reported.",
+          "battery_reserve_w": "Power always kept for the battery."
+        }
       }
     },
     "abort": {
-      "single_instance_allowed": "Energy Manager is already set up."
+      "single_instance_allowed": "Energy Manager is already set up.",
+      "reconfigure_successful": "The meter source was changed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Control",
+        "data": {
+          "smoothing_window": "Averaging window",
+          "settle_time": "Settling time"
+        },
+        "data_description": {
+          "smoothing_window": "Smooths the surplus so passing clouds do not cause switching storms. 0 disables smoothing.",
+          "settle_time": "After a switch, the same load is left alone for this long. Prevents the automation from reacting to the effect of its own action."
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "consumer": {
+      "title": "Load",
+      "entry_type": "Load",
+      "initiate_flow": {
+        "user": "Add load",
+        "reconfigure": "Edit load"
+      },
+      "step": {
+        "user": {
+          "title": "Add load",
+          "data": {
+            "name": "Name",
+            "switch_entity": "Switchable entity",
+            "power_entity": "Power sensor",
+            "min_power": "Switch-on threshold",
+            "max_power": "Rated power",
+            "hysteresis": "Hysteresis",
+            "turn_on_delay": "Switch-on delay",
+            "turn_off_delay": "Switch-off delay",
+            "min_runtime": "Minimum runtime",
+            "min_off_time": "Minimum off time"
+          },
+          "data_description": {
+            "power_entity": "Current power draw. Without it the rated power is used.",
+            "min_power": "Surplus required before switching on is worthwhile. Defaults to the rated power.",
+            "max_power": "Maximum power draw.",
+            "hysteresis": "Dead band against oscillation around zero.",
+            "turn_on_delay": "The surplus must be sufficient for this long before switching on. Debounces brief gaps in sunshine.",
+            "turn_off_delay": "The deficit must persist this long before switching off. Rides out passing clouds.",
+            "min_runtime": "The device stays on at least this long after being switched on.",
+            "min_off_time": "The device stays off at least this long after being switched off. Protects compressors from restarting too early."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit load",
+          "data": {
+            "name": "Name",
+            "switch_entity": "Switchable entity",
+            "power_entity": "Power sensor",
+            "min_power": "Switch-on threshold",
+            "max_power": "Rated power",
+            "hysteresis": "Hysteresis",
+            "turn_on_delay": "Switch-on delay",
+            "turn_off_delay": "Switch-off delay",
+            "min_runtime": "Minimum runtime",
+            "min_off_time": "Minimum off time"
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "The load was changed."
+      }
+    }
+  },
+  "selector": {
+    "meter_mode": {
+      "options": {
+        "grid": "Single grid sensor (bidirectional)",
+        "split": "Separate sensors for production and consumption"
+      }
+    },
+    "battery_mode": {
+      "options": {
+        "charge_only": "Count charging only",
+        "full": "Subtract discharging (pure solar surplus)"
+      }
     }
   }
 }

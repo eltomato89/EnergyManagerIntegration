@@ -3,11 +3,145 @@
     "step": {
       "user": {
         "title": "Energy Manager",
-        "description": "Lege fest, woraus der Überschuss berechnet wird."
+        "description": "Woraus soll der Überschuss berechnet werden?",
+        "data": { "meter_mode": "Zählerquelle" }
+      },
+      "reconfigure": {
+        "title": "Zählerquelle ändern",
+        "data": { "meter_mode": "Zählerquelle" }
+      },
+      "grid": {
+        "title": "Netzsensor",
+        "description": "Ein bidirektionaler Sensor: positiv beim Bezug, negativ beim Einspeisen.",
+        "data": {
+          "grid_entity": "Netzsensor",
+          "invert_grid": "Vorzeichen umkehren"
+        },
+        "data_description": {
+          "invert_grid": "Aktivieren, wenn der Sensor beim Einspeisen positiv wird."
+        }
+      },
+      "split": {
+        "title": "Getrennte Sensoren",
+        "description": "Beide Werte müssen stets positiv sein.",
+        "data": {
+          "production_entity": "PV-Erzeugung",
+          "consumption_entity": "Hausverbrauch",
+          "consumption_includes_battery": "Verbrauch enthält Batterieladung"
+        },
+        "data_description": {
+          "consumption_includes_battery": "Aktivieren, wenn der Verbrauchssensor die Batterieladung mitzählt."
+        }
+      },
+      "battery": {
+        "title": "Hausbatterie",
+        "description": "Freiwillig — ohne Batterie einfach leer lassen und bestätigen.",
+        "data": {
+          "battery_soc_entity": "Ladestand",
+          "battery_power_entity": "Batterieleistung",
+          "battery_invert": "Vorzeichen umkehren",
+          "battery_charge_entity": "Ladeleistung",
+          "battery_discharge_entity": "Entladeleistung",
+          "battery_mode": "Entladung im Überschuss",
+          "battery_min_soc": "Mindestladestand",
+          "battery_reserve_w": "Batteriereserve"
+        },
+        "data_description": {
+          "battery_power_entity": "Ein bidirektionaler Sensor: positiv beim Laden, negativ beim Entladen.",
+          "battery_charge_entity": "Alternative zum bidirektionalen Sensor: zwei stets positive Sensoren.",
+          "battery_mode": "Ladeleistung zählt immer als verfügbar. Die Frage ist, ob eine Entladung den Überschuss verringern soll.",
+          "battery_min_soc": "Darunter hat das Laden Vorrang, es wird kein Überschuss mehr ausgewiesen.",
+          "battery_reserve_w": "Leistung, die immer der Batterie vorbehalten bleibt."
+        }
       }
     },
     "abort": {
-      "single_instance_allowed": "Energy Manager ist bereits eingerichtet."
+      "single_instance_allowed": "Energy Manager ist bereits eingerichtet.",
+      "reconfigure_successful": "Die Zählerquelle wurde geändert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Regelung",
+        "data": {
+          "smoothing_window": "Mittelungsfenster",
+          "settle_time": "Beruhigungszeit"
+        },
+        "data_description": {
+          "smoothing_window": "Glättet den Überschuss, damit Wolken keine Schaltflut auslösen. 0 schaltet die Glättung ab.",
+          "settle_time": "So lange nach einer Schaltung wird derselbe Verbraucher nicht erneut angefasst. Verhindert, dass die Automatik auf die Wirkung ihrer eigenen Schaltung reagiert."
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "consumer": {
+      "title": "Verbraucher",
+      "entry_type": "Verbraucher",
+      "initiate_flow": {
+        "user": "Verbraucher hinzufügen",
+        "reconfigure": "Verbraucher bearbeiten"
+      },
+      "step": {
+        "user": {
+          "title": "Verbraucher hinzufügen",
+          "data": {
+            "name": "Name",
+            "switch_entity": "Schaltbare Entität",
+            "power_entity": "Leistungssensor",
+            "min_power": "Einschaltschwelle",
+            "max_power": "Nennleistung",
+            "hysteresis": "Hysterese",
+            "turn_on_delay": "Einschaltverzögerung",
+            "turn_off_delay": "Ausschaltverzögerung",
+            "min_runtime": "Mindestlaufzeit",
+            "min_off_time": "Mindest-Aus-Zeit"
+          },
+          "data_description": {
+            "power_entity": "Aktuelle Leistungsaufnahme. Ohne ihn wird mit der Nennleistung gerechnet.",
+            "min_power": "Ab so viel Überschuss lohnt sich das Einschalten. Ohne Angabe gilt die Nennleistung.",
+            "max_power": "Maximale Leistungsaufnahme.",
+            "hysteresis": "Totband gegen Pendeln um den Nullpunkt.",
+            "turn_on_delay": "Der Überschuss muss so lange ununterbrochen reichen, bevor eingeschaltet wird. Entprellt kurze Sonnenlücken.",
+            "turn_off_delay": "Das Defizit muss so lange anhalten, bevor ausgeschaltet wird. Überbrückt vorbeiziehende Wolken.",
+            "min_runtime": "So lange bleibt das Gerät nach dem Einschalten mindestens an.",
+            "min_off_time": "So lange bleibt das Gerät nach dem Ausschalten mindestens aus. Schützt Kompressoren vor zu frühem Wiederanlauf."
+          }
+        },
+        "reconfigure": {
+          "title": "Verbraucher bearbeiten",
+          "data": {
+            "name": "Name",
+            "switch_entity": "Schaltbare Entität",
+            "power_entity": "Leistungssensor",
+            "min_power": "Einschaltschwelle",
+            "max_power": "Nennleistung",
+            "hysteresis": "Hysterese",
+            "turn_on_delay": "Einschaltverzögerung",
+            "turn_off_delay": "Ausschaltverzögerung",
+            "min_runtime": "Mindestlaufzeit",
+            "min_off_time": "Mindest-Aus-Zeit"
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Der Verbraucher wurde geändert."
+      }
+    }
+  },
+  "selector": {
+    "meter_mode": {
+      "options": {
+        "grid": "Ein Netzsensor (bidirektional)",
+        "split": "Getrennte Sensoren für Erzeugung und Verbrauch"
+      }
+    },
+    "battery_mode": {
+      "options": {
+        "charge_only": "Nur Laden anrechnen",
+        "full": "Entladung abziehen (reiner PV-Überschuss)"
+      }
     }
   }
 }
