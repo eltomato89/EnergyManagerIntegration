@@ -1,0 +1,6613 @@
+{
+  "surplus": [
+    {
+      "name": "grid=-3200 bat=null mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 3200,
+        "batteryCorrection": 0,
+        "gridW": -3200,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=null mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 2900,
+        "batteryCorrection": 0,
+        "gridW": -3200,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=null mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 3200,
+        "batteryCorrection": 0,
+        "gridW": -3200,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=null mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 2900,
+        "batteryCorrection": 0,
+        "gridW": -3200,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=-1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 3200,
+        "batteryCorrection": 0,
+        "gridW": -3200,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=-1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 2900,
+        "batteryCorrection": 0,
+        "gridW": -3200,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=-1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 1700,
+        "available": 1700,
+        "batteryCorrection": -1500,
+        "gridW": -3200,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=-1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 1700,
+        "available": 1400,
+        "batteryCorrection": -1500,
+        "gridW": -3200,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=-386 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 3200,
+        "batteryCorrection": 0,
+        "gridW": -3200,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=-386 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 2900,
+        "batteryCorrection": 0,
+        "gridW": -3200,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=-386 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2814,
+        "available": 2814,
+        "batteryCorrection": -386,
+        "gridW": -3200,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=-386 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 2814,
+        "available": 2514,
+        "batteryCorrection": -386,
+        "gridW": -3200,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=0 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 3200,
+        "batteryCorrection": 0,
+        "gridW": -3200,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=0 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 2900,
+        "batteryCorrection": 0,
+        "gridW": -3200,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=0 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 3200,
+        "batteryCorrection": 0,
+        "gridW": -3200,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=0 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 2900,
+        "batteryCorrection": 0,
+        "gridW": -3200,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=600 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 3800,
+        "available": 3800,
+        "batteryCorrection": 600,
+        "gridW": -3200,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=600 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 3800,
+        "available": 3500,
+        "batteryCorrection": 600,
+        "gridW": -3200,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=600 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 3800,
+        "available": 3800,
+        "batteryCorrection": 600,
+        "gridW": -3200,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=600 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 3800,
+        "available": 3500,
+        "batteryCorrection": 600,
+        "gridW": -3200,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 4700,
+        "available": 4700,
+        "batteryCorrection": 1500,
+        "gridW": -3200,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 4700,
+        "available": 4400,
+        "batteryCorrection": 1500,
+        "gridW": -3200,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 4700,
+        "available": 4700,
+        "batteryCorrection": 1500,
+        "gridW": -3200,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-3200 bat=1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -3200
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 4700,
+        "available": 4400,
+        "batteryCorrection": 1500,
+        "gridW": -3200,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=null mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 2000,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=null mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 1700,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=null mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 2000,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=null mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 1700,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=-1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 2000,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=-1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 1700,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=-1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 500,
+        "available": 500,
+        "batteryCorrection": -1500,
+        "gridW": -2000,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=-1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 500,
+        "available": 200,
+        "batteryCorrection": -1500,
+        "gridW": -2000,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=-386 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 2000,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=-386 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 1700,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=-386 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 1614,
+        "available": 1614,
+        "batteryCorrection": -386,
+        "gridW": -2000,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=-386 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 1614,
+        "available": 1314,
+        "batteryCorrection": -386,
+        "gridW": -2000,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=0 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 2000,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=0 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 1700,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=0 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 2000,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=0 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 1700,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=600 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2600,
+        "available": 2600,
+        "batteryCorrection": 600,
+        "gridW": -2000,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=600 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 2600,
+        "available": 2300,
+        "batteryCorrection": 600,
+        "gridW": -2000,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=600 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2600,
+        "available": 2600,
+        "batteryCorrection": 600,
+        "gridW": -2000,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=600 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 2600,
+        "available": 2300,
+        "batteryCorrection": 600,
+        "gridW": -2000,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 3500,
+        "available": 3500,
+        "batteryCorrection": 1500,
+        "gridW": -2000,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 3500,
+        "available": 3200,
+        "batteryCorrection": 1500,
+        "gridW": -2000,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 3500,
+        "available": 3500,
+        "batteryCorrection": 1500,
+        "gridW": -2000,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-2000 bat=1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 3500,
+        "available": 3200,
+        "batteryCorrection": 1500,
+        "gridW": -2000,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=null mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 7,
+        "available": 7,
+        "batteryCorrection": 0,
+        "gridW": -7,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=null mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 7,
+        "available": -293,
+        "batteryCorrection": 0,
+        "gridW": -7,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=null mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 7,
+        "available": 7,
+        "batteryCorrection": 0,
+        "gridW": -7,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=null mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 7,
+        "available": -293,
+        "batteryCorrection": 0,
+        "gridW": -7,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=-1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 7,
+        "available": 7,
+        "batteryCorrection": 0,
+        "gridW": -7,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=-1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 7,
+        "available": -293,
+        "batteryCorrection": 0,
+        "gridW": -7,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=-1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -1493,
+        "available": -1493,
+        "batteryCorrection": -1500,
+        "gridW": -7,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=-1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -1493,
+        "available": -1793,
+        "batteryCorrection": -1500,
+        "gridW": -7,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=-386 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 7,
+        "available": 7,
+        "batteryCorrection": 0,
+        "gridW": -7,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=-386 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 7,
+        "available": -293,
+        "batteryCorrection": 0,
+        "gridW": -7,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=-386 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -379,
+        "available": -379,
+        "batteryCorrection": -386,
+        "gridW": -7,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=-386 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -379,
+        "available": -679,
+        "batteryCorrection": -386,
+        "gridW": -7,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=0 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 7,
+        "available": 7,
+        "batteryCorrection": 0,
+        "gridW": -7,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=0 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 7,
+        "available": -293,
+        "batteryCorrection": 0,
+        "gridW": -7,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=0 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 7,
+        "available": 7,
+        "batteryCorrection": 0,
+        "gridW": -7,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=0 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 7,
+        "available": -293,
+        "batteryCorrection": 0,
+        "gridW": -7,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=600 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 607,
+        "available": 607,
+        "batteryCorrection": 600,
+        "gridW": -7,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=600 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 607,
+        "available": 307,
+        "batteryCorrection": 600,
+        "gridW": -7,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=600 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 607,
+        "available": 607,
+        "batteryCorrection": 600,
+        "gridW": -7,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=600 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 607,
+        "available": 307,
+        "batteryCorrection": 600,
+        "gridW": -7,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 1507,
+        "available": 1507,
+        "batteryCorrection": 1500,
+        "gridW": -7,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 1507,
+        "available": 1207,
+        "batteryCorrection": 1500,
+        "gridW": -7,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 1507,
+        "available": 1507,
+        "batteryCorrection": 1500,
+        "gridW": -7,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=-7 bat=1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 1507,
+        "available": 1207,
+        "batteryCorrection": 1500,
+        "gridW": -7,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=null mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 0,
+        "available": 0,
+        "batteryCorrection": 0,
+        "gridW": 0,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=null mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 0,
+        "available": -300,
+        "batteryCorrection": 0,
+        "gridW": 0,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=null mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 0,
+        "available": 0,
+        "batteryCorrection": 0,
+        "gridW": 0,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=null mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 0,
+        "available": -300,
+        "batteryCorrection": 0,
+        "gridW": 0,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=-1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 0,
+        "available": 0,
+        "batteryCorrection": 0,
+        "gridW": 0,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=-1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 0,
+        "available": -300,
+        "batteryCorrection": 0,
+        "gridW": 0,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=-1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -1500,
+        "available": -1500,
+        "batteryCorrection": -1500,
+        "gridW": 0,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=-1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -1500,
+        "available": -1800,
+        "batteryCorrection": -1500,
+        "gridW": 0,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=-386 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 0,
+        "available": 0,
+        "batteryCorrection": 0,
+        "gridW": 0,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=-386 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 0,
+        "available": -300,
+        "batteryCorrection": 0,
+        "gridW": 0,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=-386 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -386,
+        "available": -386,
+        "batteryCorrection": -386,
+        "gridW": 0,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=-386 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -386,
+        "available": -686,
+        "batteryCorrection": -386,
+        "gridW": 0,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=0 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 0,
+        "available": 0,
+        "batteryCorrection": 0,
+        "gridW": 0,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=0 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 0,
+        "available": -300,
+        "batteryCorrection": 0,
+        "gridW": 0,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=0 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 0,
+        "available": 0,
+        "batteryCorrection": 0,
+        "gridW": 0,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=0 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 0,
+        "available": -300,
+        "batteryCorrection": 0,
+        "gridW": 0,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=600 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 600,
+        "available": 600,
+        "batteryCorrection": 600,
+        "gridW": 0,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=600 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 600,
+        "available": 300,
+        "batteryCorrection": 600,
+        "gridW": 0,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=600 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 600,
+        "available": 600,
+        "batteryCorrection": 600,
+        "gridW": 0,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=600 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 600,
+        "available": 300,
+        "batteryCorrection": 600,
+        "gridW": 0,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 1500,
+        "available": 1500,
+        "batteryCorrection": 1500,
+        "gridW": 0,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 1500,
+        "available": 1200,
+        "batteryCorrection": 1500,
+        "gridW": 0,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 1500,
+        "available": 1500,
+        "batteryCorrection": 1500,
+        "gridW": 0,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=0 bat=1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 0
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 1500,
+        "available": 1200,
+        "batteryCorrection": 1500,
+        "gridW": 0,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=null mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -7,
+        "available": -7,
+        "batteryCorrection": 0,
+        "gridW": 7,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=null mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -7,
+        "available": -307,
+        "batteryCorrection": 0,
+        "gridW": 7,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=null mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -7,
+        "available": -7,
+        "batteryCorrection": 0,
+        "gridW": 7,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=null mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -7,
+        "available": -307,
+        "batteryCorrection": 0,
+        "gridW": 7,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=-1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -7,
+        "available": -7,
+        "batteryCorrection": 0,
+        "gridW": 7,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=-1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -7,
+        "available": -307,
+        "batteryCorrection": 0,
+        "gridW": 7,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=-1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -1507,
+        "available": -1507,
+        "batteryCorrection": -1500,
+        "gridW": 7,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=-1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -1507,
+        "available": -1807,
+        "batteryCorrection": -1500,
+        "gridW": 7,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=-386 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -7,
+        "available": -7,
+        "batteryCorrection": 0,
+        "gridW": 7,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=-386 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -7,
+        "available": -307,
+        "batteryCorrection": 0,
+        "gridW": 7,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=-386 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -393,
+        "available": -393,
+        "batteryCorrection": -386,
+        "gridW": 7,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=-386 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -393,
+        "available": -693,
+        "batteryCorrection": -386,
+        "gridW": 7,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=0 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -7,
+        "available": -7,
+        "batteryCorrection": 0,
+        "gridW": 7,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=0 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -7,
+        "available": -307,
+        "batteryCorrection": 0,
+        "gridW": 7,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=0 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -7,
+        "available": -7,
+        "batteryCorrection": 0,
+        "gridW": 7,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=0 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -7,
+        "available": -307,
+        "batteryCorrection": 0,
+        "gridW": 7,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=600 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 593,
+        "available": 593,
+        "batteryCorrection": 600,
+        "gridW": 7,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=600 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 593,
+        "available": 293,
+        "batteryCorrection": 600,
+        "gridW": 7,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=600 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 593,
+        "available": 593,
+        "batteryCorrection": 600,
+        "gridW": 7,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=600 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 593,
+        "available": 293,
+        "batteryCorrection": 600,
+        "gridW": 7,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 1493,
+        "available": 1493,
+        "batteryCorrection": 1500,
+        "gridW": 7,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 1493,
+        "available": 1193,
+        "batteryCorrection": 1500,
+        "gridW": 7,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 1493,
+        "available": 1493,
+        "batteryCorrection": 1500,
+        "gridW": 7,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=7 bat=1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 7
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 1493,
+        "available": 1193,
+        "batteryCorrection": 1500,
+        "gridW": 7,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=null mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -800,
+        "available": -800,
+        "batteryCorrection": 0,
+        "gridW": 800,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=null mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -800,
+        "available": -1100,
+        "batteryCorrection": 0,
+        "gridW": 800,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=null mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -800,
+        "available": -800,
+        "batteryCorrection": 0,
+        "gridW": 800,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=null mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -800,
+        "available": -1100,
+        "batteryCorrection": 0,
+        "gridW": 800,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=-1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -800,
+        "available": -800,
+        "batteryCorrection": 0,
+        "gridW": 800,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=-1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -800,
+        "available": -1100,
+        "batteryCorrection": 0,
+        "gridW": 800,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=-1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -2300,
+        "available": -2300,
+        "batteryCorrection": -1500,
+        "gridW": 800,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=-1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -2300,
+        "available": -2600,
+        "batteryCorrection": -1500,
+        "gridW": 800,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=-386 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -800,
+        "available": -800,
+        "batteryCorrection": 0,
+        "gridW": 800,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=-386 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -800,
+        "available": -1100,
+        "batteryCorrection": 0,
+        "gridW": 800,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=-386 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -1186,
+        "available": -1186,
+        "batteryCorrection": -386,
+        "gridW": 800,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=-386 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -1186,
+        "available": -1486,
+        "batteryCorrection": -386,
+        "gridW": 800,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=0 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -800,
+        "available": -800,
+        "batteryCorrection": 0,
+        "gridW": 800,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=0 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -800,
+        "available": -1100,
+        "batteryCorrection": 0,
+        "gridW": 800,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=0 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -800,
+        "available": -800,
+        "batteryCorrection": 0,
+        "gridW": 800,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=0 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -800,
+        "available": -1100,
+        "batteryCorrection": 0,
+        "gridW": 800,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=600 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -200,
+        "available": -200,
+        "batteryCorrection": 600,
+        "gridW": 800,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=600 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -200,
+        "available": -500,
+        "batteryCorrection": 600,
+        "gridW": 800,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=600 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -200,
+        "available": -200,
+        "batteryCorrection": 600,
+        "gridW": 800,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=600 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -200,
+        "available": -500,
+        "batteryCorrection": 600,
+        "gridW": 800,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 700,
+        "available": 700,
+        "batteryCorrection": 1500,
+        "gridW": 800,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 700,
+        "available": 400,
+        "batteryCorrection": 1500,
+        "gridW": 800,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 700,
+        "available": 700,
+        "batteryCorrection": 1500,
+        "gridW": 800,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=800 bat=1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 800
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": 700,
+        "available": 400,
+        "batteryCorrection": 1500,
+        "gridW": 800,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=null mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -2500,
+        "available": -2500,
+        "batteryCorrection": 0,
+        "gridW": 2500,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=null mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -2500,
+        "available": -2800,
+        "batteryCorrection": 0,
+        "gridW": 2500,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=null mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -2500,
+        "available": -2500,
+        "batteryCorrection": 0,
+        "gridW": 2500,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=null mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": null,
+          "reason": "missing"
+        },
+        "batteryConfigured": false,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -2500,
+        "available": -2800,
+        "batteryCorrection": 0,
+        "gridW": 2500,
+        "batteryW": null,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=-1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -2500,
+        "available": -2500,
+        "batteryCorrection": 0,
+        "gridW": 2500,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=-1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -2500,
+        "available": -2800,
+        "batteryCorrection": 0,
+        "gridW": 2500,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=-1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -4000,
+        "available": -4000,
+        "batteryCorrection": -1500,
+        "gridW": 2500,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=-1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -4000,
+        "available": -4300,
+        "batteryCorrection": -1500,
+        "gridW": 2500,
+        "batteryW": -1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=-386 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -2500,
+        "available": -2500,
+        "batteryCorrection": 0,
+        "gridW": 2500,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=-386 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -2500,
+        "available": -2800,
+        "batteryCorrection": 0,
+        "gridW": 2500,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=-386 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -2886,
+        "available": -2886,
+        "batteryCorrection": -386,
+        "gridW": 2500,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=-386 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": -386
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -2886,
+        "available": -3186,
+        "batteryCorrection": -386,
+        "gridW": 2500,
+        "batteryW": -386,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=0 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -2500,
+        "available": -2500,
+        "batteryCorrection": 0,
+        "gridW": 2500,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=0 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -2500,
+        "available": -2800,
+        "batteryCorrection": 0,
+        "gridW": 2500,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=0 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -2500,
+        "available": -2500,
+        "batteryCorrection": 0,
+        "gridW": 2500,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=0 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -2500,
+        "available": -2800,
+        "batteryCorrection": 0,
+        "gridW": 2500,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=600 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -1900,
+        "available": -1900,
+        "batteryCorrection": 600,
+        "gridW": 2500,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=600 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -1900,
+        "available": -2200,
+        "batteryCorrection": 600,
+        "gridW": 2500,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=600 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -1900,
+        "available": -1900,
+        "batteryCorrection": 600,
+        "gridW": 2500,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=600 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 600
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -1900,
+        "available": -2200,
+        "batteryCorrection": 600,
+        "gridW": 2500,
+        "batteryW": 600,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=1500 mode=charge_only res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -1000,
+        "available": -1000,
+        "batteryCorrection": 1500,
+        "gridW": 2500,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=1500 mode=charge_only res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -1000,
+        "available": -1300,
+        "batteryCorrection": 1500,
+        "gridW": 2500,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=1500 mode=full res=0",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -1000,
+        "available": -1000,
+        "batteryCorrection": 1500,
+        "gridW": 2500,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "grid=2500 bat=1500 mode=full res=300",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": 2500
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 1500
+        },
+        "batteryConfigured": true,
+        "batteryMode": "full",
+        "batterySoc": 62,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 300
+      },
+      "expected": {
+        "raw": -1000,
+        "available": -1300,
+        "batteryCorrection": 1500,
+        "gridW": 2500,
+        "batteryW": 1500,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=0 cons=842 incl=false",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 0
+        },
+        "consumption": {
+          "w": 842
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -842,
+        "available": -842,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=0 cons=842 incl=true",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 0
+        },
+        "consumption": {
+          "w": 842
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": true,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -42,
+        "available": -42,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=0 cons=1800 incl=false",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 0
+        },
+        "consumption": {
+          "w": 1800
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -1800,
+        "available": -1800,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=0 cons=1800 incl=true",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 0
+        },
+        "consumption": {
+          "w": 1800
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": true,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -1000,
+        "available": -1000,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=0 cons=3000 incl=false",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 0
+        },
+        "consumption": {
+          "w": 3000
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -3000,
+        "available": -3000,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=0 cons=3000 incl=true",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 0
+        },
+        "consumption": {
+          "w": 3000
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": true,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -2200,
+        "available": -2200,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=463 cons=842 incl=false",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 463
+        },
+        "consumption": {
+          "w": 842
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -379,
+        "available": -379,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=463 cons=842 incl=true",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 463
+        },
+        "consumption": {
+          "w": 842
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": true,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 421,
+        "available": 421,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=463 cons=1800 incl=false",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 463
+        },
+        "consumption": {
+          "w": 1800
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -1337,
+        "available": -1337,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=463 cons=1800 incl=true",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 463
+        },
+        "consumption": {
+          "w": 1800
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": true,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -537,
+        "available": -537,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=463 cons=3000 incl=false",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 463
+        },
+        "consumption": {
+          "w": 3000
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -2537,
+        "available": -2537,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=463 cons=3000 incl=true",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 463
+        },
+        "consumption": {
+          "w": 3000
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": true,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": -1737,
+        "available": -1737,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=5000 cons=842 incl=false",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 5000
+        },
+        "consumption": {
+          "w": 842
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 4158,
+        "available": 4158,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=5000 cons=842 incl=true",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 5000
+        },
+        "consumption": {
+          "w": 842
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": true,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 4958,
+        "available": 4958,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=5000 cons=1800 incl=false",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 5000
+        },
+        "consumption": {
+          "w": 1800
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 3200,
+        "available": 3200,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=5000 cons=1800 incl=true",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 5000
+        },
+        "consumption": {
+          "w": 1800
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": true,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 4000,
+        "available": 4000,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=5000 cons=3000 incl=false",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 5000
+        },
+        "consumption": {
+          "w": 3000
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": false,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 2000,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "split prod=5000 cons=3000 incl=true",
+      "input": {
+        "mode": "split",
+        "grid": {
+          "w": null,
+          "reason": "missing"
+        },
+        "production": {
+          "w": 5000
+        },
+        "consumption": {
+          "w": 3000
+        },
+        "battery": {
+          "w": 800
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 50,
+        "consumptionIncludesBattery": true,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2800,
+        "available": 2800,
+        "batteryCorrection": 800,
+        "gridW": null,
+        "batteryW": 800,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "soc=5 minSoc=20",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 5,
+        "consumptionIncludesBattery": false,
+        "batteryMinSoc": 20,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 0,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "soc=19 minSoc=20",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 19,
+        "consumptionIncludesBattery": false,
+        "batteryMinSoc": 20,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 0,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "soc=20 minSoc=20",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 20,
+        "consumptionIncludesBattery": false,
+        "batteryMinSoc": 20,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 2000,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "soc=21 minSoc=20",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 21,
+        "consumptionIncludesBattery": false,
+        "batteryMinSoc": 20,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 2000,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "soc=84 minSoc=20",
+      "input": {
+        "mode": "grid",
+        "grid": {
+          "w": -2000
+        },
+        "production": {
+          "w": null,
+          "reason": "missing"
+        },
+        "consumption": {
+          "w": null,
+          "reason": "missing"
+        },
+        "battery": {
+          "w": 0
+        },
+        "batteryConfigured": true,
+        "batteryMode": "charge_only",
+        "batterySoc": 84,
+        "consumptionIncludesBattery": false,
+        "batteryMinSoc": 20,
+        "batteryReserveW": 0
+      },
+      "expected": {
+        "raw": 2000,
+        "available": 2000,
+        "batteryCorrection": 0,
+        "gridW": -2000,
+        "batteryW": 0,
+        "degraded": false,
+        "errors": []
+      }
+    }
+  ],
+  "smoothing": [
+    {
+      "name": "55s@3000 + 5s@0",
+      "window": 60,
+      "samples": [
+        [
+          0,
+          3000
+        ],
+        [
+          55,
+          0
+        ]
+      ],
+      "at": 60,
+      "expected": 2750,
+      "coverage": 1
+    },
+    {
+      "name": "konstant, carry-in",
+      "window": 60,
+      "samples": [
+        [
+          0,
+          2200
+        ]
+      ],
+      "at": 300,
+      "expected": 2200,
+      "coverage": 1
+    },
+    {
+      "name": "halb/halb",
+      "window": 60,
+      "samples": [
+        [
+          0,
+          0
+        ],
+        [
+          100,
+          1000
+        ]
+      ],
+      "at": 130,
+      "expected": 500,
+      "coverage": 1
+    },
+    {
+      "name": "nach dem Wechsel",
+      "window": 60,
+      "samples": [
+        [
+          0,
+          0
+        ],
+        [
+          100,
+          1000
+        ]
+      ],
+      "at": 160,
+      "expected": 1000,
+      "coverage": 1
+    },
+    {
+      "name": "Luecke",
+      "window": 60,
+      "samples": [
+        [
+          0,
+          2000
+        ],
+        [
+          30,
+          null
+        ]
+      ],
+      "at": 60,
+      "expected": 2000,
+      "coverage": 0.5
+    },
+    {
+      "name": "Fenster 0",
+      "window": 0,
+      "samples": [
+        [
+          0,
+          1000
+        ],
+        [
+          1,
+          250
+        ]
+      ],
+      "at": 2,
+      "expected": 250,
+      "coverage": 1
+    }
+  ]
+}

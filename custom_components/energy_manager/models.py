@@ -1,0 +1,243 @@
+"""Datenmodelle.
+
+Die Feldnamen entsprechen denen der Energy Manager Card. Das ist Absicht: wer
+beides einsetzt, soll dieselben Begriffe wiederfinden.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import StrEnum
+from typing import Any
+
+from .const import (
+    CONF_HYSTERESIS,
+    CONF_MAX_POWER,
+    CONF_MIN_OFF_TIME,
+    CONF_MIN_POWER,
+    CONF_MIN_RUNTIME,
+    CONF_NAME,
+    CONF_POWER_ENTITY,
+    CONF_SWITCH_ENTITY,
+    CONF_TURN_OFF_DELAY,
+    CONF_TURN_ON_DELAY,
+)
+
+
+class ReadingReason(StrEnum):
+    """Warum ein Messwert nicht verwertbar ist."""
+
+    MISSING = "missing"
+    """Entität nicht konfiguriert oder nicht in hass.states vorhanden."""
+
+    UNAVAILABLE = "unavailable"
+    """Zustand ist unavailable/unknown/leer."""
+
+    NAN = "nan"
+    """Zustand lässt sich nicht in eine endliche Zahl wandeln."""
+
+    WRONG_UNIT = "wrong_unit"
+    """Einheit misst keine Leistung — meist ein kWh-Zähler statt eines W-Sensors."""
+
+
+@dataclass(frozen=True, slots=True)
+class Reading:
+    """Ein auf Watt normalisierter Messwert."""
+
+    w: float | None
+    reason: ReadingReason | None = None
+    assumed_unit: bool = False
+    """unit_of_measurement fehlte, W wurde angenommen."""
+
+    unit: str | None = None
+
+    @property
+    def ok(self) -> bool:
+        return self.w is not None
+
+
+class SurplusError(StrEnum):
+    """Warum sich der Überschuss nicht berechnen lässt."""
+
+    MISSING_GRID = "missing_grid"
+    MISSING_PRODUCTION = "missing_production"
+    MISSING_CONSUMPTION = "missing_consumption"
+    GRID_UNAVAILABLE = "grid_unavailable"
+    PRODUCTION_UNAVAILABLE = "production_unavailable"
+    CONSUMPTION_UNAVAILABLE = "consumption_unavailable"
+    WRONG_UNIT = "wrong_unit"
+
+
+@dataclass(frozen=True, slots=True)
+class SurplusResult:
+    """Ergebnis der Überschussberechnung."""
+
+    raw: float | None
+    """W vor Reserve; None = nicht berechenbar."""
+
+    available: float | None
+    """W nach Reserve und Ladestandsregel.
+
+    Negativ bedeutet ein Defizit gegenüber der Erzeugung — **nicht**
+    zwangsläufig Netzbezug in gleicher Höhe, denn die Batterie kann einen Teil
+    davon stützen. Für den tatsächlichen Zählerwert siehe ``grid_w``.
+    """
+
+    battery_correction: float = 0.0
+    grid_w: float | None = None
+    battery_w: float | None = None
+    degraded: bool = False
+    """Batterie konfiguriert, liefert aber keinen Wert."""
+
+    errors: tuple[SurplusError, ...] = ()
+
+    @property
+    def usable(self) -> bool:
+        """Darf auf dieser Grundlage geschaltet werden?"""
+        return self.available is not None and not self.errors
+
+
+class DeviceStatus(StrEnum):
+    """Ampelzustand eines Verbrauchers. Werte identisch zur Karte."""
+
+    ON_OK = "on_ok"
+    ON_DEFICIT = "on_deficit"
+    OFF_READY = "off_ready"
+    OFF_CLOSE = "off_close"
+    OFF_INSUFFICIENT = "off_insufficient"
+    UNAVAILABLE = "unavailable"
+
+
+@dataclass(frozen=True, slots=True)
+class ConsumerConfig:
+    """Konfiguration eines Verbrauchers, aus einem Subentry gelesen."""
+
+    subentry_id: str
+    name: str
+    switch_entity: str
+    power_entity: str | None = None
+
+    min_power: float | None = None
+    max_power: float | None = None
+    hysteresis: float = 0.0
+
+    min_runtime: int = 0
+    min_off_time: int = 0
+    turn_on_delay: int = 0
+    turn_off_delay: int = 0
+
+    # --- Später, siehe Plan "Vorgesehen, aber jetzt nicht gebaut" ------------
+    # Ohne diese Felder müsste die Schaltentscheidung später umgebaut werden;
+    # mit ihnen bleibt die Erweiterung additiv.
+
+    steps: tuple[int, ...] | None = None
+    """Leistungsstufen in W für regelbare Verbraucher. Noch ohne Funktion."""
+
+    step_entity: str | None = None
+    """Entität, die die Stufe setzt. Noch ohne Funktion."""
+
+    window_start: str | None = None
+    """Beginn des erlaubten Zeitfensters (HH:MM). Noch ohne Funktion."""
+
+    window_end: str | None = None
+    """Ende des erlaubten Zeitfensters (HH:MM). Noch ohne Funktion."""
+
+    @classmethod
+    def from_subentry(cls, subentry_id: str, data: dict[str, Any]) -> ConsumerConfig:
+        """Liest die Konfiguration aus den Subentry-Daten."""
+        return cls(
+            subentry_id=subentry_id,
+            name=data[CONF_NAME],
+            switch_entity=data[CONF_SWITCH_ENTITY],
+            power_entity=data.get(CONF_POWER_ENTITY),
+            min_power=data.get(CONF_MIN_POWER),
+            max_power=data.get(CONF_MAX_POWER),
+            hysteresis=data.get(CONF_HYSTERESIS, 0.0),
+            min_runtime=data.get(CONF_MIN_RUNTIME, 0),
+            min_off_time=data.get(CONF_MIN_OFF_TIME, 0),
+            turn_on_delay=data.get(CONF_TURN_ON_DELAY, 0),
+            turn_off_delay=data.get(CONF_TURN_OFF_DELAY, 0),
+        )
+
+
+@dataclass
+class ConsumerRuntime:
+    """Laufzeitzustand eines Verbrauchers.
+
+    Wird persistiert, weil sich die Zeitfelder sonst nicht verlässlich
+    durchsetzen lassen: ``last_changed`` der Schalt-Entität wird durch manuelles
+    Schalten und durch einen Neustart zurückgesetzt, und über die
+    Verzögerungen sagt es prinzipbedingt nichts aus — die beziehen sich auf die
+    *Bedingung*, nicht auf den Schaltzustand.
+    """
+
+    last_switch_ts: float | None = None
+    """Zeitpunkt der letzten von DIESER Integration ausgelösten Schaltung."""
+
+    last_switch_to: bool | None = None
+    """Wohin zuletzt geschaltet wurde."""
+
+    on_condition_since: float | None = None
+    """Seit wann die Einschaltbedingung ununterbrochen erfüllt ist."""
+
+    off_condition_since: float | None = None
+    """Seit wann die Ausschaltbedingung ununterbrochen erfüllt ist."""
+
+    settle_until: float | None = None
+    """Bis dahin wird dieser Verbraucher nicht angefasst."""
+
+    force_until: float | None = None
+    """Zwangsfreigabe bis zu diesem Zeitpunkt. Noch ohne Funktion."""
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "last_switch_ts": self.last_switch_ts,
+            "last_switch_to": self.last_switch_to,
+            "on_condition_since": self.on_condition_since,
+            "off_condition_since": self.off_condition_since,
+            "settle_until": self.settle_until,
+            "force_until": self.force_until,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ConsumerRuntime:
+        return cls(
+            last_switch_ts=data.get("last_switch_ts"),
+            last_switch_to=data.get("last_switch_to"),
+            on_condition_since=data.get("on_condition_since"),
+            off_condition_since=data.get("off_condition_since"),
+            settle_until=data.get("settle_until"),
+            force_until=data.get("force_until"),
+        )
+
+
+@dataclass(slots=True)
+class ConsumerView:
+    """Bewerteter Verbraucher — Grundlage für Anzeige und Entscheidung."""
+
+    config: ConsumerConfig
+    rank: int
+    """Position in der Prioritätsreihenfolge, 0 = höchste."""
+
+    is_on: bool = False
+    available: bool = False
+    managed: bool = True
+    power_w: float | None = None
+    required_w: float = 0.0
+    status: DeviceStatus = DeviceStatus.UNAVAILABLE
+    headroom_w: float | None = None
+    locked_until: float | None = None
+    lock_kind: str | None = None
+
+
+@dataclass(slots=True)
+class ManagerState:
+    """Was der Koordinator an die Entitäten weitergibt."""
+
+    surplus: SurplusResult
+    consumers: list[ConsumerView] = field(default_factory=list)
+    coverage: float = 0.0
+    """Anteil des Mittelungsfensters mit gültigen Daten, 0..1."""
+
+    running: bool = False
+    """Automatik ist aktiv und darf schalten."""
