@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "description": "Where should the surplus be calculated from?",
+        "description": "Basis for the surplus calculation.",
         "data": {
           "meter_mode": "Meter source"
         }
@@ -21,7 +21,7 @@
           "invert_grid": "Invert sign"
         },
         "data_description": {
-          "invert_grid": "Enable if the sensor reports positive values while exporting."
+          "invert_grid": "Required if the sensor reports positive values while exporting."
         }
       },
       "split": {
@@ -33,12 +33,12 @@
           "consumption_includes_battery": "Consumption includes battery charging"
         },
         "data_description": {
-          "consumption_includes_battery": "Enable if the consumption sensor already counts battery charging."
+          "consumption_includes_battery": "Required if the consumption sensor already includes battery charging."
         }
       },
       "battery": {
         "title": "Home battery",
-        "description": "Optional — leave empty and confirm if you have none.",
+        "description": "Optional. Without a home battery, leave the fields empty and confirm.",
         "data": {
           "battery_soc_entity": "State of charge",
           "battery_power_entity": "Battery power",
@@ -52,8 +52,8 @@
         "data_description": {
           "battery_power_entity": "A bidirectional sensor: positive when charging, negative when discharging.",
           "battery_charge_entity": "Alternative to the bidirectional sensor: two always-positive sensors.",
-          "battery_mode": "Charging power always counts as available. The question is whether discharging should reduce the surplus.",
-          "battery_min_soc": "Below this, charging takes priority and no surplus is reported.",
+          "battery_mode": "Charging power always counts as available. This setting determines whether discharging reduces the surplus.",
+          "battery_min_soc": "Below this state of charge, charging takes precedence and no surplus is reported.",
           "battery_reserve_w": "Power always kept for the battery."
         }
       }
@@ -72,8 +72,8 @@
           "settle_time": "Settling time"
         },
         "data_description": {
-          "smoothing_window": "Smooths the surplus so passing clouds do not cause switching storms. 0 disables smoothing.",
-          "settle_time": "For this long the same load is left alone after switching, and the automation deducts the switched power itself. Choose at least as long as the power sensor needs to report the new value — with sluggish plugs that can be several minutes."
+          "smoothing_window": "Smooths the surplus and prevents changing cloud cover from causing frequent switching. 0 disables smoothing.",
+          "settle_time": "For this long after a switching action the same load is left alone; meanwhile the automation deducts the switched power itself. The value should be at least as large as the delay of the power sensor, which can be several minutes with sluggish smart plugs."
         }
       }
     }
@@ -99,17 +99,17 @@
             "turn_on_delay": "Switch-on delay",
             "turn_off_delay": "Switch-off delay",
             "min_runtime": "Minimum runtime",
-            "min_off_time": "Minimum off time"
+            "min_off_time": "Minimum pause"
           },
           "data_description": {
             "power_entity": "Current power draw. Without it the rated power is used.",
-            "min_power": "Surplus required before switching on is worthwhile. Defaults to the rated power.",
+            "min_power": "Switching on starts at this surplus. Without a value the rated power applies.",
             "max_power": "Maximum power draw.",
             "hysteresis": "Dead band against oscillation around zero.",
-            "turn_on_delay": "The surplus must be sufficient for this long before switching on. Debounces brief gaps in sunshine.",
-            "turn_off_delay": "The deficit must persist this long before switching off. Rides out passing clouds.",
+            "turn_on_delay": "The surplus must be sufficient for this long without interruption before switching on. Bridges short drops in production.",
+            "turn_off_delay": "The deficit must persist for this long before switching off. Bridges brief drops.",
             "min_runtime": "The device stays on at least this long after being switched on.",
-            "min_off_time": "The device stays off at least this long after being switched off. Protects compressors from restarting too early."
+            "min_off_time": "The device stays off at least this long after switching off. Protects compressors from restarting too early."
           }
         },
         "reconfigure": {
@@ -124,7 +124,7 @@
             "turn_on_delay": "Switch-on delay",
             "turn_off_delay": "Switch-off delay",
             "min_runtime": "Minimum runtime",
-            "min_off_time": "Minimum off time"
+            "min_off_time": "Minimum pause"
           }
         }
       },
@@ -132,7 +132,7 @@
         "reconfigure_successful": "The load was changed."
       },
       "error": {
-        "switch_in_use": "This device is already switched by another load. Two entries for the same device make the automation plan it twice. Check the entity — its ID need not match the display name."
+        "switch_in_use": "This device is already switched by another load. Two entries for the same device cause the automation to plan it twice. The entity ID need not match the display name; please verify."
       }
     }
   },
@@ -147,16 +147,16 @@
       "status": {
         "name": "Status",
         "state": {
-          "starting": "starting",
-          "running": "running",
-          "paused": "paused",
+          "starting": "Initialising",
+          "running": "Active",
+          "paused": "Paused",
           "sensor_error": "sensor error",
-          "on_ok": "running, covered",
-          "on_deficit": "running, drawing from grid",
-          "off_ready": "ready",
-          "off_close": "almost enough",
-          "off_insufficient": "not enough",
-          "unavailable": "unavailable"
+          "on_ok": "Running, covered",
+          "on_deficit": "Running, drawing from grid",
+          "off_ready": "Ready to start",
+          "off_close": "Surplus marginal",
+          "off_insufficient": "Surplus insufficient",
+          "unavailable": "Unavailable"
         }
       },
       "locked_until": {
@@ -194,35 +194,35 @@
   "services": {
     "force_on": {
       "name": "Force on",
-      "description": "Turns a load on immediately and keeps it on for the given duration, regardless of surplus. Works even with the main switch off — this is an operation, not an automation decision.",
+      "description": "Switches a load on regardless of the surplus and keeps it running for the given duration. Also works with the main switch off, as this is an operation rather than an automation decision.",
       "fields": {
         "device_id": {
           "name": "Load",
-          "description": "The load's device. An entity of the same device works as well."
+          "description": "The load's device. An entity of the same device is also accepted."
         },
         "duration": {
           "name": "Duration",
-          "description": "How long the automation will not turn the device back off."
+          "description": "For this long the automation will not switch the device off again."
         }
       }
     },
     "clear_force": {
       "name": "End forced run",
-      "description": "Cancels a running forced run early. Nothing is turned off — from now on the surplus decides again.",
+      "description": "Ends a running forced run early. Nothing is switched off; from this point the surplus decides again.",
       "fields": {
         "device_id": {
           "name": "Load",
-          "description": "The load's device. An entity of the same device works as well."
+          "description": "The load's device. An entity of the same device is also accepted."
         }
       }
     },
     "pause": {
       "name": "Pause automation",
-      "description": "Stops the automation. Without a duration it stays off until resumed manually.",
+      "description": "Stops the automation. Without a duration it stays disabled until resumed manually.",
       "fields": {
         "duration": {
           "name": "Duration",
-          "description": "The automation resumes by itself after this time. Leave empty for indefinite."
+          "description": "The automation resumes automatically after this time. Without a value the pause is indefinite."
         }
       }
     },
@@ -236,7 +236,7 @@
       "message": "The Energy Manager integration is not set up."
     },
     "no_target": {
-      "message": "No load was given."
+      "message": "No load was specified."
     },
     "unknown_target": {
       "message": "Unknown target: {target}"

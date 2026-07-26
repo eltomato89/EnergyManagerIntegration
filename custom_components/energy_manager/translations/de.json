@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "description": "Woraus soll der Überschuss berechnet werden?",
+        "description": "Grundlage der Überschussberechnung.",
         "data": {
           "meter_mode": "Zählerquelle"
         }
@@ -15,13 +15,13 @@
       },
       "grid": {
         "title": "Netzsensor",
-        "description": "Ein bidirektionaler Sensor: positiv beim Bezug, negativ beim Einspeisen.",
+        "description": "Ein bidirektionaler Sensor: positiv bei Bezug, negativ bei Einspeisung.",
         "data": {
           "grid_entity": "Netzsensor",
           "invert_grid": "Vorzeichen umkehren"
         },
         "data_description": {
-          "invert_grid": "Aktivieren, wenn der Sensor beim Einspeisen positiv wird."
+          "invert_grid": "Erforderlich, wenn der Sensor bei Einspeisung positive Werte liefert."
         }
       },
       "split": {
@@ -33,12 +33,12 @@
           "consumption_includes_battery": "Verbrauch enthält Batterieladung"
         },
         "data_description": {
-          "consumption_includes_battery": "Aktivieren, wenn der Verbrauchssensor die Batterieladung mitzählt."
+          "consumption_includes_battery": "Erforderlich, wenn der Verbrauchssensor die Batterieladung mitzählt."
         }
       },
       "battery": {
         "title": "Hausbatterie",
-        "description": "Freiwillig — ohne Batterie einfach leer lassen und bestätigen.",
+        "description": "Optional. Ohne Hausbatterie die Felder leer lassen und bestätigen.",
         "data": {
           "battery_soc_entity": "Ladestand",
           "battery_power_entity": "Batterieleistung",
@@ -52,8 +52,8 @@
         "data_description": {
           "battery_power_entity": "Ein bidirektionaler Sensor: positiv beim Laden, negativ beim Entladen.",
           "battery_charge_entity": "Alternative zum bidirektionalen Sensor: zwei stets positive Sensoren.",
-          "battery_mode": "Ladeleistung zählt immer als verfügbar. Die Frage ist, ob eine Entladung den Überschuss verringern soll.",
-          "battery_min_soc": "Darunter hat das Laden Vorrang, es wird kein Überschuss mehr ausgewiesen.",
+          "battery_mode": "Ladeleistung gilt stets als verfügbar. Diese Einstellung bestimmt, ob eine Entladung den Überschuss verringert.",
+          "battery_min_soc": "Unterhalb dieses Ladestands hat das Laden Vorrang; es wird kein Überschuss ausgewiesen.",
           "battery_reserve_w": "Leistung, die immer der Batterie vorbehalten bleibt."
         }
       }
@@ -72,8 +72,8 @@
           "settle_time": "Beruhigungszeit"
         },
         "data_description": {
-          "smoothing_window": "Glättet den Überschuss, damit Wolken keine Schaltflut auslösen. 0 schaltet die Glättung ab.",
-          "settle_time": "So lange nach einer Schaltung wird derselbe Verbraucher nicht erneut angefasst; für diese Zeit rechnet die Automatik die geschaltete Last selbst heraus. Mindestens so lang wählen, wie der Leistungssensor braucht, um den neuen Wert zu zeigen — bei trägen Steckdosen können das mehrere Minuten sein."
+          "smoothing_window": "Glättet den Überschuss und verhindert, dass wechselnde Bewölkung häufige Schaltvorgänge auslöst. 0 deaktiviert die Glättung.",
+          "settle_time": "In dieser Zeit nach einer Schaltung wird derselbe Verbraucher nicht erneut geschaltet; die Automatik rechnet die geschaltete Last währenddessen selbst heraus. Der Wert sollte mindestens so groß sein wie die Verzögerung des Leistungssensors, die bei trägen Zwischensteckern mehrere Minuten betragen kann."
         }
       }
     }
@@ -99,15 +99,15 @@
             "turn_on_delay": "Einschaltverzögerung",
             "turn_off_delay": "Ausschaltverzögerung",
             "min_runtime": "Mindestlaufzeit",
-            "min_off_time": "Mindest-Aus-Zeit"
+            "min_off_time": "Mindestpause"
           },
           "data_description": {
             "power_entity": "Aktuelle Leistungsaufnahme. Ohne ihn wird mit der Nennleistung gerechnet.",
-            "min_power": "Ab so viel Überschuss lohnt sich das Einschalten. Ohne Angabe gilt die Nennleistung.",
+            "min_power": "Ab diesem Überschuss wird eingeschaltet. Ohne Angabe gilt die Nennleistung.",
             "max_power": "Maximale Leistungsaufnahme.",
             "hysteresis": "Totband gegen Pendeln um den Nullpunkt.",
-            "turn_on_delay": "Der Überschuss muss so lange ununterbrochen reichen, bevor eingeschaltet wird. Entprellt kurze Sonnenlücken.",
-            "turn_off_delay": "Das Defizit muss so lange anhalten, bevor ausgeschaltet wird. Überbrückt vorbeiziehende Wolken.",
+            "turn_on_delay": "Der Überschuss muss so lange ununterbrochen ausreichen, bevor eingeschaltet wird. Überbrückt kurze Einbrüche der Erzeugung.",
+            "turn_off_delay": "Das Defizit muss so lange anhalten, bevor ausgeschaltet wird. Überbrückt kurzzeitige Einbrüche.",
             "min_runtime": "So lange bleibt das Gerät nach dem Einschalten mindestens an.",
             "min_off_time": "So lange bleibt das Gerät nach dem Ausschalten mindestens aus. Schützt Kompressoren vor zu frühem Wiederanlauf."
           }
@@ -124,7 +124,7 @@
             "turn_on_delay": "Einschaltverzögerung",
             "turn_off_delay": "Ausschaltverzögerung",
             "min_runtime": "Mindestlaufzeit",
-            "min_off_time": "Mindest-Aus-Zeit"
+            "min_off_time": "Mindestpause"
           }
         }
       },
@@ -132,7 +132,7 @@
         "reconfigure_successful": "Der Verbraucher wurde geändert."
       },
       "error": {
-        "switch_in_use": "Dieses Gerät wird schon von einem anderen Verbraucher geschaltet. Zwei Einträge für dasselbe Gerät verplant die Automatik doppelt. Prüfe die Entität — ihre ID muss nicht zum Anzeigenamen passen."
+        "switch_in_use": "Dieses Gerät wird bereits von einem anderen Verbraucher geschaltet. Zwei Einträge für dasselbe Gerät führen dazu, dass die Automatik es doppelt verplant. Die Entitäts-ID muss nicht mit dem Anzeigenamen übereinstimmen; bitte prüfen."
       }
     }
   },
@@ -147,16 +147,16 @@
       "status": {
         "name": "Status",
         "state": {
-          "starting": "startet",
-          "running": "aktiv",
-          "paused": "pausiert",
+          "starting": "Initialisierung",
+          "running": "Aktiv",
+          "paused": "Pausiert",
           "sensor_error": "Sensorfehler",
-          "on_ok": "läuft, gedeckt",
-          "on_deficit": "läuft, Netzbezug",
-          "off_ready": "bereit",
-          "off_close": "fast ausreichend",
-          "off_insufficient": "reicht nicht",
-          "unavailable": "nicht verfügbar"
+          "on_ok": "In Betrieb, gedeckt",
+          "on_deficit": "In Betrieb, Netzbezug",
+          "off_ready": "Einschaltbereit",
+          "off_close": "Überschuss knapp",
+          "off_insufficient": "Überschuss unzureichend",
+          "unavailable": "Nicht verfügbar"
         }
       },
       "locked_until": {
@@ -194,35 +194,35 @@
   "services": {
     "force_on": {
       "name": "Zwangsfreigabe",
-      "description": "Schaltet einen Verbraucher sofort ein und hält ihn für die angegebene Dauer an — unabhängig vom Überschuss. Wirkt auch bei ausgeschaltetem Hauptschalter, denn es ist eine Bedienung, keine Automatikentscheidung.",
+      "description": "Schaltet einen Verbraucher unabhängig vom Überschuss ein und hält ihn für die angegebene Dauer in Betrieb. Wirkt auch bei ausgeschaltetem Hauptschalter, da es sich um eine Bedienung und nicht um eine Entscheidung der Automatik handelt.",
       "fields": {
         "device_id": {
           "name": "Verbraucher",
-          "description": "Das Gerät des Verbrauchers. Eine Entität desselben Geräts geht ebenso."
+          "description": "Das Gerät des Verbrauchers. Eine Entität desselben Geräts ist ebenfalls zulässig."
         },
         "duration": {
           "name": "Dauer",
-          "description": "Wie lange die Automatik das Gerät nicht wieder abschaltet."
+          "description": "So lange schaltet die Automatik das Gerät nicht wieder aus."
         }
       }
     },
     "clear_force": {
       "name": "Zwangsfreigabe beenden",
-      "description": "Hebt eine laufende Zwangsfreigabe vorzeitig auf. Ausgeschaltet wird dabei nichts — ab jetzt entscheidet wieder der Überschuss.",
+      "description": "Beendet eine laufende Zwangsfreigabe vorzeitig. Es wird nichts ausgeschaltet; ab diesem Zeitpunkt entscheidet wieder der Überschuss.",
       "fields": {
         "device_id": {
           "name": "Verbraucher",
-          "description": "Das Gerät des Verbrauchers. Eine Entität desselben Geräts geht ebenso."
+          "description": "Das Gerät des Verbrauchers. Eine Entität desselben Geräts ist ebenfalls zulässig."
         }
       }
     },
     "pause": {
       "name": "Automatik pausieren",
-      "description": "Hält die Automatik an. Ohne Angabe einer Dauer bleibt sie aus, bis sie von Hand fortgesetzt wird.",
+      "description": "Hält die Automatik an. Ohne Angabe einer Dauer bleibt sie deaktiviert, bis sie manuell fortgesetzt wird.",
       "fields": {
         "duration": {
           "name": "Dauer",
-          "description": "Nach dieser Zeit läuft die Automatik von selbst wieder an. Leer lassen für unbefristet."
+          "description": "Nach dieser Zeit wird die Automatik selbsttätig fortgesetzt. Ohne Angabe bleibt die Pause unbefristet."
         }
       }
     },

@@ -2,6 +2,23 @@
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.3.2] — 2026-07-26
+
+### Geändert
+
+- **Alle Nutzertexte auf ein sachliches Register gebracht.** Die Ampelzustände lasen sich wie eine
+  Notenbeurteilung („reicht nicht", „fast ausreichend"); sie benennen nun den Zustand und den
+  Begriff, um den es geht — „Überschuss unzureichend", „Überschuss knapp", „Einschaltbereit",
+  „In Betrieb, gedeckt". Identisch zur [Karte](https://github.com/eltomato89/EnergyManagerCard),
+  sonst zeigte die Kartenzeile etwas anderes als der Sensor, aus dem sie stammt.
+
+- Ebenso überarbeitet: die Anrede-Imperative in den Beschreibungen, „Mindest-Aus-Zeit" zu
+  „Mindestpause", und Formulierungen wie „einfach leer lassen" oder „damit Wolken keine Schaltflut
+  auslösen".
+
+- Vier Prüfungen halten das Register künftig fest, darunter die Deckungsgleichheit beider Sprachen:
+  ein Text, der nur in einer existiert, erschien bisher als roher Schlüssel.
+
 ## [0.3.1] — 2026-07-26
 
 ### Behoben
