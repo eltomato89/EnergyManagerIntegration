@@ -52,7 +52,7 @@ Fehlschaltung auffiele:
 | --- | --- |
 | **Höchstens eine Schaltung je Durchlauf** | Drei Geräte gleichzeitig zuschalten hieße, dreimal mit demselben Budget zu rechnen |
 | **Antizipation** | Zwischen dem Zuschalten und dem Zeitpunkt, an dem der Zähler es zeigt, vergehen Sekunden. In dieser Lücke würde derselbe Überschuss ein zweites Mal vergeben |
-| **Beruhigungsfenster** (Standard 60 s) | Nach einer Schaltung bleibt dieses Gerät unangetastet, egal was der Überschuss macht |
+| **Beruhigungsfenster** (Standard 60 s) | Nach einer Schaltung bleibt dieses Gerät unangetastet, egal was der Überschuss macht. **Mindestens so lang wählen, wie der Leistungssensor braucht** — träge Steckdosen melden erst nach Minuten |
 | **Glättung** (Standard 60 s) | Eine vorbeiziehende Wolke ist kein Grund abzuschalten. Solange das Mittelungsfenster erst halb gefüllt ist, wird gar nicht geschaltet |
 | **Nichts beim Start** | Während HA hochfährt melden nicht alle Entitäten einen Zustand — die Anlage sähe aus wie nach einem Totalausfall |
 | **Nichts bei unbrauchbarem Sensor** | Ein kWh-Zähler oder ein ausgefallener Sensor ist ein Konfigurationsfehler, kein Überschuss von 0 W |

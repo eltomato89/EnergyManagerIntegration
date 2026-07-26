@@ -73,7 +73,7 @@
         },
         "data_description": {
           "smoothing_window": "Smooths the surplus so passing clouds do not cause switching storms. 0 disables smoothing.",
-          "settle_time": "After a switch, the same load is left alone for this long. Prevents the automation from reacting to the effect of its own action."
+          "settle_time": "For this long the same load is left alone after switching, and the automation deducts the switched power itself. Choose at least as long as the power sensor needs to report the new value — with sluggish plugs that can be several minutes."
         }
       }
     }

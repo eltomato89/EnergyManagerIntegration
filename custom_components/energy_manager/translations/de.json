@@ -73,7 +73,7 @@
         },
         "data_description": {
           "smoothing_window": "Glättet den Überschuss, damit Wolken keine Schaltflut auslösen. 0 schaltet die Glättung ab.",
-          "settle_time": "So lange nach einer Schaltung wird derselbe Verbraucher nicht erneut angefasst. Verhindert, dass die Automatik auf die Wirkung ihrer eigenen Schaltung reagiert."
+          "settle_time": "So lange nach einer Schaltung wird derselbe Verbraucher nicht erneut angefasst; für diese Zeit rechnet die Automatik die geschaltete Last selbst heraus. Mindestens so lang wählen, wie der Leistungssensor braucht, um den neuen Wert zu zeigen — bei trägen Steckdosen können das mehrere Minuten sein."
         }
       }
     }
