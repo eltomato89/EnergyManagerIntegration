@@ -2,7 +2,6 @@
   "config": {
     "step": {
       "user": {
-        "title": "Energy Manager",
         "description": "Where should the surplus be calculated from?",
         "data": {
           "meter_mode": "Meter source"

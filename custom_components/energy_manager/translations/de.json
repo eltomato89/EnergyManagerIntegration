@@ -2,7 +2,6 @@
   "config": {
     "step": {
       "user": {
-        "title": "Energy Manager",
         "description": "Woraus soll der Überschuss berechnet werden?",
         "data": {
           "meter_mode": "Zählerquelle"

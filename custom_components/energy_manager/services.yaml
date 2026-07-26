@@ -1,8 +1,12 @@
+# Die Ziel-Filter schränken auf Verbrauchergeräte ein: `model` ist der einzige
+# Schlüssel, der Hub und Verbraucher unterscheidet. Wird trotzdem etwas anderes
+# übergeben, weist der Dienst es zur Laufzeit mit einer Meldung ab, statt still
+# nichts zu tun.
 force_on:
   target:
     device:
       integration: energy_manager
-      entry_type: service
+      model: Verbraucher
   fields:
     duration:
       required: true
@@ -15,7 +19,7 @@ clear_force:
   target:
     device:
       integration: energy_manager
-      entry_type: service
+      model: Verbraucher
 
 pause:
   fields:
