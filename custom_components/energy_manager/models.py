@@ -260,6 +260,18 @@ class ConsumerView:
     locked_until: float | None = None
     lock_kind: str | None = None
 
+    displaceable: tuple[str, ...] = ()
+    """Laufende Verbraucher niedrigerer Priorität, die für diesen weichen könnten.
+
+    Leer, solange das nicht nötig oder nicht möglich ist. Gefüllt nur, wenn ihre
+    zusammen freiwerdende Leistung tatsächlich reicht — sonst würde man
+    abschalten und trotzdem nichts gewinnen.
+
+    Ohne diesen Weg bliebe die Priorität eine bloße Reihenfolge beim Zuschalten:
+    Zwei kleine Verbraucher könnten einen großen mit höherem Rang dauerhaft
+    aussperren, egal wie weit der Überschuss steigt.
+    """
+
 
 @dataclass(slots=True)
 class ManagerState:

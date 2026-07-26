@@ -60,6 +60,28 @@ Fehlschaltung auffiele:
 Dazu kommen je Verbraucher die vier Zeitfelder (`turn_on_delay`, `turn_off_delay`, `min_runtime`,
 `min_off_time`) und der eigene Automatik-Schalter.
 
+## Was die Priorität bedeutet
+
+Sie entscheidet zweierlei:
+
+1. **Wer zuerst bedient wird**, wenn Überschuss frei wird.
+2. **Wer wem weichen muss**, wenn er sonst gar nicht zum Zug käme.
+
+Der zweite Punkt ist der wichtigere. Ein Beispiel: 800 W Überschuss, drei Verbraucher mit 1000 W,
+500 W und 200 W Bedarf in dieser Rangfolge. Für den ersten reicht es nicht, also gehen der zweite
+und der dritte an. Steigt der Überschuss auf 1100 W, sind trotzdem nur 400 W frei — der wichtigste
+Verbraucher käme **nie** dran, obwohl die Anlage längst genug liefert.
+
+Deshalb gilt: Reicht *verfügbarer Überschuss + Last der laufenden, niedriger priorisierten
+Verbraucher* für einen wichtigeren, weichen diese. Es weichen so wenige wie möglich, die
+unwichtigsten zuerst, und nur wenn es am Ende auch reicht — sonst hätte man abgeschaltet und
+nichts gewonnen.
+
+**Nicht verdrängt wird**, wer eine Mindestlaufzeit abarbeitet (ein angefangener Waschgang wird
+nicht abgebrochen), wer nicht an der Automatik teilnimmt, wer unter Zwangsfreigabe läuft oder wer
+gerade erst geschaltet wurde. Das Attribut `displaces` am Status-Sensor zeigt, wie viele für einen
+Verbraucher weichen würden.
+
 ## Warum passiert gerade nichts?
 
 Die häufigste Frage — und ohne Antwort ist eine ausbleibende Schaltung nicht von einem Fehler zu

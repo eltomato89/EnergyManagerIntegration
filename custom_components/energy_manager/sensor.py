@@ -203,6 +203,10 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
             # Ohne diese Angabe ist "die Automatik tut nichts" nicht von einem
             # Fehler zu unterscheiden — die häufigste Rückfrage überhaupt.
             "blocked_by": self._blocked_by(),
+            # Wie viele laufende Verbraucher für diesen weichen würden. Erklärt
+            # den sonst überraschenden Fall, dass ein Gerät angeht, obwohl der
+            # Überschuss allein nicht reicht.
+            "displaces": len(view.displaceable),
         }
 
     def _blocked_by(self) -> str | None:

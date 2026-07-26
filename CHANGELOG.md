@@ -2,6 +2,33 @@
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.2.0] — 2026-07-26
+
+### Neu — ändert das Schaltverhalten
+
+- **Priorität setzt sich jetzt wirklich durch.** Bisher bedeutete sie nur „wer wird zuerst
+  bedient, wenn Überschuss frei wird". Zwei kleine Verbraucher konnten damit einen großen mit
+  höherem Rang **dauerhaft aussperren**: Bei 800 W Überschuss gehen ein 500-W- und ein
+  200-W-Gerät an; steigt der Überschuss auf 1100 W, sind trotzdem nur 400 W frei — für den
+  1000-W-Verbraucher an Position 1 reicht das nie.
+
+  Reicht nun *verfügbarer Überschuss + Last der laufenden, niedriger priorisierten Verbraucher*
+  für einen wichtigeren, weichen diese. Es weichen so wenige wie möglich, die unwichtigsten
+  zuerst, und nur wenn es am Ende auch reicht.
+
+  **Nicht verdrängt wird**, wer eine Mindestlaufzeit abarbeitet, nicht an der Automatik teilnimmt,
+  unter Zwangsfreigabe läuft oder gerade erst geschaltet wurde. Abschalten und Einschalten
+  geschehen im selben Durchlauf — sonst könnte dazwischen ein Dritter den frei gewordenen
+  Überschuss belegen.
+
+- Der Status-Sensor jedes Verbrauchers hat ein Attribut `displaces`: wie viele für ihn weichen
+  würden. Es erklärt den sonst überraschenden Fall, dass ein Gerät angeht, obwohl der Überschuss
+  allein nicht reicht.
+
+- Der Hilfetext zur **Beruhigungszeit** sagt jetzt, wonach sie sich richtet: nach der Trägheit des
+  Leistungssensors. Ist der Sensor langsamer als das Fenster, sieht die Automatik danach wieder
+  den vollen Überschuss, obwohl die Last längst läuft.
+
 ## [0.1.0] — 2026-07-26
 
 Erste Fassung. Die Integration rechnet, entscheidet und schaltet.

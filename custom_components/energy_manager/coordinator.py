@@ -361,44 +361,60 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         return self._window.coverage(now) >= MIN_COVERAGE
 
     async def _execute(self, action: Decision, views: list[ConsumerView], now: float) -> None:
-        """Führt genau eine Schaltung aus und merkt sie sich."""
-        view = next(
-            (v for v in views if v.config.subentry_id == action.subentry_id),
-            None,
-        )
+        """Führt eine Entscheidung aus und merkt sie sich.
+
+        Eine Verdrängung umfasst mehrere Schaltvorgänge, ist aber **eine**
+        Handlung: Erst weichen die niedriger priorisierten, dann kommt der
+        wichtigere. Auf mehrere Durchläufe verteilt könnte dazwischen ein
+        Dritter den frei gewordenen Überschuss belegen — dann wären die einen
+        aus und der andere trotzdem nicht an.
+        """
+        by_id = {v.config.subentry_id: v for v in views}
+        view = by_id.get(action.subentry_id)
         if view is None:
             return
 
-        runtime = self.runtime_for(action.subentry_id)
-        settle = self._settle_time()
+        for subentry_id in action.displaces:
+            opfer = by_id.get(subentry_id)
+            if opfer is None:
+                continue
+            _LOGGER.info(
+                "%s weicht für %s (%.0f W werden frei)",
+                opfer.config.name,
+                view.config.name,
+                opfer.power_w or opfer.required_w,
+            )
+            await self._switch(opfer, turn_on=False, now=now)
+
+        _LOGGER.info(
+            "%s wird %s (%s, %.0f W)",
+            view.config.name,
+            "eingeschaltet" if action.turn_on else "ausgeschaltet",
+            action.reason,
+            view.required_w,
+        )
+        await self._switch(view, turn_on=action.turn_on, now=now)
+
+    async def _switch(self, view: ConsumerView, *, turn_on: bool, now: float) -> None:
+        """Schaltet einen Verbraucher und schreibt seinen Laufzeitzustand fort."""
+        runtime = self.runtime_for(view.config.subentry_id)
 
         # Erst merken, dann schalten. Andersherum könnte das Zustandsereignis
         # der eigenen Schaltung eine zweite Auswertung anstoßen, bevor das
         # Beruhigungsfenster steht.
         runtime.last_switch_ts = now
-        runtime.last_switch_to = action.turn_on
-        runtime.settle_until = now + settle
+        runtime.last_switch_to = turn_on
+        runtime.settle_until = now + self._settle_time()
         # Beim Einschalten fehlt die neue Last im Messwert, beim Ausschalten
         # ist die alte noch enthalten — deshalb das umgekehrte Vorzeichen.
-        runtime.anticipated_w = (
-            view.required_w if action.turn_on else -(view.power_w or view.required_w)
-        )
+        runtime.anticipated_w = view.required_w if turn_on else -(view.power_w or view.required_w)
         runtime.on_condition_since = None
         runtime.off_condition_since = None
         self.schedule_save()
 
-        _LOGGER.info(
-            "%s wird %s (%s, %.0f W, Beruhigung %.0f s)",
-            view.config.name,
-            "eingeschaltet" if action.turn_on else "ausgeschaltet",
-            action.reason,
-            view.required_w,
-            settle,
-        )
-
         await self.hass.services.async_call(
             HA_DOMAIN,
-            SERVICE_TURN_ON if action.turn_on else SERVICE_TURN_OFF,
+            SERVICE_TURN_ON if turn_on else SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: view.config.switch_entity},
             blocking=True,
         )

@@ -171,7 +171,80 @@ def build_views(
             )
         )
 
+    assign_displaceable(views, coordinator, now)
     return views
+
+
+def displaced_power(view: ConsumerView) -> float:
+    """Wie viel Leistung frei wird, wenn dieser Verbraucher weicht.
+
+    Der gemessene Wert, nicht der geschätzte Bedarf: Was tatsächlich fließt,
+    ist auch das, was zurückkommt. Ohne Leistungssensor bleibt nur die
+    Schätzung.
+    """
+    if view.power_w is not None and view.power_w > 0:
+        return view.power_w
+    return view.required_w
+
+
+def may_be_displaced(view: ConsumerView, runtime: ConsumerRuntime, now: float) -> bool:
+    """Darf dieser laufende Verbraucher für einen wichtigeren weichen?
+
+    Die Ausnahmen sind dieselben, die auch sonst vor einer Schaltung schützen —
+    eine Verdrängung ist kein Freibrief, die Mindestlaufzeit zu übergehen.
+    """
+    if not view.is_on or not view.available:
+        return False
+    if not view.managed:
+        return False
+    if is_forced(runtime, now):
+        return False
+    if runtime.settle_until is not None and now < runtime.settle_until:
+        return False
+    # Mindestlaufzeit: ein angefangener Waschgang wird nicht abgebrochen.
+    return not (view.locked_until is not None and now < view.locked_until)
+
+
+def assign_displaceable(
+    views: list[ConsumerView],
+    coordinator: EnergyManagerCoordinator,
+    now: float,
+) -> None:
+    """Bestimmt je Verbraucher, wer für ihn weichen müsste.
+
+    Nur für ausgeschaltete, die es aus eigener Kraft nicht schaffen. Gesammelt
+    wird von der niedrigsten Priorität aufwärts und nur so viel wie nötig — wer
+    am wenigsten wichtig ist, weicht zuerst, und niemand wird ohne Not
+    abgeschaltet.
+    """
+    for index, view in enumerate(views):
+        if view.is_on or not view.available or not view.managed:
+            continue
+        if view.status is DeviceStatus.OFF_READY:
+            continue  # Braucht niemanden zu verdrängen.
+        if view.headroom_w is None:
+            continue
+
+        fehlend = view.required_w - view.headroom_w
+        if fehlend <= 0:
+            continue
+
+        opfer: list[str] = []
+        gewinn = 0.0
+        # Von hinten: die unwichtigsten zuerst.
+        for kandidat in reversed(views[index + 1 :]):
+            runtime = coordinator.runtime_for(kandidat.config.subentry_id)
+            if not may_be_displaced(kandidat, runtime, now):
+                continue
+            opfer.append(kandidat.config.subentry_id)
+            gewinn += displaced_power(kandidat)
+            if gewinn >= fehlend:
+                break
+
+        # Nur übernehmen, wenn es am Ende auch reicht. Sonst hätte man
+        # abgeschaltet und trotzdem nichts gewonnen.
+        if gewinn >= fehlend:
+            view.displaceable = tuple(opfer)
 
 
 # --- Schaltentscheidung -----------------------------------------------------
@@ -203,6 +276,15 @@ class Decision:
     turn_on: bool
     reason: str
 
+    displaces: tuple[str, ...] = ()
+    """Verbraucher, die dafür weichen müssen.
+
+    Zusammen mit dem Einschalten **eine** Handlung: Erst abschalten, dann
+    einschalten, im selben Durchlauf. Verteilt auf mehrere Durchläufe könnte
+    dazwischen ein anderer den frei gewordenen Überschuss belegen — dann wären
+    die einen aus und der andere trotzdem nicht an.
+    """
+
 
 @dataclass(frozen=True, slots=True)
 class Evaluation:
@@ -227,8 +309,12 @@ def update_conditions(
     ist, beginnt die Zeit von vorn. Nur so bedeutet "ununterbrochen" auch
     ununterbrochen — ein Zähler, der bei jeder Lücke stehen bliebe, würde die
     Verzögerung nach ein paar Wolken wirkungslos machen.
+
+    "Einschaltbereit" heißt dabei auch: bereit, sobald niedriger priorisierte
+    Verbraucher weichen. Ohne das liefe der Zähler für einen Verdränger nie an,
+    und seine Einschaltverzögerung begänne erst nach dem Abschalten der anderen.
     """
-    wants_on = not view.is_on and view.status is DeviceStatus.OFF_READY
+    wants_on = not view.is_on and (view.status is DeviceStatus.OFF_READY or bool(view.displaceable))
     wants_off = view.is_on and view.status is DeviceStatus.ON_DEFICIT
 
     if wants_on:
@@ -290,6 +376,17 @@ def decide_for(
         # Sperre aus der letzten Ausschaltung.
         if view.locked_until is not None and now < view.locked_until:
             return None, Blocker.MIN_OFF_TIME
+
+        if view.displaceable:
+            return (
+                Decision(
+                    consumer.subentry_id,
+                    True,
+                    "displaces_lower_priority",
+                    displaces=view.displaceable,
+                ),
+                None,
+            )
         return Decision(consumer.subentry_id, True, "surplus_sufficient"), None
 
     # Ausschalten: Das Defizit muss lange genug angehalten haben.
