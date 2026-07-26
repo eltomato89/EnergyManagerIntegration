@@ -2,6 +2,24 @@
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.3.0] — 2026-07-26
+
+### Neu — ändert das Schaltverhalten
+
+- **Fehlt die Nennleistung, wird sie aus der Statistik geschätzt.** Bisher rechnete die Automatik
+  dann mit einem festen Vorgabewert von 500 W — bei einer Wärmepumpe ein Bruchteil, bei einer
+  Umwälzpumpe ein Vielfaches. Herangezogen wird das Maximum der letzten sieben Tage, einmal
+  täglich neu; der Mittelwert taugt nicht, weil in ihn alle Stunden eingehen, in denen das Gerät
+  aus war. Eingetragene Werte werden nie überstimmt.
+
+  Das Attribut `required_source` am Status-Sensor zeigt die Herkunft: `min_power`, `max_power`,
+  `measured`, `estimated` oder `default`. Ohne diese Angabe ist ein geratener Wert nicht von einem
+  eingetragenen zu unterscheiden.
+
+- Der Hilfetext zur **Beruhigungszeit** sagt jetzt, wonach sie sich richtet: nach der Trägheit des
+  Leistungssensors. Ist der Sensor langsamer als das Fenster, sieht die Automatik danach wieder
+  den vollen Überschuss, obwohl die Last längst läuft.
+
 ## [0.2.0] — 2026-07-26
 
 ### Neu — ändert das Schaltverhalten
@@ -24,20 +42,6 @@ Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Der Status-Sensor jedes Verbrauchers hat ein Attribut `displaces`: wie viele für ihn weichen
   würden. Es erklärt den sonst überraschenden Fall, dass ein Gerät angeht, obwohl der Überschuss
   allein nicht reicht.
-
-- **Fehlt die Nennleistung, wird sie aus der Statistik geschätzt.** Bisher rechnete die Automatik
-  dann mit einem festen Vorgabewert von 500 W — bei einer Wärmepumpe ein Bruchteil, bei einer
-  Umwälzpumpe ein Vielfaches. Herangezogen wird das Maximum der letzten sieben Tage, einmal
-  täglich neu; der Mittelwert taugt nicht, weil in ihn alle Stunden eingehen, in denen das Gerät
-  aus war. Eingetragene Werte werden nie überstimmt.
-
-  Das Attribut `required_source` am Status-Sensor zeigt die Herkunft: `min_power`, `max_power`,
-  `measured`, `estimated` oder `default`. Ohne diese Angabe ist ein geratener Wert nicht von einem
-  eingetragenen zu unterscheiden.
-
-- Der Hilfetext zur **Beruhigungszeit** sagt jetzt, wonach sie sich richtet: nach der Trägheit des
-  Leistungssensors. Ist der Sensor langsamer als das Fenster, sieht die Automatik danach wieder
-  den vollen Überschuss, obwohl die Last längst läuft.
 
 ## [0.1.0] — 2026-07-26
 
