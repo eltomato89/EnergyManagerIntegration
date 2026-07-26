@@ -79,3 +79,27 @@ def test_kein_gedankenstrich_als_satzersatz(sprache: str) -> None:
 def test_beide_sprachen_deckungsgleich() -> None:
     """Ein Text, der nur in einer Sprache existiert, erscheint sonst als Schlüssel."""
     assert [pfad for pfad, _ in texte("de")] == [pfad for pfad, _ in texte("en")]
+
+
+# Texte, die in beiden Sprachen gleich lauten dürfen: Wörter, die im Englischen
+# identisch sind, und Symbole mit Platzhaltern.
+GLEICH_ERLAUBT = {
+    "config_subentries.consumer.step.user.data.name",
+    "config_subentries.consumer.step.reconfigure.data.name",
+    "entity.sensor.status.name",
+}
+
+
+def test_englisch_ist_uebersetzt() -> None:
+    """Der häufigste Fehler ist ein kopierter, nicht übersetzter Text.
+
+    Wortlisten fangen den nicht: „Einschaltbereit" enthält weder Umlaut noch
+    deutsches Funktionswort. Ein Vergleich der beiden Fassungen schon.
+    """
+    deutsch = dict(texte("de"))
+    treffer = [
+        (pfad, text)
+        for pfad, text in texte("en")
+        if pfad not in GLEICH_ERLAUBT and deutsch.get(pfad) == text
+    ]
+    assert treffer == []
