@@ -193,6 +193,10 @@
       "name": "Zwangsfreigabe",
       "description": "Schaltet einen Verbraucher sofort ein und hält ihn für die angegebene Dauer an — unabhängig vom Überschuss. Wirkt auch bei ausgeschaltetem Hauptschalter, denn es ist eine Bedienung, keine Automatikentscheidung.",
       "fields": {
+        "device_id": {
+          "name": "Verbraucher",
+          "description": "Das Gerät des Verbrauchers. Eine Entität desselben Geräts geht ebenso."
+        },
         "duration": {
           "name": "Dauer",
           "description": "Wie lange die Automatik das Gerät nicht wieder abschaltet."
@@ -201,7 +205,13 @@
     },
     "clear_force": {
       "name": "Zwangsfreigabe beenden",
-      "description": "Hebt eine laufende Zwangsfreigabe vorzeitig auf. Ausgeschaltet wird dabei nichts — ab jetzt entscheidet wieder der Überschuss."
+      "description": "Hebt eine laufende Zwangsfreigabe vorzeitig auf. Ausgeschaltet wird dabei nichts — ab jetzt entscheidet wieder der Überschuss.",
+      "fields": {
+        "device_id": {
+          "name": "Verbraucher",
+          "description": "Das Gerät des Verbrauchers. Eine Entität desselben Geräts geht ebenso."
+        }
+      }
     },
     "pause": {
       "name": "Automatik pausieren",

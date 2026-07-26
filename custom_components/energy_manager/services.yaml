@@ -1,13 +1,19 @@
-# Die Ziel-Filter schränken auf Verbrauchergeräte ein: `model` ist der einzige
-# Schlüssel, der Hub und Verbraucher unterscheidet. Wird trotzdem etwas anderes
-# übergeben, weist der Dienst es zur Laufzeit mit einer Meldung ab, statt still
-# nichts zu tun.
+# Das Gerät ist ein Feld, kein `target`: Home Assistant erlaubt in `target`
+# keine Gerätefilter mehr (hassfest, "use a device selector instead"). Ohne den
+# Filter auf `model` stünden hier auch der Hub und fremde Geräte zur Auswahl.
+#
+# Alternativ nimmt jeder Dienst eine `entity_id` desselben Geräts — eine
+# Automatisierung hat die meist zur Hand. Mindestens eines von beiden muss
+# angegeben sein; der Dienst meldet sonst einen Fehler, statt still nichts zu
+# tun.
 force_on:
-  target:
-    device:
-      integration: energy_manager
-      model: Verbraucher
   fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: energy_manager
+          model: Verbraucher
     duration:
       required: true
       example: "01:00:00"
@@ -16,10 +22,13 @@ force_on:
         duration:
 
 clear_force:
-  target:
-    device:
-      integration: energy_manager
-      model: Verbraucher
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: energy_manager
+          model: Verbraucher
 
 pause:
   fields:

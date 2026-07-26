@@ -193,6 +193,10 @@
       "name": "Force on",
       "description": "Turns a load on immediately and keeps it on for the given duration, regardless of surplus. Works even with the main switch off — this is an operation, not an automation decision.",
       "fields": {
+        "device_id": {
+          "name": "Load",
+          "description": "The load's device. An entity of the same device works as well."
+        },
         "duration": {
           "name": "Duration",
           "description": "How long the automation will not turn the device back off."
@@ -201,7 +205,13 @@
     },
     "clear_force": {
       "name": "End forced run",
-      "description": "Cancels a running forced run early. Nothing is turned off — from now on the surplus decides again."
+      "description": "Cancels a running forced run early. Nothing is turned off — from now on the surplus decides again.",
+      "fields": {
+        "device_id": {
+          "name": "Load",
+          "description": "The load's device. An entity of the same device works as well."
+        }
+      }
     },
     "pause": {
       "name": "Pause automation",
