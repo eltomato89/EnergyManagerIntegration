@@ -12,6 +12,36 @@ passiert.
 > einer realen Anlage erprobt. Der Hauptschalter steht nach dem Einrichten bewusst auf **aus** —
 > erst beobachten, dann scharfschalten.
 
+## Installation
+
+Braucht Home Assistant **2025.2** oder neuer (Config Subentries).
+
+### HACS
+
+1. HACS → Menü ⋮ → **Benutzerdefinierte Repositories**
+2. `https://github.com/eltomato89/EnergyManagerIntegration` eintragen, Kategorie **Integration**
+3. „Energy Manager" installieren, Home Assistant neu starten
+4. Einstellungen → Geräte & Dienste → **Integration hinzufügen** → „Energy Manager"
+
+### Manuell
+
+Den Ordner `custom_components/energy_manager` nach `/config/custom_components/` kopieren und
+Home Assistant neu starten.
+
+## Einrichtung
+
+1. **Zählerquelle** wählen: ein bidirektionaler Netzsensor (>0 Bezug, <0 Einspeisung) oder
+   getrennte Sensoren für Erzeugung und Hausverbrauch. Optional eine Hausbatterie.
+2. **Verbraucher hinzufügen** — je einer über „Untereintrag hinzufügen" am Integrationseintrag.
+   Pflicht ist nur die Schalt-Entität; Leistungssensor, Nennleistung und die Zeitfelder machen die
+   Entscheidung genauer.
+3. **Beobachten.** Der Überschuss-Sensor sollte mit der Anlage übereinstimmen, die Ampeln
+   plausibel sein. Weicht etwas ab, stimmt die Konfiguration nicht — nicht die Rechnung.
+4. Erst dann den **Hauptschalter** einschalten.
+
+Die [Energy Manager Card](https://github.com/eltomato89/EnergyManagerCard) ab v0.4.0 findet die
+Integration von selbst und zeigt alles an. Verbraucher werden **nur hier** gepflegt.
+
 ## Sicherheitsnetze
 
 Die Integration greift in eine reale Anlage ein. Sechs Mechanismen verhindern, dass sie das zum
@@ -30,9 +60,33 @@ Fehlschaltung auffiele:
 Dazu kommen je Verbraucher die vier Zeitfelder (`turn_on_delay`, `turn_off_delay`, `min_runtime`,
 `min_off_time`) und der eigene Automatik-Schalter.
 
-**Warum passiert gerade nichts?** Der Status-Sensor jedes Verbrauchers hat ein Attribut
-`blocked_by` mit genau dieser Antwort — ohne das ist eine ausbleibende Schaltung nicht von einem
-Fehler zu unterscheiden.
+## Warum passiert gerade nichts?
+
+Die häufigste Frage — und ohne Antwort ist eine ausbleibende Schaltung nicht von einem Fehler zu
+unterscheiden. Zwei Stellen geben sie:
+
+Der **Status-Sensor der Automatik** (`sensor.…_status`) für das Ganze:
+
+| Wert | Bedeutung |
+| --- | --- |
+| `starting` | HA fährt noch hoch, oder das Mittelungsfenster ist zu dünn besetzt |
+| `sensor_error` | Ein Zählersensor fehlt, ist ausgefallen oder misst keine Leistung |
+| `paused` | Hauptschalter aus |
+| `running` | Alles bereit |
+
+Der **Status-Sensor jedes Verbrauchers** im Attribut `blocked_by` für den Einzelfall:
+
+| Wert | Bedeutung |
+| --- | --- |
+| `not_managed` | Automatik-Schalter dieses Verbrauchers ist aus |
+| `unavailable` | Die Schalt-Entität meldet keinen Zustand |
+| `settling` | Beruhigungsfenster nach der letzten Schaltung läuft |
+| `forced` | Zwangsfreigabe läuft — die Automatik hält sich fern |
+| `turn_on_delay` / `turn_off_delay` | Die Bedingung gilt noch nicht lange genug |
+| `min_runtime` / `min_off_time` | Sperrzeit läuft, siehe „gesperrt bis" |
+
+Steht dort nichts, reicht schlicht der Überschuss nicht — das sagt dann der Ampelzustand
+(`off_close`, `off_insufficient`).
 
 ## Was die Integration bereitstellt
 
@@ -57,6 +111,29 @@ Ein Hub-Gerät und je Verbraucher ein eigenes Gerät:
 | `sensor.<name>_gesperrt_bis` | Wann die Sperre endet — exakt, nicht geschätzt |
 
 Damit braucht es **keine Helfer-Variablen**. Die Karte liest und bedient diese Entitäten direkt.
+
+## Dienste
+
+Vier Dienste für das, was sich über Entitäten allein nicht ausdrücken lässt: eine **Dauer**. Der
+Hauptschalter kennt nur an und aus.
+
+| Dienst | Wofür |
+| --- | --- |
+| `energy_manager.force_on` | Schaltet einen Verbraucher sofort ein und hält ihn für die angegebene Zeit an — unabhängig vom Überschuss. Wirkt auch bei ausgeschaltetem Hauptschalter, denn es ist eine Bedienung, keine Automatikentscheidung |
+| `energy_manager.clear_force` | Beendet eine Zwangsfreigabe vorzeitig. Schaltet nichts ab; ab dann entscheidet wieder der Überschuss |
+| `energy_manager.pause` | Hält die Automatik an, auf Wunsch befristet („zwei Stunden Ruhe", etwa während einer Wartung) |
+| `energy_manager.resume` | Schaltet sie wieder scharf |
+
+`force_on` und `clear_force` zielen auf ein **Verbrauchergerät**; eine Entität desselben Geräts
+funktioniert ebenso, weil eine Automatisierung meist eine `entity_id` zur Hand hat.
+
+```yaml
+action: energy_manager.force_on
+target:
+  device_id: <Wallbox>
+data:
+  duration: "01:30:00"
+```
 
 ## Entwicklung
 

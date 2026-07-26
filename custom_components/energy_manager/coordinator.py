@@ -31,7 +31,11 @@ from homeassistant.core import (
 )
 from homeassistant.core import DOMAIN as HA_DOMAIN
 from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
+from homeassistant.helpers.event import (
+    async_call_later,
+    async_track_state_change_event,
+    async_track_time_interval,
+)
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
@@ -126,6 +130,12 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         # der schlimmste Zeitpunkt für eine Fehlentscheidung.
         self._started = False
 
+        # Befristete Eingriffe von Hand. Beide werden beim Entladen abgeräumt —
+        # ein Timer, der auf einen entladenen Eintrag zurückgreift, wäre ein
+        # Fehler beim nächsten Auslösen.
+        self._force_timers: dict[str, CALLBACK_TYPE] = {}
+        self._pause_timer: CALLBACK_TYPE | None = None
+
     # -- Einrichtung ---------------------------------------------------------
 
     async def async_load(self) -> None:
@@ -175,6 +185,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             )
         )
         entry.async_on_unload(self._unsubscribe_states)
+        entry.async_on_unload(self._cancel_timers)
 
         if self.hass.is_running:
             self._started = True
@@ -197,6 +208,16 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         self._unsub_state = async_track_state_change_event(
             self.hass, sorted(tracked), self._handle_state_event
         )
+
+    @callback
+    def _cancel_timers(self) -> None:
+        """Bricht alle befristeten Eingriffe ab."""
+        for cancel in self._force_timers.values():
+            cancel()
+        self._force_timers.clear()
+        if self._pause_timer is not None:
+            self._pause_timer()
+            self._pause_timer = None
 
     @callback
     def _unsubscribe_states(self) -> None:
@@ -530,6 +551,88 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         self.runtime_for(subentry_id).managed = value
         self.schedule_save()
         await self.async_request_refresh_now()
+
+    async def async_force_on(self, subentry_id: str, seconds: float) -> None:
+        """Schaltet sofort ein und hält es für die Dauer an.
+
+        Das Einschalten geschieht hier und nicht über die Engine: Eine
+        Zwangsfreigabe ist eine Anweisung des Nutzers, keine
+        Automatikentscheidung. Sie wirkt deshalb auch bei ausgeschaltetem
+        Hauptschalter — der ist der Not-Aus für die *Automatik*, nicht für die
+        Bedienung.
+
+        Die Automatik hält sich in dieser Zeit fern; siehe ``is_forced``.
+        """
+        now = dt_util.utcnow().timestamp()
+        runtime = self.runtime_for(subentry_id)
+        runtime.force_until = now + seconds
+        # Verzögerungszähler zurücksetzen: Nach dem Ende der Freigabe soll die
+        # Automatik neu bewerten und nicht auf einem alten Stand aufsetzen.
+        runtime.on_condition_since = None
+        runtime.off_condition_since = None
+        self.schedule_save()
+
+        consumer = self.consumers.get(subentry_id)
+        if consumer is None:
+            return
+
+        _LOGGER.info("%s wird für %.0f s zwangsfreigegeben", consumer.name, seconds)
+        await self.hass.services.async_call(
+            HA_DOMAIN,
+            SERVICE_TURN_ON,
+            {ATTR_ENTITY_ID: consumer.switch_entity},
+            blocking=True,
+        )
+        await self.async_request_refresh_now()
+
+        # Nach Ablauf einmal auswerten, sonst bliebe das Gerät bis zum nächsten
+        # Ereignis an — der Takt käme zwar auch, aber erst nach bis zu 10 s.
+        self._schedule_force_end(subentry_id, seconds)
+
+    @callback
+    def _schedule_force_end(self, subentry_id: str, seconds: float) -> None:
+        cancel = self._force_timers.pop(subentry_id, None)
+        if cancel is not None:
+            cancel()
+
+        async def _ended(_now: Any) -> None:
+            self._force_timers.pop(subentry_id, None)
+            await self._async_evaluate()
+
+        self._force_timers[subentry_id] = async_call_later(self.hass, seconds + 1, _ended)
+
+    async def async_clear_force(self, subentry_id: str) -> None:
+        """Beendet eine Zwangsfreigabe vorzeitig.
+
+        Ausgeschaltet wird dabei nicht: Ob das Gerät weiterlaufen darf,
+        entscheidet ab jetzt wieder der Überschuss.
+        """
+        self.runtime_for(subentry_id).force_until = None
+        if (cancel := self._force_timers.pop(subentry_id, None)) is not None:
+            cancel()
+        self.schedule_save()
+        await self.async_request_refresh_now()
+
+    async def async_pause(self, seconds: float | None = None) -> None:
+        """Hält die Automatik an — auf Wunsch befristet.
+
+        Der Hauptschalter kann nur an oder aus. "Zwei Stunden Ruhe" ist der
+        häufigere Wunsch, etwa während einer Wartung.
+        """
+        await self.async_set_automation(False)
+
+        if (cancel := self._pause_timer) is not None:
+            cancel()
+            self._pause_timer = None
+        if seconds is None:
+            return
+
+        async def _ended(_now: Any) -> None:
+            self._pause_timer = None
+            await self.async_set_automation(True)
+
+        _LOGGER.info("Automatik pausiert für %.0f s", seconds)
+        self._pause_timer = async_call_later(self.hass, seconds, _ended)
 
     async def async_set_automation(self, value: bool) -> None:
         """Schaltet die Automatik insgesamt."""

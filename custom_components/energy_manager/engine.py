@@ -187,6 +187,8 @@ class Blocker(StrEnum):
     NOT_MANAGED = "not_managed"
     UNAVAILABLE = "unavailable"
     SETTLING = "settling"
+    FORCED = "forced"
+    """Zwangsfreigabe läuft — die Automatik hält sich fern."""
     MIN_RUNTIME = "min_runtime"
     MIN_OFF_TIME = "min_off_time"
     TURN_ON_DELAY = "turn_on_delay"
@@ -257,12 +259,24 @@ def check_blockers(
     return None
 
 
+def is_forced(runtime: ConsumerRuntime, now: float) -> bool:
+    """Läuft für diesen Verbraucher gerade eine Zwangsfreigabe?"""
+    return runtime.force_until is not None and now < runtime.force_until
+
+
 def decide_for(
     view: ConsumerView,
     runtime: ConsumerRuntime,
     now: float,
 ) -> tuple[Decision | None, Blocker | None]:
     """Entscheidet für einen einzelnen Verbraucher."""
+    # Zwangsfreigabe zuerst: Sie ist eine ausdrückliche Anweisung des Nutzers
+    # und hat Vorrang vor jeder Wirtschaftlichkeitsrechnung. Eingeschaltet wird
+    # dabei nicht hier — das tut der Service sofort. Die Automatik hält sich in
+    # dieser Zeit nur davon fern, es wieder abzuschalten.
+    if is_forced(runtime, now):
+        return None, Blocker.FORCED
+
     if (blocker := check_blockers(view, runtime, now)) is not None:
         return None, blocker
 

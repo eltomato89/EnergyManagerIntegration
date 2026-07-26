@@ -1,0 +1,28 @@
+force_on:
+  target:
+    device:
+      integration: energy_manager
+      entry_type: service
+  fields:
+    duration:
+      required: true
+      example: "01:00:00"
+      default: "01:00:00"
+      selector:
+        duration:
+
+clear_force:
+  target:
+    device:
+      integration: energy_manager
+      entry_type: service
+
+pause:
+  fields:
+    duration:
+      required: false
+      example: "02:00:00"
+      selector:
+        duration:
+
+resume:

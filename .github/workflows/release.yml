@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: pip install -r requirements_test.txt
+
+      # Bewusst hier und nicht nur in der CI: Die läuft auf Branches, nicht auf
+      # Tags. Ein Release, dessen Tests rot sind, soll gar nicht erst entstehen.
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Tests
+        run: pytest tests/ -q
+
+      # Läuft die Version im Manifest dem Tag hinterher, bietet HACS das Update
+      # endlos erneut an: Es vergleicht die installierte Manifest-Version mit
+      # dem Release-Tag.
+      - name: Manifest-Version muss zum Tag passen
+        run: |
+          MANIFEST=$(python -c "import json;print(json.load(open('custom_components/energy_manager/manifest.json'))['version'])")
+          TAG="${GITHUB_REF_NAME#v}"
+          test "$MANIFEST" = "$TAG" || { echo "manifest.json=$MANIFEST != Tag=$TAG"; exit 1; }
+
+      # HACS installiert den Ordner custom_components/energy_manager direkt aus
+      # dem Tag (zip_release: false). Es braucht deshalb kein Asset, nur einen
+      # Release-Eintrag, an dem HACS die Version erkennt.
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true

@@ -4,11 +4,15 @@
       "user": {
         "title": "Energy Manager",
         "description": "Where should the surplus be calculated from?",
-        "data": { "meter_mode": "Meter source" }
+        "data": {
+          "meter_mode": "Meter source"
+        }
       },
       "reconfigure": {
         "title": "Change meter source",
-        "data": { "meter_mode": "Meter source" }
+        "data": {
+          "meter_mode": "Meter source"
+        }
       },
       "grid": {
         "title": "Grid sensor",
@@ -132,8 +136,12 @@
   },
   "entity": {
     "sensor": {
-      "surplus": { "name": "Surplus" },
-      "surplus_raw": { "name": "Surplus unsmoothed" },
+      "surplus": {
+        "name": "Surplus"
+      },
+      "surplus_raw": {
+        "name": "Surplus unsmoothed"
+      },
       "status": {
         "name": "Status",
         "state": {
@@ -149,14 +157,22 @@
           "unavailable": "unavailable"
         }
       },
-      "locked_until": { "name": "Locked until" }
+      "locked_until": {
+        "name": "Locked until"
+      }
     },
     "number": {
-      "priority": { "name": "Priority" }
+      "priority": {
+        "name": "Priority"
+      }
     },
     "switch": {
-      "automation": { "name": "Automation" },
-      "managed": { "name": "Automation" }
+      "automation": {
+        "name": "Automation"
+      },
+      "managed": {
+        "name": "Automation"
+      }
     }
   },
   "selector": {
@@ -171,6 +187,50 @@
         "charge_only": "Count charging only",
         "full": "Subtract discharging (pure solar surplus)"
       }
+    }
+  },
+  "services": {
+    "force_on": {
+      "name": "Force on",
+      "description": "Turns a load on immediately and keeps it on for the given duration, regardless of surplus. Works even with the main switch off — this is an operation, not an automation decision.",
+      "fields": {
+        "duration": {
+          "name": "Duration",
+          "description": "How long the automation will not turn the device back off."
+        }
+      }
+    },
+    "clear_force": {
+      "name": "End forced run",
+      "description": "Cancels a running forced run early. Nothing is turned off — from now on the surplus decides again."
+    },
+    "pause": {
+      "name": "Pause automation",
+      "description": "Stops the automation. Without a duration it stays off until resumed manually.",
+      "fields": {
+        "duration": {
+          "name": "Duration",
+          "description": "The automation resumes by itself after this time. Leave empty for indefinite."
+        }
+      }
+    },
+    "resume": {
+      "name": "Resume automation",
+      "description": "Arms the automation again."
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "The Energy Manager integration is not set up."
+    },
+    "no_target": {
+      "message": "No load was given."
+    },
+    "unknown_target": {
+      "message": "Unknown target: {target}"
+    },
+    "not_a_consumer": {
+      "message": "{target} is not an Energy Manager load."
     }
   }
 }

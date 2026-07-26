@@ -1,0 +1,29 @@
+{
+  "entity": {
+    "sensor": {
+      "surplus": { "default": "mdi:solar-power-variant" },
+      "surplus_raw": { "default": "mdi:solar-power-variant-outline" },
+      "status": { "default": "mdi:robot" },
+      "locked_until": { "default": "mdi:lock-clock" }
+    },
+    "number": {
+      "priority": { "default": "mdi:sort-numeric-variant" }
+    },
+    "switch": {
+      "automation": {
+        "default": "mdi:robot",
+        "state": { "off": "mdi:robot-off" }
+      },
+      "managed": {
+        "default": "mdi:robot",
+        "state": { "off": "mdi:robot-off" }
+      }
+    }
+  },
+  "services": {
+    "force_on": { "service": "mdi:flash" },
+    "clear_force": { "service": "mdi:flash-off" },
+    "pause": { "service": "mdi:pause" },
+    "resume": { "service": "mdi:play" }
+  }
+}

@@ -4,11 +4,15 @@
       "user": {
         "title": "Energy Manager",
         "description": "Woraus soll der Überschuss berechnet werden?",
-        "data": { "meter_mode": "Zählerquelle" }
+        "data": {
+          "meter_mode": "Zählerquelle"
+        }
       },
       "reconfigure": {
         "title": "Zählerquelle ändern",
-        "data": { "meter_mode": "Zählerquelle" }
+        "data": {
+          "meter_mode": "Zählerquelle"
+        }
       },
       "grid": {
         "title": "Netzsensor",
@@ -132,8 +136,12 @@
   },
   "entity": {
     "sensor": {
-      "surplus": { "name": "Überschuss" },
-      "surplus_raw": { "name": "Überschuss ungeglättet" },
+      "surplus": {
+        "name": "Überschuss"
+      },
+      "surplus_raw": {
+        "name": "Überschuss ungeglättet"
+      },
       "status": {
         "name": "Status",
         "state": {
@@ -149,14 +157,22 @@
           "unavailable": "nicht verfügbar"
         }
       },
-      "locked_until": { "name": "Gesperrt bis" }
+      "locked_until": {
+        "name": "Gesperrt bis"
+      }
     },
     "number": {
-      "priority": { "name": "Priorität" }
+      "priority": {
+        "name": "Priorität"
+      }
     },
     "switch": {
-      "automation": { "name": "Automatik" },
-      "managed": { "name": "Automatik" }
+      "automation": {
+        "name": "Automatik"
+      },
+      "managed": {
+        "name": "Automatik"
+      }
     }
   },
   "selector": {
@@ -171,6 +187,50 @@
         "charge_only": "Nur Laden anrechnen",
         "full": "Entladung abziehen (reiner PV-Überschuss)"
       }
+    }
+  },
+  "services": {
+    "force_on": {
+      "name": "Zwangsfreigabe",
+      "description": "Schaltet einen Verbraucher sofort ein und hält ihn für die angegebene Dauer an — unabhängig vom Überschuss. Wirkt auch bei ausgeschaltetem Hauptschalter, denn es ist eine Bedienung, keine Automatikentscheidung.",
+      "fields": {
+        "duration": {
+          "name": "Dauer",
+          "description": "Wie lange die Automatik das Gerät nicht wieder abschaltet."
+        }
+      }
+    },
+    "clear_force": {
+      "name": "Zwangsfreigabe beenden",
+      "description": "Hebt eine laufende Zwangsfreigabe vorzeitig auf. Ausgeschaltet wird dabei nichts — ab jetzt entscheidet wieder der Überschuss."
+    },
+    "pause": {
+      "name": "Automatik pausieren",
+      "description": "Hält die Automatik an. Ohne Angabe einer Dauer bleibt sie aus, bis sie von Hand fortgesetzt wird.",
+      "fields": {
+        "duration": {
+          "name": "Dauer",
+          "description": "Nach dieser Zeit läuft die Automatik von selbst wieder an. Leer lassen für unbefristet."
+        }
+      }
+    },
+    "resume": {
+      "name": "Automatik fortsetzen",
+      "description": "Schaltet die Automatik wieder scharf."
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "Die Energy-Manager-Integration ist nicht eingerichtet."
+    },
+    "no_target": {
+      "message": "Es wurde kein Verbraucher angegeben."
+    },
+    "unknown_target": {
+      "message": "Unbekanntes Ziel: {target}"
+    },
+    "not_a_consumer": {
+      "message": "{target} ist kein Verbraucher des Energy Managers."
     }
   }
 }

@@ -13,7 +13,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
+from .const import DOMAIN
 from .coordinator import EnergyManagerCoordinator
+from .services import async_remove_services, async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,6 +40,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: EnergyManagerConfigEntry
     coordinator.async_setup_listeners()
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
+    # Dienste hängen am Domain, nicht am Eintrag — bei einem Reload dürfen sie
+    # nicht kurz verschwinden, sonst schlägt eine gleichzeitig laufende
+    # Automatisierung fehl. Deshalb hier nur anlegen, entfernt wird in
+    # async_unload_entry und auch nur, wenn kein Eintrag mehr übrig ist.
+    async_setup_services(hass)
+
     return True
 
 
@@ -52,7 +60,14 @@ async def _async_update_listener(hass: HomeAssistant, entry: EnergyManagerConfig
 
 async def async_unload_entry(hass: HomeAssistant, entry: EnergyManagerConfigEntry) -> bool:
     """Entlädt einen Konfigurationseintrag."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    # Nur wenn dies der letzte Eintrag war. `single_config_entry` macht das
+    # heute eindeutig, aber der Code soll nicht daran hängen.
+    if unloaded and len(hass.config_entries.async_loaded_entries(DOMAIN)) <= 1:
+        async_remove_services(hass)
+
+    return unloaded
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: EnergyManagerConfigEntry) -> None:
