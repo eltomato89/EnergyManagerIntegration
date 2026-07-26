@@ -199,6 +199,10 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
             # ohne die Konfiguration zu kennen.
             "min_power": consumer.min_power,
             "max_power": consumer.max_power,
+            # Woher required_w stammt. Ohne diese Angabe ist ein geratener Wert
+            # nicht von einem eingetragenen zu unterscheiden — und niemand käme
+            # auf die Idee, die Nennleistung nachzutragen.
+            "required_source": view.required_source,
             # Warum hier gerade nichts geschieht, obwohl es sinnvoll wäre.
             # Ohne diese Angabe ist "die Automatik tut nichts" nicht von einem
             # Fehler zu unterscheiden — die häufigste Rückfrage überhaupt.

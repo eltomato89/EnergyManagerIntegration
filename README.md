@@ -35,6 +35,15 @@ Home Assistant neu starten.
 2. **Verbraucher hinzufügen** — je einer über „Untereintrag hinzufügen" am Integrationseintrag.
    Pflicht ist nur die Schalt-Entität; Leistungssensor, Nennleistung und die Zeitfelder machen die
    Entscheidung genauer.
+
+   Fehlt die **Nennleistung**, schätzt die Integration sie aus der aufgezeichneten Statistik des
+   Leistungssensors: das Maximum der letzten sieben Tage, einmal täglich neu. Der Mittelwert taugt
+   dafür nicht — in ihn gingen alle Stunden ein, in denen das Gerät aus war. Ist auch das nicht
+   möglich (kein Leistungssensor, keine Aufzeichnung, Sensor ohne `state_class`), bleibt ein
+   Vorgabewert von 500 W, und der ist fast immer falsch.
+
+   Das Attribut `required_source` am Status-Sensor sagt, woher der Wert stammt: `min_power`,
+   `max_power`, `measured`, `estimated` oder `default`.
 3. **Beobachten.** Der Überschuss-Sensor sollte mit der Anlage übereinstimmen, die Ampeln
    plausibel sein. Weicht etwas ab, stimmt die Konfiguration nicht — nicht die Rechnung.
 4. Erst dann den **Hauptschalter** einschalten.

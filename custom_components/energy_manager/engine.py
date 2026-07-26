@@ -24,11 +24,23 @@ if TYPE_CHECKING:
     from .coordinator import EnergyManagerCoordinator
 
 
-def resolve_required_w(consumer: ConsumerConfig, power_w: float | None) -> float:
+def resolve_required_w(
+    consumer: ConsumerConfig,
+    power_w: float | None,
+    estimated_w: float | None = None,
+) -> float:
     """Wie viel Leistung ein Verbraucher voraussichtlich zieht.
 
-    Reihenfolge: ausdrückliche Einschaltschwelle, dann Nennleistung, dann der
-    aktuell gemessene Wert, zuletzt ein konservativer Vorgabewert.
+    Reihenfolge, von der verlässlichsten Quelle zur schwächsten:
+
+    1. **Einschaltschwelle** — die ausdrückliche Ansage des Nutzers.
+    2. **Nennleistung** — ebenfalls eingetragen.
+    3. **Ist-Wert**, wenn das Gerät gerade läuft. Dann ist die Frage ohnehin
+       beantwortet.
+    4. **Geschätzt** aus der aufgezeichneten Statistik. Greift genau im
+       kritischen Fall: Gerät aus, nichts eingetragen — und trotzdem muss
+       entschieden werden, ob der Überschuss reicht.
+    5. **Vorgabewert.** Ein Notnagel, mehr nicht.
     """
     if consumer.min_power is not None and consumer.min_power > 0:
         return float(consumer.min_power)
@@ -36,7 +48,30 @@ def resolve_required_w(consumer: ConsumerConfig, power_w: float | None) -> float
         return float(consumer.max_power)
     if power_w is not None and power_w > 0:
         return power_w
+    if estimated_w is not None and estimated_w > 0:
+        return float(estimated_w)
     return float(DEFAULT_REQUIRED_W)
+
+
+def required_source(
+    consumer: ConsumerConfig,
+    power_w: float | None,
+    estimated_w: float | None = None,
+) -> str:
+    """Woher der Bedarfswert stammt — für die Anzeige.
+
+    Ohne diese Angabe ist ein geratener Wert nicht von einem eingetragenen zu
+    unterscheiden, und niemand käme auf die Idee, die Nennleistung nachzutragen.
+    """
+    if consumer.min_power is not None and consumer.min_power > 0:
+        return "min_power"
+    if consumer.max_power is not None and consumer.max_power > 0:
+        return "max_power"
+    if power_w is not None and power_w > 0:
+        return "measured"
+    if estimated_w is not None and estimated_w > 0:
+        return "estimated"
+    return "default"
 
 
 def order_consumers(
@@ -130,7 +165,8 @@ def build_views(
 
         power = read_power_w(hass, consumer.power_entity)
         power_w = None if power.w is None else round_w(power.w)
-        required_w = resolve_required_w(consumer, power_w)
+        estimated_w = coordinator.estimated_power(consumer.subentry_id)
+        required_w = resolve_required_w(consumer, power_w, estimated_w)
 
         if not entity_available or budget is None:
             status = DeviceStatus.UNAVAILABLE
@@ -168,6 +204,7 @@ def build_views(
                 headroom_w=budget,
                 locked_until=locked_until,
                 lock_kind=lock_kind,
+                required_source=required_source(consumer, power_w, estimated_w),
             )
         )
 

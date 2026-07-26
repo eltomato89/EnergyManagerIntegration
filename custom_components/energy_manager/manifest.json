@@ -1,6 +1,9 @@
 {
   "domain": "energy_manager",
   "name": "Energy Manager",
+  "after_dependencies": [
+    "recorder"
+  ],
   "codeowners": [
     "@eltomato89"
   ],

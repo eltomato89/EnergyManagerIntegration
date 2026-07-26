@@ -63,6 +63,7 @@ from .const import (
     DEFAULT_SETTLE_TIME,
     DEFAULT_SMOOTHING_WINDOW,
     DOMAIN,
+    ESTIMATE_INTERVAL,
     METER_MODE_GRID,
     MIN_COVERAGE,
     STORAGE_MINOR_VERSION,
@@ -72,6 +73,7 @@ from .const import (
     TICK_INTERVAL,
 )
 from .engine import Decision, Evaluation, anticipated_w, build_views, decide
+from .estimate import async_estimate_power
 from .models import (
     ConsumerConfig,
     ConsumerRuntime,
@@ -136,6 +138,11 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         self._force_timers: dict[str, CALLBACK_TYPE] = {}
         self._pause_timer: CALLBACK_TYPE | None = None
 
+        # Geschätzte Nennleistung je Verbraucher, aus der Statistik. Nur für
+        # die, bei denen nichts eingetragen ist — und bewusst gepuffert: Die
+        # Abfrage geht an die Datenbank und gehört nicht in jeden Durchlauf.
+        self._estimated: dict[str, float] = {}
+
     # -- Einrichtung ---------------------------------------------------------
 
     async def async_load(self) -> None:
@@ -187,8 +194,21 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         entry.async_on_unload(self._unsubscribe_states)
         entry.async_on_unload(self._cancel_timers)
 
+        entry.async_on_unload(
+            async_track_time_interval(
+                self.hass,
+                self._handle_estimate_tick,
+                timedelta(seconds=ESTIMATE_INTERVAL),
+                name=f"{DOMAIN} estimate",
+                cancel_on_shutdown=True,
+            )
+        )
+
         if self.hass.is_running:
             self._started = True
+            entry.async_create_background_task(
+                self.hass, self._first_run(), name=f"{DOMAIN} initial estimate"
+            )
         else:
             entry.async_on_unload(
                 self.hass.bus.async_listen_once(
@@ -268,6 +288,38 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             self.hass, self._debouncer.async_call(), name=f"{DOMAIN} evaluate"
         )
 
+    async def _handle_estimate_tick(self, _now: Any) -> None:
+        await self.async_update_estimates()
+
+    async def async_update_estimates(self) -> None:
+        """Holt die Nennleistung aus der Statistik, wo sie fehlt.
+
+        Nur für Verbraucher ohne eingetragene Leistung: Wer sie angegeben hat,
+        soll nicht von einer Schätzung überstimmt werden.
+        """
+        for subentry_id, consumer in self.consumers.items():
+            if consumer.min_power or consumer.max_power:
+                self._estimated.pop(subentry_id, None)
+                continue
+            if not consumer.power_entity:
+                continue
+
+            geschaetzt = await async_estimate_power(self.hass, consumer.power_entity)
+            if geschaetzt is None:
+                continue
+
+            if self._estimated.get(subentry_id) != geschaetzt:
+                _LOGGER.info(
+                    "%s: Nennleistung aus der Statistik geschätzt — %.0f W",
+                    consumer.name,
+                    geschaetzt,
+                )
+            self._estimated[subentry_id] = geschaetzt
+
+    def estimated_power(self, subentry_id: str) -> float | None:
+        """Geschätzte Nennleistung, oder None."""
+        return self._estimated.get(subentry_id)
+
     async def _handle_tick(self, _now: Any) -> None:
         """Zeitbedingungen prüfen — ohne Entprellung, der Takt ist langsam genug."""
         await self._async_evaluate()
@@ -276,8 +328,17 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
     def _handle_ha_started(self, _event: Event) -> None:
         self._started = True
         self.config_entry.async_create_background_task(
-            self.hass, self._async_evaluate(), name=f"{DOMAIN} first evaluate"
+            self.hass, self._first_run(), name=f"{DOMAIN} first evaluate"
         )
+
+    async def _first_run(self) -> None:
+        """Erst schätzen, dann bewerten.
+
+        In dieser Reihenfolge, damit die erste Entscheidung schon auf den
+        geschätzten Werten beruht statt auf dem Vorgabewert.
+        """
+        await self.async_update_estimates()
+        await self._async_evaluate()
 
     async def async_request_refresh_now(self) -> None:
         """Sofortige Auswertung, etwa nach einer Bedienung."""

@@ -260,6 +260,10 @@ class ConsumerView:
     locked_until: float | None = None
     lock_kind: str | None = None
 
+    required_source: str = "default"
+    """Woher ``required_w`` stammt: min_power, max_power, measured, estimated,
+    default. Ein geratener Wert soll als solcher erkennbar sein."""
+
     displaceable: tuple[str, ...] = ()
     """Laufende Verbraucher niedrigerer Priorität, die für diesen weichen könnten.
 

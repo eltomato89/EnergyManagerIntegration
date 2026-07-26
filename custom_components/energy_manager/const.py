@@ -70,6 +70,23 @@ DEFAULT_SETTLE_TIME: Final = 60
 # W, angenommener Bedarf, wenn weder min_power noch max_power noch eine
 # gemessene Leistung vorliegt. Identisch zur Karte.
 DEFAULT_REQUIRED_W: Final = 500
+
+ESTIMATE_WINDOW_DAYS: Final = 7
+"""Zeitraum, aus dem die Nennleistung geschätzt wird.
+
+Lang genug, dass ein Gerät mit seltenem Betrieb erfasst wird; kurz genug, dass
+ein Austausch nach ein paar Tagen durchschlägt.
+"""
+
+ESTIMATE_MIN_W: Final = 50
+"""Darunter gilt ein Messwert als Standby, nicht als Nennleistung.
+
+Ohne diese Grenze würde ein Gerät, das im Zeitraum nur im Bereitschaftsbetrieb
+lief, als beliebig zuschaltbar gelten.
+"""
+
+ESTIMATE_INTERVAL: Final = 86400
+"""Wie oft neu geschätzt wird. Die Nennleistung ändert sich selten."""
 # Anteil des Bedarfs, ab dem ein Verbraucher als "fast bereit" gilt.
 CLOSE_THRESHOLD_RATIO: Final = 0.8
 
