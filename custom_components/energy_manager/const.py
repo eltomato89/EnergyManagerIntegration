@@ -78,11 +78,17 @@ Lang genug, dass ein Gerät mit seltenem Betrieb erfasst wird; kurz genug, dass
 ein Austausch nach ein paar Tagen durchschlägt.
 """
 
-ESTIMATE_MIN_W: Final = 50
-"""Darunter gilt ein Messwert als Standby, nicht als Nennleistung.
+STANDBY_W: Final = 50
+"""Darunter gilt ein Messwert als Bereitschaftsbetrieb, nicht als Bedarf.
 
-Ohne diese Grenze würde ein Gerät, das im Zeitraum nur im Bereitschaftsbetrieb
-lief, als beliebig zuschaltbar gelten.
+Ein Luftentfeuchter mit Hygrostat, eine Waschmaschine nach dem Programm, ein
+Klimagerät ohne Kühlbedarf: Der Schalter ist an, das Gerät zieht ein paar Watt
+und arbeitet nicht. Diesen Wert als Bedarf zu nehmen wäre gefährlich — die
+Automatik hielte das Gerät für mit 2 W zuschaltbar, es liefe an und zöge seine
+echte Leistung. Das Ergebnis ist Netzbezug.
+
+Ein Verbraucher, den man wegen PV-Überschuss schaltet, liegt praktisch immer
+darüber. Wer wirklich weniger braucht, trägt die Nennleistung ein.
 """
 
 ESTIMATE_INTERVAL: Final = 86400

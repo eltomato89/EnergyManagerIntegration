@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import CLOSE_THRESHOLD_RATIO, DEFAULT_REQUIRED_W
+from .const import CLOSE_THRESHOLD_RATIO, DEFAULT_REQUIRED_W, STANDBY_W
 from .models import ConsumerConfig, ConsumerRuntime, ConsumerView, DeviceStatus
 from .units import is_on, is_unavailable, read_power_w, round_w
 
@@ -35,18 +35,22 @@ def resolve_required_w(
 
     1. **Einschaltschwelle** — die ausdrückliche Ansage des Nutzers.
     2. **Nennleistung** — ebenfalls eingetragen.
-    3. **Ist-Wert**, wenn das Gerät gerade läuft. Dann ist die Frage ohnehin
-       beantwortet.
+    3. **Ist-Wert**, wenn das Gerät läuft und dabei mehr als
+       Bereitschaftsleistung zieht. Dann ist die Frage ohnehin beantwortet.
     4. **Geschätzt** aus der aufgezeichneten Statistik. Greift genau im
        kritischen Fall: Gerät aus, nichts eingetragen — und trotzdem muss
        entschieden werden, ob der Überschuss reicht.
     5. **Vorgabewert.** Ein Notnagel, mehr nicht.
+
+    Der Bereitschaftsbetrieb ist bewusst ausgenommen, siehe ``STANDBY_W``: Ein
+    Gerät, dessen Schalter an ist und das dabei zwei Watt zieht, ist nicht mit
+    zwei Watt zuschaltbar.
     """
     if consumer.min_power is not None and consumer.min_power > 0:
         return float(consumer.min_power)
     if consumer.max_power is not None and consumer.max_power > 0:
         return float(consumer.max_power)
-    if power_w is not None and power_w > 0:
+    if power_w is not None and power_w >= STANDBY_W:
         return power_w
     if estimated_w is not None and estimated_w > 0:
         return float(estimated_w)
@@ -67,7 +71,7 @@ def required_source(
         return "min_power"
     if consumer.max_power is not None and consumer.max_power > 0:
         return "max_power"
-    if power_w is not None and power_w > 0:
+    if power_w is not None and power_w >= STANDBY_W:
         return "measured"
     if estimated_w is not None and estimated_w > 0:
         return "estimated"

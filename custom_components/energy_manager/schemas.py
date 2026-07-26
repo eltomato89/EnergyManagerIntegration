@@ -182,11 +182,24 @@ CONSUMER_SCHEMA = vol.Schema(
 )
 
 
+# Bei diesen Feldern ist 0 keine Angabe, sondern das Fehlen einer. Anders als
+# bei `hysteresis` oder den Zeitfeldern, wo 0 "aus" bedeutet und gespeichert
+# gehört.
+_NULL_IST_LEER = (CONF_MIN_POWER, CONF_MAX_POWER)
+
+
 def clean(data: dict[str, Any]) -> dict[str, Any]:
     """Entfernt leere Werte, statt sie zu speichern.
 
     Die Formulare liefern geleerte Felder als ``None`` oder leeren String
     zurück. Gespeichert wären sie etwas anderes als "nicht gesetzt" und würden
     die Vorgabewerte aushebeln.
+
+    Eine 0 bei der Nennleistung ist derselbe Fall: Sie sähe im Attribut wie eine
+    Angabe aus, wirkt aber nicht — die Bedarfsermittlung überspringt sie.
     """
-    return {k: v for k, v in data.items() if v is not None and v != ""}
+    return {
+        k: v
+        for k, v in data.items()
+        if v is not None and v != "" and not (k in _NULL_IST_LEER and v == 0)
+    }

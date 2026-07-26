@@ -130,6 +130,9 @@
       },
       "abort": {
         "reconfigure_successful": "Der Verbraucher wurde geändert."
+      },
+      "error": {
+        "switch_in_use": "Dieses Gerät wird schon von einem anderen Verbraucher geschaltet. Zwei Einträge für dasselbe Gerät verplant die Automatik doppelt. Prüfe die Entität — ihre ID muss nicht zum Anzeigenamen passen."
       }
     }
   },

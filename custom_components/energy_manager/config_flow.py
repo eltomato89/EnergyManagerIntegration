@@ -23,6 +23,7 @@ from homeassistant.core import callback
 
 from .const import (
     CONF_METER_MODE,
+    CONF_SWITCH_ENTITY,
     DOMAIN,
     METER_MODE_GRID,
     SUBENTRY_TYPE_CONSUMER,
@@ -135,28 +136,62 @@ class EnergyManagerOptionsFlow(OptionsFlow):
 class ConsumerSubentryFlowHandler(ConfigSubentryFlow):
     """Legt einen Verbraucher an oder ändert ihn."""
 
+    def _switch_belegt(self, switch_entity: str, eigener: str | None = None) -> bool:
+        """Führt schon ein anderer Verbraucher dieselbe Schalt-Entität?
+
+        Zwei Einträge für dasselbe Gerät verplant die Automatik doppelt: Sie
+        rechnet den Bedarf zweimal ab, hält es für zweimal schaltbar und
+        vergleicht seinen Zustand mit zwei getrennten Sperrzeiten. Das ist immer
+        ein Versehen — meist eine verwechselte Entität, weil deren ID nicht zum
+        Anzeigenamen passt.
+        """
+        for subentry_id, subentry in self._get_entry().subentries.items():
+            if subentry_id == eigener:
+                continue
+            if subentry.subentry_type != SUBENTRY_TYPE_CONSUMER:
+                continue
+            if subentry.data.get(CONF_SWITCH_ENTITY) == switch_entity:
+                return True
+        return False
+
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        errors: dict[str, str] = {}
+
         if user_input is not None:
             cleaned = clean(user_input)
-            return self.async_create_entry(title=cleaned["name"], data=cleaned)
+            if self._switch_belegt(cleaned[CONF_SWITCH_ENTITY]):
+                errors[CONF_SWITCH_ENTITY] = "switch_in_use"
+            else:
+                return self.async_create_entry(title=cleaned["name"], data=cleaned)
 
-        return self.async_show_form(step_id="user", data_schema=CONSUMER_SCHEMA)
+        return self.async_show_form(
+            step_id="user",
+            data_schema=self.add_suggested_values_to_schema(CONSUMER_SCHEMA, user_input or {}),
+            errors=errors,
+        )
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
         subentry = self._get_reconfigure_subentry()
+        errors: dict[str, str] = {}
 
         if user_input is not None:
             cleaned = clean(user_input)
-            return self.async_update_and_abort(
-                self._get_entry(),
-                subentry,
-                data=cleaned,
-                title=cleaned["name"],
-            )
+            if self._switch_belegt(cleaned[CONF_SWITCH_ENTITY], subentry.subentry_id):
+                errors[CONF_SWITCH_ENTITY] = "switch_in_use"
+            else:
+                return self.async_update_and_abort(
+                    self._get_entry(),
+                    subentry,
+                    data=cleaned,
+                    title=cleaned["name"],
+                )
 
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=self.add_suggested_values_to_schema(CONSUMER_SCHEMA, subentry.data),
+            data_schema=self.add_suggested_values_to_schema(
+                CONSUMER_SCHEMA, user_input or subentry.data
+            ),
+            errors=errors,
         )

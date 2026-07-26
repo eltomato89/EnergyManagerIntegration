@@ -2,6 +2,27 @@
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.3.1] — 2026-07-26
+
+### Behoben
+
+- **Bereitschaftsleistung wurde als Bedarf übernommen.** Ein Luftentfeuchter mit Hygrostat zieht im
+  Standby zwei Watt, obwohl sein Schalter an ist. Daraus wurde `required_w: 2` — die Automatik
+  hielt das Gerät für mit zwei Watt zuschaltbar. Es wäre angelaufen, hätte seine echten paar
+  hundert Watt gezogen, und das Ergebnis wäre Netzbezug gewesen.
+
+  Messwerte unter 50 W gelten jetzt als Bereitschaftsbetrieb und werden nicht als Bedarf gewertet;
+  stattdessen greift die Schätzung aus der Statistik oder der Vorgabewert. Derselbe Fall betrifft
+  eine Waschmaschine nach dem Programm oder ein Klimagerät ohne Kühlbedarf.
+
+- **Zwei Verbraucher für dasselbe Gerät werden abgelehnt.** Die Automatik hätte es doppelt
+  verplant: den Bedarf zweimal abgerechnet, es für zweimal schaltbar gehalten und zwei getrennte
+  Sperrzeiten geführt. Passiert leicht, wenn die Entitäts-ID nicht zum Anzeigenamen passt.
+
+- **Eine 0 bei der Nennleistung wird nicht mehr gespeichert.** Sie sah im Attribut wie eine Angabe
+  aus, wirkte aber nicht. Bei `hysteresis` und den Zeitfeldern bleibt 0 erhalten — dort bedeutet
+  sie „aus".
+
 ## [0.3.0] — 2026-07-26
 
 ### Neu — ändert das Schaltverhalten

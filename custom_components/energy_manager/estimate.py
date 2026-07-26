@@ -18,7 +18,7 @@ from datetime import timedelta
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import ESTIMATE_MIN_W, ESTIMATE_WINDOW_DAYS
+from .const import ESTIMATE_WINDOW_DAYS, STANDBY_W
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ async def async_estimate_power(hass: HomeAssistant, statistic_id: str) -> float 
     # Ein Standby-Wert von wenigen Watt ist keine Nennleistung. Ihn zu
     # übernehmen wäre schlimmer als der Vorgabewert: Die Automatik hielte das
     # Gerät für beliebig zuschaltbar.
-    if value < ESTIMATE_MIN_W:
+    if value < STANDBY_W:
         return None
 
     return round(value)

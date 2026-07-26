@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -196,3 +197,115 @@ async def test_verbraucher_bearbeiten(
 
     await hass.async_block_till_done()
     assert mock_config_entry.subentries[subentry_id].title == "Wallbox Garage"
+
+
+class TestDoppelteSchaltEntitaet:
+    """Zwei Verbraucher für dasselbe Gerät sind immer ein Versehen.
+
+    Meist eine verwechselte Entität, weil deren ID nicht zum Anzeigenamen passt.
+    Die Automatik verplant das Gerät dann doppelt: rechnet den Bedarf zweimal
+    ab, hält es für zweimal schaltbar und führt zwei getrennte Sperrzeiten.
+    """
+
+    async def test_anlegen_wird_abgelehnt(self, hass: HomeAssistant) -> None:
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={CONF_METER_MODE: METER_MODE_GRID, CONF_GRID_ENTITY: "sensor.netz"},
+            unique_id=DOMAIN,
+            subentries_data=[
+                ConfigSubentryData(
+                    subentry_type=SUBENTRY_TYPE_CONSUMER,
+                    title="Erster",
+                    unique_id=None,
+                    data={CONF_NAME: "Erster", CONF_SWITCH_ENTITY: "switch.geteilt"},
+                )
+            ],
+        )
+        entry.add_to_hass(hass)
+
+        result = await hass.config_entries.subentries.async_init(
+            (entry.entry_id, SUBENTRY_TYPE_CONSUMER), context={"source": "user"}
+        )
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"],
+            {CONF_NAME: "Zweiter", CONF_SWITCH_ENTITY: "switch.geteilt"},
+        )
+
+        assert result["type"] is FlowResultType.FORM
+        assert result["errors"] == {CONF_SWITCH_ENTITY: "switch_in_use"}
+
+    async def test_ein_freies_geraet_geht_durch(self, hass: HomeAssistant) -> None:
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={CONF_METER_MODE: METER_MODE_GRID, CONF_GRID_ENTITY: "sensor.netz"},
+            unique_id=DOMAIN,
+            subentries_data=[
+                ConfigSubentryData(
+                    subentry_type=SUBENTRY_TYPE_CONSUMER,
+                    title="Erster",
+                    unique_id=None,
+                    data={CONF_NAME: "Erster", CONF_SWITCH_ENTITY: "switch.eins"},
+                )
+            ],
+        )
+        entry.add_to_hass(hass)
+
+        result = await hass.config_entries.subentries.async_init(
+            (entry.entry_id, SUBENTRY_TYPE_CONSUMER), context={"source": "user"}
+        )
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"],
+            {CONF_NAME: "Zweiter", CONF_SWITCH_ENTITY: "switch.zwei"},
+        )
+
+        assert result["type"] is FlowResultType.CREATE_ENTRY
+
+    async def test_der_eigene_eintrag_blockiert_sich_nicht(self, hass: HomeAssistant) -> None:
+        """Beim Bearbeiten darf die eigene Entität bleiben."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={CONF_METER_MODE: METER_MODE_GRID, CONF_GRID_ENTITY: "sensor.netz"},
+            unique_id=DOMAIN,
+            subentries_data=[
+                ConfigSubentryData(
+                    subentry_type=SUBENTRY_TYPE_CONSUMER,
+                    title="Pumpe",
+                    unique_id=None,
+                    data={CONF_NAME: "Pumpe", CONF_SWITCH_ENTITY: "switch.pumpe"},
+                )
+            ],
+        )
+        entry.add_to_hass(hass)
+        subentry = next(iter(entry.subentries.values()))
+
+        result = await hass.config_entries.subentries.async_init(
+            (entry.entry_id, SUBENTRY_TYPE_CONSUMER),
+            context={"source": "reconfigure", "subentry_id": subentry.subentry_id},
+        )
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"],
+            {CONF_NAME: "Pumpe neu", CONF_SWITCH_ENTITY: "switch.pumpe"},
+        )
+
+        assert result["type"] is FlowResultType.ABORT
+
+
+class TestNullwerte:
+    async def test_null_bei_der_nennleistung_wird_nicht_gespeichert(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Sie sähe im Attribut wie eine Angabe aus, wirkt aber nicht."""
+        from custom_components.energy_manager.const import CONF_HYSTERESIS, CONF_MAX_POWER
+        from custom_components.energy_manager.schemas import clean
+
+        gereinigt = clean(
+            {
+                CONF_NAME: "X",
+                CONF_SWITCH_ENTITY: "switch.x",
+                CONF_MAX_POWER: 0,
+                # Hier bedeutet 0 "aus" und gehört gespeichert.
+                CONF_HYSTERESIS: 0,
+            }
+        )
+        assert CONF_MAX_POWER not in gereinigt
+        assert gereinigt[CONF_HYSTERESIS] == 0

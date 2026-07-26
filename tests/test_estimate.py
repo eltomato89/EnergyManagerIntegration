@@ -28,6 +28,7 @@ from custom_components.energy_manager.const import (
     DEFAULT_REQUIRED_W,
     DOMAIN,
     METER_MODE_GRID,
+    STANDBY_W,
     SUBENTRY_TYPE_CONSUMER,
 )
 from custom_components.energy_manager.engine import required_source, resolve_required_w
@@ -72,6 +73,36 @@ class TestReihenfolgeDerQuellen:
         assert required_source(config(), 400, 1840) == "measured"
         assert required_source(config(), 0, 1840) == "estimated"
         assert required_source(config(), None, None) == "default"
+
+
+class TestBereitschaftsbetrieb:
+    """Ein laufender Schalter heißt nicht, dass das Gerät arbeitet.
+
+    Ein Luftentfeuchter mit Hygrostat, eine Waschmaschine nach dem Programm,
+    ein Klimagerät ohne Kühlbedarf: Der Schalter ist an, das Gerät zieht ein
+    paar Watt und tut nichts.
+    """
+
+    def test_standby_gilt_nicht_als_bedarf(self) -> None:
+        """Der gefährliche Fall.
+
+        Ohne diese Grenze hielte die Automatik das Gerät für mit 2 W
+        zuschaltbar. Es liefe an, zöge seine echten 300 W — und das Ergebnis
+        wäre Netzbezug.
+        """
+        assert resolve_required_w(config(), 2, None) == DEFAULT_REQUIRED_W
+        assert required_source(config(), 2, None) == "default"
+
+    def test_statt_standby_gilt_die_schaetzung(self) -> None:
+        assert resolve_required_w(config(), 2, 1840) == 1840
+        assert required_source(config(), 2, 1840) == "estimated"
+
+    def test_ein_echter_betriebswert_zaehlt_weiter(self) -> None:
+        assert resolve_required_w(config(), 300, 1840) == 300
+        assert required_source(config(), 300, 1840) == "measured"
+
+    def test_die_grenze_selbst_zaehlt_als_betrieb(self) -> None:
+        assert resolve_required_w(config(), STANDBY_W, None) == STANDBY_W
 
 
 def consumer_subentry(name: str, **extra) -> ConfigSubentryData:

@@ -130,6 +130,9 @@
       },
       "abort": {
         "reconfigure_successful": "The load was changed."
+      },
+      "error": {
+        "switch_in_use": "This device is already switched by another load. Two entries for the same device make the automation plan it twice. Check the entity — its ID need not match the display name."
       }
     }
   },
