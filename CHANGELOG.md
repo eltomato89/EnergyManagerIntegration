@@ -2,6 +2,17 @@
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.3.3] — 2026-07-27
+
+### Geändert
+
+- **README auf Englisch**, samt Hinweis darauf, dass die Entitäts-IDs der Sprache der Instanz
+  folgen: Auf einer deutschen Instanz heißen dieselben Sensoren `sensor.…_ueberschuss` und
+  `sensor.<name>_gesperrt_bis`.
+
+<sub>Ohne diese Version zeigt HACS weiterhin die deutsche Fassung: Es liest die README aus dem
+installierten Release-Tag, nicht aus dem Standard-Branch.</sub>
+
 ## [0.3.2] — 2026-07-26
 
 ### Geändert
