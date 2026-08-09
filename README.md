@@ -54,8 +54,8 @@ integration on its own and displays everything. Loads are maintained **here only
 ### Versioning
 
 Card and integration are versioned **independently**; the numbers are deliberately not kept in
-lockstep. The card also runs without the integration, and what the two sides share is the attribute
-contract, not the release cadence — the card probes for attributes rather than versions, so an older
+lockstep. What the two sides share is the attribute contract, not the release cadence: releases on
+one side alone are routine, and the card probes for attributes rather than versions, so an older
 integration means less display, never an error. Where a card feature does require a minimum
 integration version, the
 [interface contract](https://github.com/eltomato89/EnergyManagerCard/blob/main/docs/integration-contract.md#versionierung-getrennte-nummern-dokumentierte-mindestversion)
