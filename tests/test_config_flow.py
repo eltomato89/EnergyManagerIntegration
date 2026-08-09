@@ -10,6 +10,8 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.energy_manager.const import (
     BATTERY_MODE_CHARGE_ONLY,
+    CONF_BATTERY_MAX_CHARGE_W,
+    CONF_BATTERY_MIN_SOC,
     CONF_BATTERY_POWER_ENTITY,
     CONF_CONSUMPTION_ENTITY,
     CONF_GRID_ENTITY,
@@ -110,6 +112,185 @@ async def test_nur_eine_instanz(hass: HomeAssistant, mock_config_entry: MockConf
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "single_instance_allowed"
+
+
+class TestNeuKonfigurieren:
+    """Der Ablauf endet mit einem aktualisierten, nicht mit einem neuen Eintrag.
+
+    Home Assistant verbietet ``async_create_entry`` in einem
+    ``reconfigure``-Ablauf und wirft. In der Oberfläche kam das als „Unknown
+    error occurred" an — genau am letzten Schritt, dem Batterie-Formular.
+    """
+
+    async def test_aktualisiert_den_bestehenden_eintrag(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        mock_config_entry.add_to_hass(hass)
+        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": mock_config_entry.entry_id,
+            },
+        )
+        assert result["step_id"] == "reconfigure"
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_METER_MODE: METER_MODE_GRID}
+        )
+        assert result["step_id"] == "grid"
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_GRID_ENTITY: "sensor.netz_neu"}
+        )
+        assert result["step_id"] == "battery"
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_BATTERY_POWER_ENTITY: "sensor.batterie",
+                CONF_BATTERY_MAX_CHARGE_W: 5000,
+            },
+        )
+        await hass.async_block_till_done()
+
+        assert result["type"] is FlowResultType.ABORT
+        assert result["reason"] == "reconfigure_successful"
+        assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+        assert mock_config_entry.data[CONF_GRID_ENTITY] == "sensor.netz_neu"
+        assert mock_config_entry.data[CONF_BATTERY_MAX_CHARGE_W] == 5000
+
+    async def test_formulare_sind_vorbelegt(self, hass: HomeAssistant) -> None:
+        """Sonst müsste jedes Feld erneut ausgefüllt werden, um eines zu ändern."""
+        entry = _eintrag_mit_batterie()
+        entry.add_to_hass(hass)
+
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": entry.entry_id,
+            },
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_METER_MODE: METER_MODE_GRID}
+        )
+        assert _suggested(result, CONF_GRID_ENTITY) == "sensor.netz"
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_GRID_ENTITY: "sensor.netz"}
+        )
+        assert _suggested(result, CONF_BATTERY_POWER_ENTITY) == "sensor.batterie"
+
+    async def test_geleertes_feld_bleibt_leer(self, hass: HomeAssistant) -> None:
+        """Vorbelegte Felder müssen sich auch wieder abwählen lassen."""
+        entry = _eintrag_mit_batterie()
+        entry.add_to_hass(hass)
+
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": entry.entry_id,
+            },
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_METER_MODE: METER_MODE_GRID}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_GRID_ENTITY: "sensor.netz"}
+        )
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        await hass.async_block_till_done()
+
+        assert result["type"] is FlowResultType.ABORT
+        assert CONF_BATTERY_POWER_ENTITY not in entry.data
+
+
+class TestStummeAngaben:
+    """Eine Zahl, die ohne ihren Messwert nichts tut, gehört abgewiesen.
+
+    Beide Felder hängen an einer Batterie-Entität. Ohne sie stünde ein Wert im
+    Formular, der stillschweigend wirkungslos bleibt — dieselbe Art Fehler wie
+    eine verwechselte Entität, nur ohne jede Rückmeldung.
+    """
+
+    async def _bis_batterie(self, hass: HomeAssistant) -> dict:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_METER_MODE: METER_MODE_GRID}
+        )
+        return await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_GRID_ENTITY: "sensor.netz"}
+        )
+
+    async def test_ladeleistung_ohne_batterie_entitaet(self, hass: HomeAssistant) -> None:
+        result = await self._bis_batterie(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_BATTERY_MAX_CHARGE_W: 5000}
+        )
+
+        assert result["type"] is FlowResultType.FORM
+        assert result["errors"] == {CONF_BATTERY_MAX_CHARGE_W: "battery_entity_required"}
+
+    async def test_mindestladestand_ohne_ladestandssensor(self, hass: HomeAssistant) -> None:
+        result = await self._bis_batterie(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_BATTERY_POWER_ENTITY: "sensor.batterie", CONF_BATTERY_MIN_SOC: 20},
+        )
+
+        assert result["type"] is FlowResultType.FORM
+        assert result["errors"] == {CONF_BATTERY_MIN_SOC: "soc_entity_required"}
+
+    async def test_die_eingabe_bleibt_nach_dem_fehler_stehen(self, hass: HomeAssistant) -> None:
+        """Sonst verschwindet genau der Wert, der korrigiert werden soll."""
+        result = await self._bis_batterie(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_BATTERY_MAX_CHARGE_W: 5000}
+        )
+
+        assert _suggested(result, CONF_BATTERY_MAX_CHARGE_W) == 5000
+
+    async def test_mit_batterie_geht_es_durch(self, hass: HomeAssistant) -> None:
+        result = await self._bis_batterie(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_BATTERY_POWER_ENTITY: "sensor.batterie",
+                CONF_BATTERY_MAX_CHARGE_W: 5000,
+            },
+        )
+
+        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["data"][CONF_BATTERY_MAX_CHARGE_W] == 5000
+
+
+def _eintrag_mit_batterie() -> MockConfigEntry:
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title="Energy Manager",
+        data={
+            CONF_METER_MODE: METER_MODE_GRID,
+            CONF_GRID_ENTITY: "sensor.netz",
+            CONF_BATTERY_POWER_ENTITY: "sensor.batterie",
+        },
+        options={},
+        unique_id=DOMAIN,
+    )
+
+
+def _suggested(result, key: str):
+    """Der vorbelegte Wert eines Feldes im gezeigten Formular."""
+    for marker in result["data_schema"].schema:
+        if marker == key:
+            return (marker.description or {}).get("suggested_value")
+    raise AssertionError(f"Feld {key} nicht im Formular")
 
 
 async def test_options_flow(hass: HomeAssistant, mock_config_entry: MockConfigEntry) -> None:

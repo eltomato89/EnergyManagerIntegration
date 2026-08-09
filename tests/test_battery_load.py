@@ -16,6 +16,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.energy_manager.const import (
     CONF_BATTERY_MAX_CHARGE_W,
     CONF_BATTERY_POWER_ENTITY,
+    CONF_BATTERY_RESERVE_W,
     CONF_BATTERY_SOC_ENTITY,
     CONF_GRID_ENTITY,
     CONF_MAX_POWER,
@@ -52,6 +53,7 @@ async def setup_battery(
     soc: int,
     max_charge: int = 2000,
     battery_prio: int = 2,
+    reserve: int = 0,
 ) -> MockConfigEntry:
     """Zwei Verbraucher (Wichtig=1, Egal=3) mit der Batterie dazwischen.
 
@@ -66,6 +68,8 @@ async def setup_battery(
     }
     if max_charge:
         data[CONF_BATTERY_MAX_CHARGE_W] = max_charge
+    if reserve:
+        data[CONF_BATTERY_RESERVE_W] = reserve
 
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -148,6 +152,36 @@ class TestBudget:
         assert nach_namen["Egal"].status.value == "off_ready"
 
 
+class TestReserveUndLadeleistung:
+    """Beide Felder meinen dieselbe Leistung und dürfen nicht doppelt zählen.
+
+    Die Reserve wird schon vor dem ersten Verbraucher abgezogen. Käme die
+    Ladeleistung an ihrem Rang voll obendrauf, entzöge die Batterie den
+    Verbrauchern die Summe aus beidem.
+    """
+
+    async def test_die_batterie_bekommt_nie_mehr_als_die_ladeleistung(
+        self, hass: HomeAssistant
+    ) -> None:
+        entry = await setup_battery(hass, netz=-3000, soc=60, reserve=800)
+        battery = entry.runtime_data.data.battery
+
+        assert battery is not None
+        # 800 W Reserve + 1200 W am Rang = 2000 W, nicht 2800 W.
+        assert battery.claim_w == 2000
+        assert battery.status.value == "on_ok"
+
+    async def test_der_rest_bleibt_den_verbrauchern(self, hass: HomeAssistant) -> None:
+        entry = await setup_battery(hass, netz=-4000, soc=60, reserve=800)
+        nach_namen = {v.config.name: v for v in entry.runtime_data.data.consumers}
+
+        # 4000 W Einspeisung, davon 800 W Reserve: 2200 W bleiben nach Wichtig
+        # (1000 W). Die Batterie fordert an ihrem Rang nur noch 1200 W an, also
+        # reicht es für Egal. Ohne die Anrechnung forderte sie 2000 W und Egal
+        # ginge mit 200 W leer aus.
+        assert nach_namen["Egal"].status.value == "off_ready"
+
+
 class TestEntitaeten:
     async def test_prioritaets_entitaet_der_batterie(self, hass: HomeAssistant) -> None:
         await setup_battery(hass, netz=-2500, soc=60, battery_prio=2)
@@ -173,6 +207,9 @@ class TestEntitaeten:
         assert attrs["battery_claim_w"] == 1500
         assert attrs["battery_status"] == "on_deficit"
         assert attrs["battery_soc_entity"] == "sensor.akku_soc"
+        # Was nach der Batterie noch übrig ist: hier nichts, deshalb geht Egal
+        # leer aus. Ohne diese Angabe wäre das in der Anzeige nicht erklärbar.
+        assert attrs["battery_headroom_w"] == 0
 
     async def test_batterie_rang_ueberlebt_neuladen(self, hass: HomeAssistant) -> None:
         """Der Rang liegt im Speicher, nicht nur in der Entität."""

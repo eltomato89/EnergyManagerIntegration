@@ -55,10 +55,14 @@
           "battery_charge_entity": "Alternative zum bidirektionalen Sensor: zwei stets positive Sensoren.",
           "battery_mode": "Ladeleistung gilt stets als verfügbar. Diese Einstellung bestimmt, ob eine Entladung den Überschuss verringert.",
           "battery_min_soc": "Unterhalb dieses Ladestands hat das Laden Vorrang; es wird kein Überschuss ausgewiesen.",
-          "battery_reserve_w": "Leistung, die immer der Batterie vorbehalten bleibt.",
-          "battery_max_charge_w": "Lässt die Batterie als verschiebbare Last an der Prioritätsreihenfolge teilnehmen. Höher priorisierte Verbraucher werden zuerst versorgt und bleiben eingeschaltet; die Batterie reserviert an ihrem Rang bis zu dieser Ladeleistung; nur der Rest steht tiefer priorisierten Verbrauchern zur Verfügung. 0 schaltet die Teilnahme ab."
+          "battery_reserve_w": "Leistung, die immer der Batterie vorbehalten bleibt. Sie wird auf die maximale Ladeleistung angerechnet, nicht zu ihr addiert.",
+          "battery_max_charge_w": "Lässt die Batterie als verschiebbare Last an der Prioritätsreihenfolge teilnehmen und begrenzt zugleich, wie viel Überschuss sie insgesamt bekommt. Höher priorisierte Verbraucher werden zuerst versorgt und bleiben eingeschaltet; die Batterie legt an ihrem Rang bis zu dieser Leistung zurück, abzüglich einer bereits eingetragenen Reserve; nur der Rest steht tiefer priorisierten Verbrauchern zur Verfügung. 0 schaltet die Teilnahme ab."
         }
       }
+    },
+    "error": {
+      "battery_entity_required": "Die maximale Ladeleistung wirkt nur mit einem Messwert der Batterie. Ohne Lade-, Entlade- oder Ladestandssensor lässt sich weder erkennen, ob geladen wird, noch ob die Batterie voll ist. Erforderlich ist eine der Batterie-Entitäten in diesem Formular.",
+      "soc_entity_required": "Der Mindestladestand wirkt nur mit einem Ladestandssensor. Ohne ihn bleibt die Grenze ohne Wirkung."
     },
     "abort": {
       "single_instance_allowed": "Energy Manager ist bereits eingerichtet.",
@@ -106,7 +110,7 @@
           "data_description": {
             "power_entity": "Aktuelle Leistungsaufnahme. Ohne ihn wird mit der Nennleistung gerechnet.",
             "min_power": "Ab diesem Überschuss wird eingeschaltet. Ohne Angabe gilt die Nennleistung.",
-            "max_power": "Maximale Leistungsaufnahme.",
+            "max_power": "Ersatzwert für den Bedarf, solange keine Einschaltschwelle eingetragen ist. Eine Obergrenze für den Betrieb ist damit nicht gesetzt.",
             "hysteresis": "Totband gegen Pendeln um den Nullpunkt.",
             "turn_on_delay": "Der Überschuss muss so lange ununterbrochen ausreichen, bevor eingeschaltet wird. Überbrückt kurze Einbrüche der Erzeugung.",
             "turn_off_delay": "Das Defizit muss so lange anhalten, bevor ausgeschaltet wird. Überbrückt kurzzeitige Einbrüche.",

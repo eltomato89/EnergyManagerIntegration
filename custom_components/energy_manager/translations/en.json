@@ -55,10 +55,14 @@
           "battery_charge_entity": "Alternative to the bidirectional sensor: two always-positive sensors.",
           "battery_mode": "Charging power always counts as available. This setting determines whether discharging reduces the surplus.",
           "battery_min_soc": "Below this state of charge, charging takes precedence and no surplus is reported.",
-          "battery_reserve_w": "Power always kept for the battery.",
-          "battery_max_charge_w": "Lets the battery take part in the priority order as a shiftable load. Higher-priority loads are served first and stay on; at its rank the battery reserves up to this charge power; only the remainder is available to lower-priority loads. 0 disables participation."
+          "battery_reserve_w": "Power always kept for the battery. It counts towards the maximum charge power rather than adding to it.",
+          "battery_max_charge_w": "Lets the battery take part in the priority order as a shiftable load, and at the same time caps how much surplus it receives in total. Higher-priority loads are served first and stay on; at its rank the battery sets aside up to this power, less any reserve already configured; only the remainder is available to lower-priority loads. 0 disables participation."
         }
       }
+    },
+    "error": {
+      "battery_entity_required": "Maximum charge power only takes effect with a battery reading. Without a charge, discharge or state-of-charge sensor there is no way to tell whether the battery is charging or full. One of the battery entities in this form is required.",
+      "soc_entity_required": "Minimum state of charge only takes effect with a state-of-charge sensor. Without one the limit has no effect."
     },
     "abort": {
       "single_instance_allowed": "Energy Manager is already set up.",
@@ -106,7 +110,7 @@
           "data_description": {
             "power_entity": "Current power draw. Without it the rated power is used.",
             "min_power": "Switching on starts at this surplus. Without a value the rated power applies.",
-            "max_power": "Maximum power draw.",
+            "max_power": "Fallback for the demand while no switch-on threshold is set. It does not cap the device during operation.",
             "hysteresis": "Dead band against oscillation around zero.",
             "turn_on_delay": "The surplus must be sufficient for this long without interruption before switching on. Bridges short drops in production.",
             "turn_off_delay": "The deficit must persist for this long before switching off. Bridges brief drops.",

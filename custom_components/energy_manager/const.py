@@ -75,7 +75,6 @@ CONF_MIN_RUNTIME: Final = "min_runtime"
 CONF_MIN_OFF_TIME: Final = "min_off_time"
 CONF_TURN_ON_DELAY: Final = "turn_on_delay"
 CONF_TURN_OFF_DELAY: Final = "turn_off_delay"
-CONF_PRIORITY: Final = "priority"
 
 # --- Vorgabewerte -----------------------------------------------------------
 

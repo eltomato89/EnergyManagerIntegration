@@ -118,6 +118,13 @@ class SurplusSensor(EnergyManagerEntity, SensorEntity):
                     "battery_status": battery.status.value,
                     "battery_max_charge_w": battery.max_charge_w,
                     "battery_claim_w": round(battery.claim_w),
+                    # Was nach der Batterie noch für tiefer priorisierte
+                    # Verbraucher bleibt. Ohne diese Angabe ließe sich in der
+                    # Anzeige nicht nachvollziehen, warum ein Verbraucher unter
+                    # der Batterie leer ausgeht.
+                    "battery_headroom_w": (
+                        None if battery.headroom_w is None else round(battery.headroom_w)
+                    ),
                     "battery_charging_w": battery.charging_w,
                     "battery_full": battery.full,
                     "battery_soc_entity": self.coordinator.battery_soc_entity,

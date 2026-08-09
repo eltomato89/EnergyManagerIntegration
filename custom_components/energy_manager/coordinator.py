@@ -86,6 +86,7 @@ from .models import (
     Reading,
     ReadingReason,
     SurplusResult,
+    has_battery,
 )
 from .smoothing import TimeWeightedWindow
 from .surplus import SurplusInput, apply_reserve, compute_surplus
@@ -572,7 +573,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
                 production=read_power_w(self.hass, data.get(CONF_PRODUCTION_ENTITY)),
                 consumption=read_power_w(self.hass, data.get(CONF_CONSUMPTION_ENTITY)),
                 battery=battery,
-                battery_configured=self._has_battery(data),
+                battery_configured=has_battery(data),
                 battery_mode=data.get(CONF_BATTERY_MODE, "charge_only"),
                 battery_soc=read_percent(self.hass, data.get(CONF_BATTERY_SOC_ENTITY)),
                 consumption_includes_battery=data.get(CONF_CONSUMPTION_INCLUDES_BATTERY, False),
@@ -592,18 +593,6 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             data.get(CONF_BATTERY_INVERT, False),
         )
 
-    @staticmethod
-    def _has_battery(data: dict[str, Any]) -> bool:
-        return any(
-            data.get(key)
-            for key in (
-                CONF_BATTERY_POWER_ENTITY,
-                CONF_BATTERY_CHARGE_ENTITY,
-                CONF_BATTERY_DISCHARGE_ENTITY,
-                CONF_BATTERY_SOC_ENTITY,
-            )
-        )
-
     def _build_views(self, surplus: SurplusResult) -> tuple[list[ConsumerView], BatteryView | None]:
         """Bewertet die Verbraucher in Prioritätsreihenfolge."""
         return build_views(self.hass, self, surplus.available)
@@ -618,13 +607,14 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         """
         data = dict(self.config_entry.data) if self.config_entry else {}
         max_charge = data.get(CONF_BATTERY_MAX_CHARGE_W)
-        if not self._has_battery(data) or not max_charge:
+        if not has_battery(data) or not max_charge:
             return None
 
         reading = self._battery_reading(data)
         return BatteryLoad(
             priority=self._battery_priority,
             max_charge_w=float(max_charge),
+            reserve_w=float(data.get(CONF_BATTERY_RESERVE_W) or 0.0),
             soc=read_percent(self.hass, data.get(CONF_BATTERY_SOC_ENTITY)),
             charging_w=reading.w,
         )

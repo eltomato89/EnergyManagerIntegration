@@ -11,6 +11,10 @@ from enum import StrEnum
 from typing import Any
 
 from .const import (
+    CONF_BATTERY_CHARGE_ENTITY,
+    CONF_BATTERY_DISCHARGE_ENTITY,
+    CONF_BATTERY_POWER_ENTITY,
+    CONF_BATTERY_SOC_ENTITY,
     CONF_HYSTERESIS,
     CONF_MAX_POWER,
     CONF_MIN_OFF_TIME,
@@ -22,6 +26,25 @@ from .const import (
     CONF_TURN_OFF_DELAY,
     CONF_TURN_ON_DELAY,
 )
+
+
+def has_battery(data: dict[str, Any]) -> bool:
+    """Ist überhaupt eine Batterie eingerichtet?
+
+    Maßstab ist eine Entität, die etwas über die Batterie sagt. Reine
+    Zahlenangaben wie Mindestladestand oder Ladeleistung genügen nicht: Ohne
+    Messwert lässt sich weder erkennen, ob geladen wird, noch ob die Batterie
+    voll ist.
+    """
+    return any(
+        data.get(key)
+        for key in (
+            CONF_BATTERY_POWER_ENTITY,
+            CONF_BATTERY_CHARGE_ENTITY,
+            CONF_BATTERY_DISCHARGE_ENTITY,
+            CONF_BATTERY_SOC_ENTITY,
+        )
+    )
 
 
 class ReadingReason(StrEnum):
@@ -133,22 +156,6 @@ class ConsumerConfig:
     turn_on_delay: int = 0
     turn_off_delay: int = 0
 
-    # --- Später, siehe Plan "Vorgesehen, aber jetzt nicht gebaut" ------------
-    # Ohne diese Felder müsste die Schaltentscheidung später umgebaut werden;
-    # mit ihnen bleibt die Erweiterung additiv.
-
-    steps: tuple[int, ...] | None = None
-    """Leistungsstufen in W für regelbare Verbraucher. Noch ohne Funktion."""
-
-    step_entity: str | None = None
-    """Entität, die die Stufe setzt. Noch ohne Funktion."""
-
-    window_start: str | None = None
-    """Beginn des erlaubten Zeitfensters (HH:MM). Noch ohne Funktion."""
-
-    window_end: str | None = None
-    """Ende des erlaubten Zeitfensters (HH:MM). Noch ohne Funktion."""
-
     @classmethod
     def from_subentry(cls, subentry_id: str, data: dict[str, Any]) -> ConsumerConfig:
         """Liest die Konfiguration aus den Subentry-Daten."""
@@ -212,7 +219,11 @@ class ConsumerRuntime:
     """
 
     force_until: float | None = None
-    """Zwangsfreigabe bis zu diesem Zeitpunkt. Noch ohne Funktion."""
+    """Zwangsfreigabe bis zu diesem Zeitpunkt.
+
+    Gesetzt vom Dienst ``force_on``, aufgehoben von ``clear_force``. Solange
+    sie läuft, lässt die Automatik den Verbraucher in Ruhe.
+    """
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -291,12 +302,22 @@ class BatteryLoad:
     """Rang, 1 = höchste. Wird über die ``battery_priority``-number bedient."""
 
     max_charge_w: float
-    """Höchste Ladeleistung, die die Batterie an ihrem Rang reserviert."""
+    """Obergrenze dessen, was die Batterie insgesamt aus dem Überschuss zieht."""
 
-    soc: float | None
+    reserve_w: float = 0.0
+    """Bereits vor der Reihenfolge abgezogene Leistung (``battery_reserve_w``).
+
+    Sie zählt auf die Ladeleistung an, statt zu ihr hinzuzukommen: Die Reserve
+    greift in :func:`~.surplus.apply_reserve` noch vor dem ersten Verbraucher,
+    die Batterie hat sie an ihrem Rang also schon sicher. Ohne diese Anrechnung
+    stünden zwei Felder nebeneinander, die dasselbe meinen, und die Batterie
+    bekäme beides.
+    """
+
+    soc: float | None = None
     """Ladestand in Prozent, oder None ohne Sensor."""
 
-    charging_w: float | None
+    charging_w: float | None = None
     """Gemessene Ladeleistung (>0 lädt), oder None."""
 
 
@@ -316,10 +337,14 @@ class BatteryView:
     priority: float
     max_charge_w: float
     claim_w: float
-    """Tatsächlich reservierte Ladeleistung, ``min(max_charge_w, Budget)``."""
+    """Insgesamt für die Batterie zurückgelegte Leistung, höchstens ``max_charge_w``.
+
+    Enthält die Reserve, die schon vor der Reihenfolge abgezogen wurde. Der Teil,
+    den die Batterie tatsächlich aus dem Budget der Reihenfolge nimmt, ist
+    ``claim_w`` abzüglich der Reserve.
+    """
 
     charging_w: float | None
-    soc: float | None
     status: DeviceStatus
     headroom_w: float | None
     """Budget, das nach der Batterie noch für tiefere Verbraucher bleibt."""

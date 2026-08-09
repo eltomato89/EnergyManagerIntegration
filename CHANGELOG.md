@@ -2,6 +2,52 @@
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.4.0b3] — 2026-08-09
+
+### Behoben
+
+- **„Unknown error occurred" beim Neukonfigurieren.** Der Ablauf endete auf dem Batterie-Formular
+  mit `async_create_entry` — Home Assistant verbietet das in einem `reconfigure`-Ablauf und wirft
+  dort seit Längerem eine Ausnahme (`Creates a new entry in a 'reconfigure' flow`). Der Eintrag
+  wird nun aktualisiert statt neu angelegt. Betrifft jeden, der die neue **Maximale Ladeleistung**
+  eintragen wollte: Sie liegt in den Eintragsdaten und ist nur über „Neu konfigurieren"
+  erreichbar.
+
+- **Die Folgeformulare beim Neukonfigurieren waren leer.** Sensoren und Schalter mussten erneut
+  ausgewählt werden, und die Felder mit Vorgabewert — Entladeverhalten, Batteriereserve — fielen
+  dabei stillschweigend auf ihre Vorgabe zurück. Alle Schritte sind jetzt mit dem bisherigen Stand
+  vorbelegt; ein geleertes Feld bleibt leer, und ein Wechsel des Zählermodus lässt keine Reste des
+  anderen Modus zurück.
+
+### Geändert
+
+- **Batteriereserve und maximale Ladeleistung zählten doppelt.** Die Reserve wird schon vor dem
+  ersten Verbraucher vom Überschuss abgezogen; die Ladeleistung kam an ihrem Rang noch einmal
+  obendrauf. Bei 800 W Reserve und 2000 W Ladeleistung entzog die Batterie den Verbrauchern 2800 W,
+  obwohl 2000 W eingetragen waren. Die Reserve wird nun auf die Ladeleistung **angerechnet**: An
+  ihrem Rang fordert die Batterie nur noch die Differenz an, und insgesamt bekommt sie nie mehr als
+  die eingetragene Ladeleistung.
+
+- **Zwei Angaben ohne Wirkung werden jetzt abgewiesen.** Die maximale Ladeleistung braucht eine
+  Batterie-Entität, der Mindestladestand einen Ladestandssensor. Ohne sie stand eine Zahl im
+  Formular, die stillschweigend nichts tat.
+
+- **Die Beschreibung der Nennleistung war irreführend.** „Maximale Leistungsaufnahme" las sich wie
+  eine Obergrenze für den Betrieb; das Feld dient ausschließlich als Ersatzwert für den Bedarf,
+  solange keine Einschaltschwelle eingetragen ist.
+
+### Hinzugefügt
+
+- Attribut `battery_headroom_w` am Überschuss-Sensor: was nach der Batterie noch für tiefer
+  priorisierte Verbraucher bleibt. Ohne diese Angabe ließ sich in der Karte nicht nachvollziehen,
+  warum ein Verbraucher unter der Batterie leer ausgeht.
+
+### Entfernt
+
+- Vier nie befüllte Platzhalterfelder an `ConsumerConfig` (`steps`, `step_entity`, `window_start`,
+  `window_end`) und die ungenutzte Konstante `CONF_PRIORITY`. Ohne Formularfeld und ohne Leser
+  waren sie nur ein Versprechen im Code.
+
 ## [0.3.3] — 2026-07-27
 
 ### Geändert

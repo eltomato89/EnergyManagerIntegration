@@ -322,41 +322,94 @@ class TestDecide:
 class TestBatteryClaim:
     """Die Batterie als gierige, aber rücksichtsvolle Last."""
 
-    def _bat(self, soc: float | None = 60.0, charging: float | None = None) -> BatteryLoad:
-        return BatteryLoad(priority=5.0, max_charge_w=2000.0, soc=soc, charging_w=charging)
+    def _bat(
+        self,
+        soc: float | None = 60.0,
+        charging: float | None = None,
+        reserve: float = 0.0,
+    ) -> BatteryLoad:
+        return BatteryLoad(
+            priority=5.0,
+            max_charge_w=2000.0,
+            reserve_w=reserve,
+            soc=soc,
+            charging_w=charging,
+        )
 
     def test_voller_ueberschuss_volle_ladeleistung(self) -> None:
-        claim, status, full = battery_claim(self._bat(), 3500.0)
-        assert claim == 2000.0
+        budget, gesamt, status, full = battery_claim(self._bat(), 3500.0)
+        assert budget == 2000.0
+        assert gesamt == 2000.0
         assert status is DeviceStatus.ON_OK
         assert full is False
 
     def test_knappes_budget_wird_gedrosselt(self) -> None:
-        claim, status, _ = battery_claim(self._bat(), 1500.0)
-        assert claim == 1500.0
+        budget, gesamt, status, _ = battery_claim(self._bat(), 1500.0)
+        assert budget == 1500.0
+        assert gesamt == 1500.0
         assert status is DeviceStatus.ON_DEFICIT
 
     def test_kein_ueberschuss_keine_reservierung(self) -> None:
-        claim, status, _ = battery_claim(self._bat(), 0.0)
-        assert claim == 0.0
+        budget, gesamt, status, _ = battery_claim(self._bat(), 0.0)
+        assert budget == 0.0
+        assert gesamt == 0.0
         assert status is DeviceStatus.OFF_INSUFFICIENT
 
     def test_defizit_wird_nicht_verstaerkt(self) -> None:
         # Bei Netzbezug beansprucht die Batterie nichts — sie schiebt niemanden
         # tiefer ins Defizit.
-        claim, _, _ = battery_claim(self._bat(), -1000.0)
-        assert claim == 0.0
+        budget, _, _, _ = battery_claim(self._bat(), -1000.0)
+        assert budget == 0.0
 
     def test_volle_batterie_reserviert_nichts(self) -> None:
-        claim, status, full = battery_claim(self._bat(soc=100.0), 3500.0)
-        assert claim == 0.0
+        budget, _, status, full = battery_claim(self._bat(soc=100.0), 3500.0)
+        assert budget == 0.0
         assert full is True
         assert status is DeviceStatus.ON_OK
 
     def test_unbekannter_ueberschuss(self) -> None:
-        claim, status, _ = battery_claim(self._bat(), None)
-        assert claim == 0.0
+        budget, _, status, _ = battery_claim(self._bat(), None)
+        assert budget == 0.0
         assert status is DeviceStatus.UNAVAILABLE
+
+
+class TestBatteryReserveWirdAngerechnet:
+    """Reserve und Ladeleistung meinen dasselbe und dürfen nicht doppelt zählen.
+
+    Die Reserve greift schon in ``apply_reserve``, also vor dem ersten
+    Verbraucher. Zählte sie zur Ladeleistung hinzu, entzöge die Batterie den
+    Verbrauchern die Summe aus beidem — bei 800 W Reserve und 2000 W
+    Ladeleistung also 2800 W, obwohl 2000 W eingetragen sind.
+    """
+
+    def _bat(self, reserve: float) -> BatteryLoad:
+        return BatteryLoad(
+            priority=5.0, max_charge_w=2000.0, reserve_w=reserve, soc=60.0, charging_w=None
+        )
+
+    def test_nur_die_differenz_kommt_aus_dem_budget(self) -> None:
+        budget, gesamt, status, _ = battery_claim(self._bat(800.0), 3500.0)
+        assert budget == 1200.0
+        assert gesamt == 2000.0
+        assert status is DeviceStatus.ON_OK
+
+    def test_reserve_deckt_die_ladeleistung_schon_ab(self) -> None:
+        budget, gesamt, status, _ = battery_claim(self._bat(2000.0), 3500.0)
+        assert budget == 0.0
+        assert gesamt == 2000.0
+        assert status is DeviceStatus.ON_OK
+
+    def test_reserve_ueber_der_ladeleistung_zaehlt_nur_bis_dahin(self) -> None:
+        budget, gesamt, _, _ = battery_claim(self._bat(5000.0), 3500.0)
+        assert budget == 0.0
+        assert gesamt == 2000.0
+
+    def test_ohne_budget_bleibt_die_reserve_sicher(self) -> None:
+        # Sie ist bereits abgezogen; an ihrem Rang kommt nur nichts mehr dazu.
+        budget, gesamt, status, _ = battery_claim(self._bat(800.0), 0.0)
+        assert budget == 0.0
+        assert gesamt == 800.0
+        assert status is DeviceStatus.ON_DEFICIT
 
 
 class TestBatteryInsertIndex:

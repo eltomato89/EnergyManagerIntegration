@@ -151,37 +151,51 @@ def compute_lock(
 def battery_claim(
     battery: BatteryLoad,
     budget: float | None,
-) -> tuple[float, DeviceStatus, bool]:
-    """Wie viel Überschuss die Batterie an ihrem Rang für sich beansprucht.
+) -> tuple[float, float, DeviceStatus, bool]:
+    """Wie viel Überschuss die Batterie bekommt.
 
-    Die Batterie ist eine gierige Last: Sie nimmt bis zu ihrer maximalen
+    Gibt zwei Beträge zurück: was an ihrem **Rang** aus dem Budget genommen wird
+    und was ihr **insgesamt** zusteht. Die beiden fallen auseinander, sobald eine
+    Batteriereserve eingetragen ist: Die greift schon vor dem ersten Verbraucher,
+    die Batterie hat sie an ihrem Rang also bereits sicher. Angerechnet statt
+    addiert, sonst bekäme sie beides und zwei Felder mit derselben Bedeutung
+    zögen den Verbrauchern doppelt Leistung ab.
+
+    Die Batterie ist eine gierige Last: Sie fordert bis zu ihrer maximalen
     Ladeleistung, aber nie mehr als gerade übrig ist. So sinkt der Anspruch bei
     Netzbezug von selbst auf 0 — die Batterie drängt tiefer priorisierte
     Verbraucher nur dann heraus, wenn tatsächlich Überschuss zu holen ist, und
     schiebt niemanden ohne Not ins Defizit.
 
-    Ist der Ladestand am Anschlag, reserviert sie nichts: Was sie nicht mehr
+    Ist der Ladestand am Anschlag, fordert sie nichts mehr an: Was sie nicht mehr
     aufnimmt, gehört wieder den tieferen Verbrauchern.
     """
     full = battery.soc is not None and battery.soc >= BATTERY_FULL_SOC
+    # Was über die Ladeleistung hinausgeht, ist keine Reserve für die Batterie
+    # mehr, sondern schlicht zu viel; als Anrechnung zählt höchstens die
+    # Ladeleistung selbst.
+    gesichert = min(battery.reserve_w, battery.max_charge_w)
 
     if budget is None:
-        return 0.0, DeviceStatus.UNAVAILABLE, full
+        return 0.0, gesichert, DeviceStatus.UNAVAILABLE, full
     if full:
-        return 0.0, DeviceStatus.ON_OK, True
+        return 0.0, gesichert, DeviceStatus.ON_OK, True
 
-    claim = min(battery.max_charge_w, max(budget, 0.0))
-    if claim <= 0:
+    offen = max(battery.max_charge_w - gesichert, 0.0)
+    aus_budget = min(offen, max(budget, 0.0))
+    gesamt = gesichert + aus_budget
+
+    if gesamt <= 0:
         # Höher priorisierte Verbraucher haben alles belegt (oder es herrscht
         # Defizit): die Batterie wartet.
         status = DeviceStatus.OFF_INSUFFICIENT
-    elif claim >= battery.max_charge_w:
-        # Volle Ladeleistung reserviert.
+    elif gesamt >= battery.max_charge_w:
+        # Volle Ladeleistung zurückgelegt.
         status = DeviceStatus.ON_OK
     else:
         # Bekommt etwas, aber nicht die volle Ladeleistung.
         status = DeviceStatus.ON_DEFICIT
-    return claim, status, False
+    return aus_budget, gesamt, status, False
 
 
 def _battery_insert_index(
@@ -306,16 +320,19 @@ def _build_battery_view(
     budget: float | None,
     rank: int,
 ) -> tuple[BatteryView, float | None]:
-    """Bewertet die Batterie-Last und zieht ihren Anspruch vom Budget ab."""
-    claim, status, full = battery_claim(battery, budget)
-    remaining = None if budget is None else budget - claim
+    """Bewertet die Batterie-Last und zieht ihren Anspruch vom Budget ab.
+
+    Vom Budget geht nur der Teil ab, der an diesem Rang zusätzlich beansprucht
+    wird; die Reserve ist vorher schon abgezogen worden.
+    """
+    aus_budget, gesamt, status, full = battery_claim(battery, budget)
+    remaining = None if budget is None else budget - aus_budget
     view = BatteryView(
         rank=rank,
         priority=battery.priority,
         max_charge_w=battery.max_charge_w,
-        claim_w=claim,
+        claim_w=gesamt,
         charging_w=battery.charging_w,
-        soc=battery.soc,
         status=status,
         headroom_w=remaining,
         full=full,
