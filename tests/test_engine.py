@@ -10,7 +10,9 @@ import pytest
 
 from custom_components.energy_manager.engine import (
     Blocker,
+    _battery_insert_index,
     anticipated_w,
+    battery_claim,
     compute_lock,
     decide,
     decide_for,
@@ -19,6 +21,7 @@ from custom_components.energy_manager.engine import (
     update_conditions,
 )
 from custom_components.energy_manager.models import (
+    BatteryLoad,
     ConsumerConfig,
     ConsumerRuntime,
     ConsumerView,
@@ -314,6 +317,73 @@ class TestDecide:
         # Erst 120 s nach der Unterbrechung wird geschaltet.
         result = decide(bereit, runtimes, NOW + 240)
         assert result.action is not None
+
+
+class TestBatteryClaim:
+    """Die Batterie als gierige, aber rücksichtsvolle Last."""
+
+    def _bat(self, soc: float | None = 60.0, charging: float | None = None) -> BatteryLoad:
+        return BatteryLoad(priority=5.0, max_charge_w=2000.0, soc=soc, charging_w=charging)
+
+    def test_voller_ueberschuss_volle_ladeleistung(self) -> None:
+        claim, status, full = battery_claim(self._bat(), 3500.0)
+        assert claim == 2000.0
+        assert status is DeviceStatus.ON_OK
+        assert full is False
+
+    def test_knappes_budget_wird_gedrosselt(self) -> None:
+        claim, status, _ = battery_claim(self._bat(), 1500.0)
+        assert claim == 1500.0
+        assert status is DeviceStatus.ON_DEFICIT
+
+    def test_kein_ueberschuss_keine_reservierung(self) -> None:
+        claim, status, _ = battery_claim(self._bat(), 0.0)
+        assert claim == 0.0
+        assert status is DeviceStatus.OFF_INSUFFICIENT
+
+    def test_defizit_wird_nicht_verstaerkt(self) -> None:
+        # Bei Netzbezug beansprucht die Batterie nichts — sie schiebt niemanden
+        # tiefer ins Defizit.
+        claim, _, _ = battery_claim(self._bat(), -1000.0)
+        assert claim == 0.0
+
+    def test_volle_batterie_reserviert_nichts(self) -> None:
+        claim, status, full = battery_claim(self._bat(soc=100.0), 3500.0)
+        assert claim == 0.0
+        assert full is True
+        assert status is DeviceStatus.ON_OK
+
+    def test_unbekannter_ueberschuss(self) -> None:
+        claim, status, _ = battery_claim(self._bat(), None)
+        assert claim == 0.0
+        assert status is DeviceStatus.UNAVAILABLE
+
+
+class TestBatteryInsertIndex:
+    def test_einfuegen_nach_prioritaet(self) -> None:
+        a, b, c = (
+            consumer("A", subentry_id="a"),
+            consumer("B", subentry_id="b"),
+            consumer("C", subentry_id="c"),
+        )
+        ordered = [a, b, c]
+        prios = {"a": 1.0, "b": 2.0, "c": 3.0}
+        # Batterie mit Rang 2.5 landet zwischen B (2) und C (3).
+        assert _battery_insert_index(ordered, prios, 2.5) == 2
+
+    def test_gleichstand_batterie_dahinter(self) -> None:
+        a, b = consumer("A", subentry_id="a"), consumer("B", subentry_id="b")
+        prios = {"a": 2.0, "b": 2.0}
+        # Bei Gleichstand steht die Batterie hinter den Verbrauchern desselben Rangs.
+        assert _battery_insert_index([a, b], prios, 2.0) == 2
+
+    def test_hoechste_prioritaet_ganz_vorn(self) -> None:
+        a = consumer("A", subentry_id="a")
+        assert _battery_insert_index([a], {"a": 5.0}, 1.0) == 0
+
+    def test_niedrigste_prioritaet_ganz_hinten(self) -> None:
+        a = consumer("A", subentry_id="a")
+        assert _battery_insert_index([a], {"a": 1.0}, 99.0) == 1
 
 
 class TestAnticipation:

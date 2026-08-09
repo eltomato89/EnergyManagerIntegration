@@ -18,6 +18,7 @@ from .const import (
     CONF_BATTERY_CHARGE_ENTITY,
     CONF_BATTERY_DISCHARGE_ENTITY,
     CONF_BATTERY_INVERT,
+    CONF_BATTERY_MAX_CHARGE_W,
     CONF_BATTERY_MIN_SOC,
     CONF_BATTERY_MODE,
     CONF_BATTERY_POWER_ENTITY,
@@ -138,6 +139,7 @@ BATTERY_SCHEMA = vol.Schema(
             )
         ),
         vol.Optional(CONF_BATTERY_RESERVE_W, default=0): watts(20000),
+        vol.Optional(CONF_BATTERY_MAX_CHARGE_W, default=0): watts(20000),
     }
 )
 
@@ -185,7 +187,7 @@ CONSUMER_SCHEMA = vol.Schema(
 # Bei diesen Feldern ist 0 keine Angabe, sondern das Fehlen einer. Anders als
 # bei `hysteresis` oder den Zeitfeldern, wo 0 "aus" bedeutet und gespeichert
 # gehört.
-_NULL_IST_LEER = (CONF_MIN_POWER, CONF_MAX_POWER)
+_NULL_IST_LEER = (CONF_MIN_POWER, CONF_MAX_POWER, CONF_BATTERY_MAX_CHARGE_W)
 
 
 def clean(data: dict[str, Any]) -> dict[str, Any]:

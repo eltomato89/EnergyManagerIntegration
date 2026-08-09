@@ -47,14 +47,16 @@
           "battery_discharge_entity": "Discharge power",
           "battery_mode": "Discharging in the surplus",
           "battery_min_soc": "Minimum state of charge",
-          "battery_reserve_w": "Battery reserve"
+          "battery_reserve_w": "Battery reserve",
+          "battery_max_charge_w": "Maximum charge power"
         },
         "data_description": {
           "battery_power_entity": "A bidirectional sensor: positive when charging, negative when discharging.",
           "battery_charge_entity": "Alternative to the bidirectional sensor: two always-positive sensors.",
           "battery_mode": "Charging power always counts as available. This setting determines whether discharging reduces the surplus.",
           "battery_min_soc": "Below this state of charge, charging takes precedence and no surplus is reported.",
-          "battery_reserve_w": "Power always kept for the battery."
+          "battery_reserve_w": "Power always kept for the battery.",
+          "battery_max_charge_w": "Lets the battery take part in the priority order as a shiftable load. Higher-priority loads are served first and stay on; at its rank the battery reserves up to this charge power; only the remainder is available to lower-priority loads. 0 disables participation."
         }
       }
     },
@@ -166,6 +168,9 @@
     "number": {
       "priority": {
         "name": "Priority"
+      },
+      "battery_priority": {
+        "name": "Battery priority"
       }
     },
     "switch": {

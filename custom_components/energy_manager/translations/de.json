@@ -47,14 +47,16 @@
           "battery_discharge_entity": "Entladeleistung",
           "battery_mode": "Entladung im Überschuss",
           "battery_min_soc": "Mindestladestand",
-          "battery_reserve_w": "Batteriereserve"
+          "battery_reserve_w": "Batteriereserve",
+          "battery_max_charge_w": "Maximale Ladeleistung"
         },
         "data_description": {
           "battery_power_entity": "Ein bidirektionaler Sensor: positiv beim Laden, negativ beim Entladen.",
           "battery_charge_entity": "Alternative zum bidirektionalen Sensor: zwei stets positive Sensoren.",
           "battery_mode": "Ladeleistung gilt stets als verfügbar. Diese Einstellung bestimmt, ob eine Entladung den Überschuss verringert.",
           "battery_min_soc": "Unterhalb dieses Ladestands hat das Laden Vorrang; es wird kein Überschuss ausgewiesen.",
-          "battery_reserve_w": "Leistung, die immer der Batterie vorbehalten bleibt."
+          "battery_reserve_w": "Leistung, die immer der Batterie vorbehalten bleibt.",
+          "battery_max_charge_w": "Lässt die Batterie als verschiebbare Last an der Prioritätsreihenfolge teilnehmen. Höher priorisierte Verbraucher werden zuerst versorgt und bleiben eingeschaltet; die Batterie reserviert an ihrem Rang bis zu dieser Ladeleistung; nur der Rest steht tiefer priorisierten Verbrauchern zur Verfügung. 0 schaltet die Teilnahme ab."
         }
       }
     },
@@ -166,6 +168,9 @@
     "number": {
       "priority": {
         "name": "Priorität"
+      },
+      "battery_priority": {
+        "name": "Priorität Batterie"
       }
     },
     "switch": {

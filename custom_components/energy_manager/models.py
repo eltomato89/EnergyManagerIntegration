@@ -277,12 +277,65 @@ class ConsumerView:
     """
 
 
+@dataclass(frozen=True, slots=True)
+class BatteryLoad:
+    """Die Hausbatterie als verschiebbare Last.
+
+    Nur befüllt, wenn eine Batterie konfiguriert ist **und** eine maximale
+    Ladeleistung eingetragen wurde. Ohne beides ist die Batterie wie bisher nur
+    ein Korrekturterm in der Überschussformel und nimmt an der
+    Prioritätsreihenfolge nicht teil.
+    """
+
+    priority: float
+    """Rang, 1 = höchste. Wird über die ``battery_priority``-number bedient."""
+
+    max_charge_w: float
+    """Höchste Ladeleistung, die die Batterie an ihrem Rang reserviert."""
+
+    soc: float | None
+    """Ladestand in Prozent, oder None ohne Sensor."""
+
+    charging_w: float | None
+    """Gemessene Ladeleistung (>0 lädt), oder None."""
+
+
+@dataclass(slots=True)
+class BatteryView:
+    """Bewertete Batterie-Last — Grundlage für die Batterie-Zeile der Karte.
+
+    Die Batterie wird **nicht** geschaltet (dazu fehlt der Integration ein
+    Steuerweg); sie belegt nur an ihrem Rang Budget, das tiefer priorisierten
+    Verbrauchern damit nicht mehr zur Verfügung steht. Höher priorisierte
+    Verbraucher werden vor ihr bedient und bleiben eingeschaltet.
+    """
+
+    rank: int
+    """Position in der gemeinsamen Reihenfolge, 0 = höchste."""
+
+    priority: float
+    max_charge_w: float
+    claim_w: float
+    """Tatsächlich reservierte Ladeleistung, ``min(max_charge_w, Budget)``."""
+
+    charging_w: float | None
+    soc: float | None
+    status: DeviceStatus
+    headroom_w: float | None
+    """Budget, das nach der Batterie noch für tiefere Verbraucher bleibt."""
+
+    full: bool
+    """Ladestand am oberen Anschlag — die Batterie reserviert dann nichts."""
+
+
 @dataclass(slots=True)
 class ManagerState:
     """Was der Koordinator an die Entitäten weitergibt."""
 
     surplus: SurplusResult
     consumers: list[ConsumerView] = field(default_factory=list)
+    battery: BatteryView | None = None
+    """Die Batterie als verschiebbare Last, sofern sie mitspielt."""
     coverage: float = 0.0
     """Anteil des Mittelungsfensters mit gültigen Daten, 0..1."""
 

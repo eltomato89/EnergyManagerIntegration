@@ -44,6 +44,7 @@ from .const import (
     CONF_BATTERY_CHARGE_ENTITY,
     CONF_BATTERY_DISCHARGE_ENTITY,
     CONF_BATTERY_INVERT,
+    CONF_BATTERY_MAX_CHARGE_W,
     CONF_BATTERY_MIN_SOC,
     CONF_BATTERY_MODE,
     CONF_BATTERY_POWER_ENTITY,
@@ -60,6 +61,7 @@ from .const import (
     CONF_SMOOTHING_WINDOW,
     CONF_SWITCH_ENTITY,
     DEBOUNCE_COOLDOWN,
+    DEFAULT_BATTERY_PRIORITY,
     DEFAULT_SETTLE_TIME,
     DEFAULT_SMOOTHING_WINDOW,
     DOMAIN,
@@ -75,6 +77,8 @@ from .const import (
 from .engine import Decision, Evaluation, anticipated_w, build_views, decide
 from .estimate import async_estimate_power
 from .models import (
+    BatteryLoad,
+    BatteryView,
     ConsumerConfig,
     ConsumerRuntime,
     ConsumerView,
@@ -109,6 +113,10 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         # Hauptschalter. Standardmäßig aus: nach dem Einrichten soll erst
         # beobachtet und dann bewusst scharfgeschaltet werden.
         self.automation_enabled = False
+        # Rang der Batterie als verschiebbare Last. Getrennt vom Verbraucher-
+        # Laufzeitzustand, weil die Batterie kein Subentry ist und beim
+        # Neuladen der Verbraucher nicht mit weggeräumt werden darf.
+        self._battery_priority = DEFAULT_BATTERY_PRIORITY
 
         self._store: Store[dict[str, Any]] = Store(
             hass,
@@ -153,6 +161,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             for key, value in (stored.get("consumers") or {}).items()
         }
         self.automation_enabled = bool(stored.get("automation_enabled", False))
+        self._battery_priority = float(stored.get("battery_priority", DEFAULT_BATTERY_PRIORITY))
         self.reload_consumers()
 
     @callback
@@ -357,7 +366,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             now = dt_util.utcnow().timestamp()
             measured = self._compute(now)
             surplus = self._with_anticipation(measured, anticipated_w(self.runtime, now))
-            views = self._build_views(surplus)
+            views, battery = self._build_views(surplus)
 
             # Immer auswerten, auch bei ausgeschalteter Automatik: Die
             # Bedingungszähler müssen mitlaufen, damit nach dem Scharfschalten
@@ -365,7 +374,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             # den Status-Attributen. Nur ausgeführt wird dann nichts.
             evaluation = decide(views, self.runtime, now)
             may_switch = self._may_switch(surplus, now)
-            self._publish(surplus, views, evaluation, now, may_switch)
+            self._publish(surplus, views, battery, evaluation, now, may_switch)
 
             if not may_switch or evaluation.action is None:
                 return
@@ -378,13 +387,15 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             # an, das es nicht mehr gibt — und der Zähler bestätigt es erst in
             # einigen Sekunden.
             after = self._with_anticipation(measured, anticipated_w(self.runtime, now))
-            self._publish(after, self._build_views(after), evaluation, now, may_switch)
+            after_views, after_battery = self._build_views(after)
+            self._publish(after, after_views, after_battery, evaluation, now, may_switch)
 
     @callback
     def _publish(
         self,
         surplus: SurplusResult,
         views: list[ConsumerView],
+        battery: BatteryView | None,
         evaluation: Evaluation,
         now: float,
         may_switch: bool,
@@ -393,6 +404,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             ManagerState(
                 surplus=surplus,
                 consumers=views,
+                battery=battery,
                 coverage=self._window.coverage(now),
                 started=self._started,
                 may_switch=may_switch,
@@ -592,9 +604,30 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             )
         )
 
-    def _build_views(self, surplus: SurplusResult) -> list[ConsumerView]:
+    def _build_views(self, surplus: SurplusResult) -> tuple[list[ConsumerView], BatteryView | None]:
         """Bewertet die Verbraucher in Prioritätsreihenfolge."""
         return build_views(self.hass, self, surplus.available)
+
+    def battery_load(self) -> BatteryLoad | None:
+        """Die Batterie als verschiebbare Last, sofern sie mitspielt.
+
+        Nur wenn eine Batterie konfiguriert ist **und** eine maximale
+        Ladeleistung eingetragen wurde. Ohne die Ladeleistung bleibt die
+        Batterie wie bisher ein reiner Korrekturterm im Überschuss und taucht in
+        der Reihenfolge nicht auf.
+        """
+        data = dict(self.config_entry.data) if self.config_entry else {}
+        max_charge = data.get(CONF_BATTERY_MAX_CHARGE_W)
+        if not self._has_battery(data) or not max_charge:
+            return None
+
+        reading = self._battery_reading(data)
+        return BatteryLoad(
+            priority=self._battery_priority,
+            max_charge_w=float(max_charge),
+            soc=read_percent(self.hass, data.get(CONF_BATTERY_SOC_ENTITY)),
+            charging_w=reading.w,
+        )
 
     # -- Hilfen für Entitäten ------------------------------------------------
 
@@ -733,6 +766,23 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         data = dict(self.config_entry.data) if self.config_entry else {}
         return read_percent(self.hass, data.get(CONF_BATTERY_SOC_ENTITY))
 
+    @property
+    def battery_soc_entity(self) -> str | None:
+        """Entität des Ladestands, damit die Karte den Detail-Dialog öffnen kann."""
+        data = dict(self.config_entry.data) if self.config_entry else {}
+        return data.get(CONF_BATTERY_SOC_ENTITY)
+
+    @property
+    def battery_priority(self) -> float:
+        """Rang der Batterie als verschiebbare Last, 1 = höchste."""
+        return self._battery_priority
+
+    async def async_set_battery_priority(self, value: float) -> None:
+        """Setzt den Rang der Batterie und wertet sofort neu aus."""
+        self._battery_priority = value
+        self.schedule_save()
+        await self.async_request_refresh_now()
+
     # -- Speichern -----------------------------------------------------------
 
     @callback
@@ -744,6 +794,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
     def _data_to_save(self) -> dict[str, Any]:
         return {
             "automation_enabled": self.automation_enabled,
+            "battery_priority": self._battery_priority,
             "consumers": {key: value.as_dict() for key, value in self.runtime.items()},
         }
 

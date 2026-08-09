@@ -16,8 +16,15 @@ from typing import TYPE_CHECKING
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import CLOSE_THRESHOLD_RATIO, DEFAULT_REQUIRED_W, STANDBY_W
-from .models import ConsumerConfig, ConsumerRuntime, ConsumerView, DeviceStatus
+from .const import BATTERY_FULL_SOC, CLOSE_THRESHOLD_RATIO, DEFAULT_REQUIRED_W, STANDBY_W
+from .models import (
+    BatteryLoad,
+    BatteryView,
+    ConsumerConfig,
+    ConsumerRuntime,
+    ConsumerView,
+    DeviceStatus,
+)
 from .units import is_on, is_unavailable, read_power_w, round_w
 
 if TYPE_CHECKING:
@@ -141,12 +148,72 @@ def compute_lock(
     return until, "min_runtime" if is_currently_on else "min_off_time"
 
 
+def battery_claim(
+    battery: BatteryLoad,
+    budget: float | None,
+) -> tuple[float, DeviceStatus, bool]:
+    """Wie viel Überschuss die Batterie an ihrem Rang für sich beansprucht.
+
+    Die Batterie ist eine gierige Last: Sie nimmt bis zu ihrer maximalen
+    Ladeleistung, aber nie mehr als gerade übrig ist. So sinkt der Anspruch bei
+    Netzbezug von selbst auf 0 — die Batterie drängt tiefer priorisierte
+    Verbraucher nur dann heraus, wenn tatsächlich Überschuss zu holen ist, und
+    schiebt niemanden ohne Not ins Defizit.
+
+    Ist der Ladestand am Anschlag, reserviert sie nichts: Was sie nicht mehr
+    aufnimmt, gehört wieder den tieferen Verbrauchern.
+    """
+    full = battery.soc is not None and battery.soc >= BATTERY_FULL_SOC
+
+    if budget is None:
+        return 0.0, DeviceStatus.UNAVAILABLE, full
+    if full:
+        return 0.0, DeviceStatus.ON_OK, True
+
+    claim = min(battery.max_charge_w, max(budget, 0.0))
+    if claim <= 0:
+        # Höher priorisierte Verbraucher haben alles belegt (oder es herrscht
+        # Defizit): die Batterie wartet.
+        status = DeviceStatus.OFF_INSUFFICIENT
+    elif claim >= battery.max_charge_w:
+        # Volle Ladeleistung reserviert.
+        status = DeviceStatus.ON_OK
+    else:
+        # Bekommt etwas, aber nicht die volle Ladeleistung.
+        status = DeviceStatus.ON_DEFICIT
+    return claim, status, False
+
+
+def _battery_insert_index(
+    ordered: list[ConsumerConfig],
+    priorities: dict[str, float],
+    battery_priority: float,
+) -> int:
+    """Position der Batterie in der nach Priorität sortierten Verbraucherliste.
+
+    Bei Gleichstand steht die Batterie **hinter** den Verbrauchern desselben
+    Rangs — sie wird erst eingefügt, sobald ein Verbraucher echt niedriger
+    priorisiert ist.
+    """
+    for index, consumer in enumerate(ordered):
+        if priorities.get(consumer.subentry_id, 999.0) > battery_priority:
+            return index
+    return len(ordered)
+
+
 def build_views(
     hass: HomeAssistant,
     coordinator: EnergyManagerCoordinator,
     available_w: float | None,
-) -> list[ConsumerView]:
+) -> tuple[list[ConsumerView], BatteryView | None]:
     """Bewertet alle Verbraucher in Prioritätsreihenfolge.
+
+    Nimmt die Batterie als verschiebbare Last teil (siehe
+    :class:`~.models.BatteryLoad`), wird sie an ihrem Rang in dieselbe
+    Budget-Kaskade eingehängt: Verbraucher **über** ihr bekommen den Überschuss
+    zuerst und bleiben eingeschaltet, die Batterie reserviert danach ihre
+    Ladeleistung, und nur was dann noch übrig ist, steht Verbrauchern **unter**
+    ihr zur Verfügung. Geschaltet wird die Batterie dabei nicht.
 
     **Abweichung von der Karte:** Dort reserviert jeder Verbraucher mit Status
     ``off_ready`` Budget, auch wenn er nicht an der Automatik teilnimmt. Für die
@@ -157,10 +224,22 @@ def build_views(
     """
     now = dt_util.utcnow().timestamp()
     priorities = coordinator.priorities()
+    battery = coordinator.battery_load()
     budget = available_w
     views: list[ConsumerView] = []
+    battery_view: BatteryView | None = None
 
-    for rank, consumer in enumerate(order_consumers(coordinator.consumers, priorities)):
+    ordered = order_consumers(coordinator.consumers, priorities)
+    battery_at = (
+        _battery_insert_index(ordered, priorities, battery.priority) if battery is not None else -1
+    )
+
+    rank = 0
+    for position, consumer in enumerate(ordered):
+        if battery is not None and position == battery_at:
+            battery_view, budget = _build_battery_view(battery, budget, rank)
+            rank += 1
+
         state = hass.states.get(consumer.switch_entity)
         entity_available = state is not None and not is_unavailable(state)
         currently_on = entity_available and is_on(state)
@@ -211,9 +290,37 @@ def build_views(
                 required_source=required_source(consumer, power_w, estimated_w),
             )
         )
+        rank += 1
+
+    # Steht die Batterie ganz hinten (niedrigste Priorität), fällt sie durch die
+    # Schleife nicht ab — hier nachholen.
+    if battery is not None and battery_at >= len(ordered):
+        battery_view, budget = _build_battery_view(battery, budget, rank)
 
     assign_displaceable(views, coordinator, now)
-    return views
+    return views, battery_view
+
+
+def _build_battery_view(
+    battery: BatteryLoad,
+    budget: float | None,
+    rank: int,
+) -> tuple[BatteryView, float | None]:
+    """Bewertet die Batterie-Last und zieht ihren Anspruch vom Budget ab."""
+    claim, status, full = battery_claim(battery, budget)
+    remaining = None if budget is None else budget - claim
+    view = BatteryView(
+        rank=rank,
+        priority=battery.priority,
+        max_charge_w=battery.max_charge_w,
+        claim_w=claim,
+        charging_w=battery.charging_w,
+        soc=battery.soc,
+        status=status,
+        headroom_w=remaining,
+        full=full,
+    )
+    return view, remaining
 
 
 def displaced_power(view: ConsumerView) -> float:

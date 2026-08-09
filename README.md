@@ -91,6 +91,16 @@ aborted), anything not participating in the automation, anything under a forced 
 just switched. The `displaces` attribute on the status sensor shows how many would give way for a
 given load.
 
+### The battery as a shiftable load
+
+Enter a **maximum charge power** for the battery (in its settings) and it joins the priority order
+as a load of its own. Loads ranked above the battery are served first and stay on; the battery then
+reserves up to its charge power at its rank; only what is left goes to loads ranked below it. When
+the battery is full it reserves nothing. This is pure scheduling — the battery is **not** commanded,
+so no control entity is needed; a `number.…_battery_priority` holds its rank, draggable in the card
+like any load. Leave the charge power empty (the default) and the battery stays what it was: a
+correction term in the surplus, with every load ranked ahead of it.
+
 ## Why is nothing happening?
 
 The most common question — and without an answer, an absent switching action cannot be told apart
@@ -131,6 +141,7 @@ One hub device plus one device per load:
 | `sensor.…_surplus` | Available surplus after reserve and state-of-charge rule |
 | `sensor.…_surplus_unsmoothed` | Unsmoothed raw value, for diagnosis |
 | `sensor.…_status` | State of the automation |
+| `number.…_battery_priority` | Rank of the battery as a shiftable load — only when a maximum charge power is set |
 
 **Per load**
 

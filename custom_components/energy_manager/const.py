@@ -37,9 +37,26 @@ CONF_BATTERY_DISCHARGE_ENTITY: Final = "battery_discharge_entity"
 CONF_BATTERY_MODE: Final = "battery_mode"
 CONF_BATTERY_MIN_SOC: Final = "battery_min_soc"
 CONF_BATTERY_RESERVE_W: Final = "battery_reserve_w"
+# W, die die Batterie höchstens aus dem Überschuss zieht, wenn sie als
+# verschiebbare Last an der Prioritätsreihenfolge teilnimmt. 0 (oder nicht
+# gesetzt) schaltet diese Teilnahme ab — dann bleibt die Batterie wie bisher nur
+# ein Korrekturterm in der Überschussformel.
+CONF_BATTERY_MAX_CHARGE_W: Final = "battery_max_charge_w"
 
 BATTERY_MODE_CHARGE_ONLY: Final = "charge_only"
 BATTERY_MODE_FULL: Final = "full"
+
+# Vorgaberang der Batterie, 1 = höchste. Bewusst hoch, damit sie ohne Zutun
+# ganz hinten steht: alle Verbraucher haben zunächst Vorrang, die Batterie
+# nimmt, was übrig bleibt — das bisherige Verhalten. Von dort kann der Nutzer
+# sie im Dashboard nach oben ziehen.
+DEFAULT_BATTERY_PRIORITY: Final = 99.0
+
+# Ab diesem Ladestand gilt die Batterie als voll und reserviert keinen
+# Überschuss mehr: was sie nicht mehr aufnimmt, steht wieder allen tiefer
+# priorisierten Verbrauchern zur Verfügung. Ohne Ladestandssensor lässt sich
+# "voll" nicht erkennen — dann reserviert die Batterie durchgehend.
+BATTERY_FULL_SOC: Final = 100.0
 
 # --- Regelung ---------------------------------------------------------------
 
