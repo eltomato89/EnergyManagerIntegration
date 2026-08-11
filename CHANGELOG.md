@@ -2,6 +2,25 @@
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.4.0] — 2026-08-11
+
+Reguläre Fassung der Batterie-Reihe: Alles aus `0.4.0b1` bis `0.4.0b4` erreicht damit auch die
+Instanzen, die in HACS keine Vorabfassungen eingeschaltet haben. Am Code ändert sich gegenüber
+`0.4.0b4` nichts.
+
+### Hinzugefügt
+
+- **Die Hausbatterie nimmt als verschiebbare Last an der Überschussverteilung teil** — nachgetragen
+  aus `0.4.0b1`, wo der Eintrag fehlte. Die Einstellung **Maximale Ladeleistung**
+  (`battery_max_charge_w`) hängt sie an ihrem Rang in dieselbe Budget-Kaskade wie die Verbraucher:
+  Höher priorisierte Verbraucher werden zuerst versorgt und bleiben eingeschaltet, die Batterie
+  reserviert bis zu ihrer Ladeleistung, und nur der Rest geht an tiefer priorisierte Verbraucher.
+  Ohne eingetragene Ladeleistung bleibt die Batterie wie bisher ein reiner Korrekturterm.
+
+- Der Rang der Batterie liegt als eigene number-Entität `battery_priority` am Hub und übersteht
+  Neustarts. Bei Netzbezug und bei voller Batterie (Ladestand ≥ 100 %) fordert sie nichts an und
+  verdrängt damit keinen laufenden Verbraucher ohne Not.
+
 ## [0.4.0b4] — 2026-08-09
 
 ### Dokumentation
