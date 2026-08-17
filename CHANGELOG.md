@@ -119,9 +119,7 @@ bestehende Testsuite unverändert grün bleibt.
 
 - **Verhaltenstyp je Verbraucher** (`consumer_type`), als Attribut am Status-Sensor ausgewiesen.
   Bestehende Verbraucher lesen sich als `switch` und verhalten sich unverändert; eine Migration ist
-  nicht nötig. Der Wert `modulating` ist vorgesehen, aber noch ohne Wirkung und deshalb noch nicht im
-  Formular — eine Auswahl, die stillschweigend nichts tut, wäre dieselbe Art Fehler wie eine Zahl
-  ohne Messwert.
+  nicht nötig.
 
 - **Erkennung von Schaltvorgängen, die nicht von dieser Integration kamen**, über den Context der
   eigenen Serviceaufrufe. Ausgewiesen als `last_foreign_change` und `last_foreign_to` am
