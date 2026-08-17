@@ -20,7 +20,14 @@ from homeassistant.util import dt as dt_util
 from .const import SUBENTRY_TYPE_CONSUMER
 from .coordinator import EnergyManagerCoordinator
 from .entity import ConsumerEntity, EnergyManagerEntity
-from .models import ConsumerConfig, DeviceStatus
+from .models import ConsumerConfig, ConsumerView, DeviceStatus
+
+
+def _as_iso(timestamp: float | None) -> str | None:
+    """Zeitstempel für ein Attribut. ISO, damit eine Anzeige damit rechnen kann."""
+    if timestamp is None:
+        return None
+    return dt_util.utc_from_timestamp(timestamp).isoformat()
 
 
 async def async_setup_entry(
@@ -211,12 +218,17 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
             return {}
 
         consumer = view.config
+        runtime = self.coordinator.runtime_for(self._subentry_id)
         return {
+            **self._level_attributes(view),
             # Zuordnung — hierüber findet eine Anzeige das eigentliche Gerät.
             "consumer_id": consumer.subentry_id,
             "consumer_name": consumer.name,
             "switch_entity": consumer.switch_entity,
             "power_entity": consumer.power_entity,
+            # Verhaltenstyp. Noch ohne Wirkung auf die Automatik; die Karte kann
+            # ihn schon lesen und muss ihn später nicht nachrüsten.
+            "consumer_type": consumer.consumer_type,
             # Bewertung
             "rank": view.rank + 1,
             "managed": view.managed,
@@ -240,6 +252,14 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
             # den sonst überraschenden Fall, dass ein Gerät angeht, obwohl der
             # Überschuss allein nicht reicht.
             "displaces": len(view.displaceable),
+            # Wann zuletzt jemand anders geschaltet hat — und wohin. Reine
+            # Diagnose: die Automatik richtet sich nicht danach. Ausgewiesen,
+            # damit sich vor dem Einschalten einer befristeten Übersteuerung
+            # ablesen lässt, wie oft der Fall bei diesem Gerät überhaupt
+            # auftritt. Bei taktenden Geräten ist das häufig, und dann ist eine
+            # Übersteuerung die falsche Antwort.
+            "last_foreign_change": _as_iso(runtime.last_foreign_change),
+            "last_foreign_to": runtime.last_foreign_to,
         }
 
     def _blocked_by(self) -> str | None:
@@ -247,6 +267,43 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
         if data is None:
             return None
         return data.blockers.get(self._subentry_id)
+
+    @staticmethod
+    def _level_attributes(view: ConsumerView) -> dict[str, object]:
+        """Die Stufenangaben — nur bei einem regelbaren Verbraucher.
+
+        Vollständig weggelassen statt mit ``None`` befüllt, damit eine Anzeige an
+        ihrem Vorhandensein erkennt, dass es hier etwas zu regeln gibt. Dasselbe
+        Muster wie bei den ``battery_*``-Angaben am Überschuss-Sensor.
+        """
+        ladder = view.ladder
+        if ladder is None:
+            return {}
+
+        return {
+            "control_entity": view.config.control_entity,
+            # Woher das Raster stammt: number_w, number_a oder select. Ein
+            # abgeleitetes Raster ist damit von einer eingetragenen Zuordnung zu
+            # unterscheiden.
+            "level_source": ladder.source,
+            "level_count": ladder.count,
+            "min_level_w": ladder.min_w,
+            "max_level_w": ladder.max_w,
+            # Die gestellte Stufe und ihre Position, 1-basiert wie rank.
+            "level_w": None if view.level is None else view.level.w,
+            "level_index": None if view.level is None else ladder.index_of(view.level) + 1,
+            # Die Stufe, auf die die Automatik gehen würde. Weicht sie von
+            # level_w ab, steht ein Stufenwechsel an — und blocked_by sagt,
+            # warum er noch nicht stattgefunden hat.
+            "setpoint_w": None if view.target is None else view.target.w,
+            # Was das Gerät seit dem Einschalten höchstens erreicht hat, und ob
+            # die Leiter deswegen beschnitten ist. Die Antwort auf „warum geht
+            # sie nicht höher": Nicht der Überschuss fehlt, das Gerät nimmt nicht
+            # mehr. Ohne diesen Ausweis sähe es aus wie ein Gerät mit weniger
+            # Stufen.
+            "observed_max_w": view.observed_max_w,
+            "level_capped": view.level_capped,
+        }
 
 
 class ConsumerLockedUntilSensor(ConsumerEntity, SensorEntity):

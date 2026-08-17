@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from .const import BATTERY_FULL_SOC, CLOSE_THRESHOLD_RATIO, DEFAULT_REQUIRED_W, STANDBY_W
+from .ladder import build_ladder, read_level
 from .models import (
     BatteryLoad,
     BatteryView,
@@ -24,6 +25,8 @@ from .models import (
     ConsumerRuntime,
     ConsumerView,
     DeviceStatus,
+    Ladder,
+    Level,
 )
 from .units import is_on, is_unavailable, read_power_w, round_w
 
@@ -83,6 +86,91 @@ def required_source(
     if estimated_w is not None and estimated_w > 0:
         return "estimated"
     return "default"
+
+
+def cap_ladder(ladder: Ladder, observed_max: float | None) -> Ladder:
+    """Begrenzt die Leiter auf das, was der Verbraucher tatsächlich erreicht.
+
+    Der Sollwert anzukommen heißt nicht, dass die Last ihm folgt. Ein Fahrzeug
+    lädt mit 10 A, obwohl 16 A angeboten sind; ein anderes ist fertig und nimmt
+    nichts mehr. Ohne diese Grenze fordert die Automatik dauerhaft eine Stufe an,
+    die nicht erreicht wird — und die Budget-Kaskade legt die Differenz für einen
+    Verbraucher zurück, der sie nie abruft. Tiefer priorisierte gehen leer aus,
+    und die Leistung wird eingespeist statt genutzt.
+
+    **Eine Stufe über dem Beobachteten bleibt erlaubt.** Sonst wäre die Grenze
+    selbsterfüllend: Was nie angefordert wird, wird nie erreicht, und ein
+    Fahrzeug, das nach dem Vorwärmen mehr könnte, käme nicht mehr hoch. Übrig
+    bleibt eine Reservierung von höchstens einer Stufe.
+    """
+    if observed_max is None or observed_max <= 0:
+        return ladder
+
+    erreicht = sum(1 for level in ladder.levels if level.w <= observed_max)
+    grenze = erreicht + 1
+    if grenze >= ladder.count:
+        return ladder
+    return Ladder(levels=ladder.levels[:grenze], source=ladder.source)
+
+
+def reachable_w(
+    budget: float,
+    is_currently_on: bool,
+    power_w: float | None,
+    current: Level | None,
+) -> float:
+    """Wie viel Leistung dieser Verbraucher insgesamt ziehen könnte.
+
+    Hier steckt die Feinheit der ganzen Stufenregelung. Die bestehende Regel
+    „ein laufender Verbraucher verbraucht kein Budget, sein Verbrauch steckt im
+    gemessenen Überschuss" gilt weiter — sie ist nur neu zu formulieren:
+
+    * **Aus**: Erreichbar ist das freie Budget. Nichts davon ist verplant.
+    * **Läuft**: Erreichbar ist der eigene Ist-Verbrauch **plus** das freie
+      Budget. Der Ist-Verbrauch steckt schon im Messwert, das Budget ist der
+      Kopfraum darüber hinaus.
+
+    Ein Ausdruck für beide Richtungen: Fällt das Budget negativ aus, ergibt
+    dieselbe Rechnung von selbst eine niedrigere Stufe.
+
+    Ohne Leistungssensor tritt die zuletzt gestellte Stufe an die Stelle des
+    Messwerts — die eigene Anforderung ist die beste vorliegende Schätzung
+    dessen, was das Gerät zieht.
+    """
+    if not is_currently_on:
+        return budget
+
+    if power_w is not None:
+        return power_w + budget
+    if current is not None:
+        return current.w + budget
+    return budget
+
+
+def choose_level(
+    ladder: Ladder,
+    reachable: float,
+    current: Level | None,
+    hysteresis: float,
+) -> Level | None:
+    """Die Stufe, auf der der Verbraucher laufen soll.
+
+    ``None`` heißt: nicht einmal die kleinste Stufe passt. Dann ist zu
+    **schalten**, nicht zu drosseln — das entscheidet :func:`decide_for`.
+
+    Die Hysterese hält die Leiter an einer Stufengrenze ruhig: Ein Wechsel
+    unterbleibt, solange er weniger als das Totband ausmacht. Das Abschalten
+    bremst sie bewusst nicht — ein Defizit zu beenden ist dringender, als eine
+    Stufe zu halten, und die Zeitbedingung dafür liegt ohnehin in
+    ``turn_off_delay``.
+    """
+    target = ladder.at_or_below(reachable)
+    if target is None or current is None:
+        return target
+
+    if abs(target.w - current.w) <= hysteresis:
+        return current
+    return target
 
 
 def order_consumers(
@@ -263,10 +351,46 @@ def build_views(
         power = read_power_w(hass, consumer.power_entity)
         power_w = None if power.w is None else round_w(power.w)
         estimated_w = coordinator.estimated_power(consumer.subentry_id)
-        required_w = resolve_required_w(consumer, power_w, estimated_w)
+
+        ladder = build_ladder(hass, consumer)
+        observed_max = coordinator.observed_max(consumer.subentry_id)
+        capped = False
+        if ladder is not None:
+            gekappt = cap_ladder(ladder, observed_max)
+            capped = gekappt.count < ladder.count
+            ladder = gekappt
+
+        level = read_level(hass, consumer, ladder) if ladder is not None else None
+        target: Level | None = None
+
+        if ladder is not None:
+            # Bei einem regelbaren Verbraucher ist der Bedarf die kleinste Stufe:
+            # weniger lässt sich nicht anfordern, mehr ist nicht nötig, um ihn
+            # überhaupt anlaufen zu lassen.
+            required_w = ladder.min_w
+            source = "ladder"
+        else:
+            required_w = resolve_required_w(consumer, power_w, estimated_w)
+            source = required_source(consumer, power_w, estimated_w)
 
         if not entity_available or budget is None:
             status = DeviceStatus.UNAVAILABLE
+        elif consumer.modulating and ladder is None:
+            # Als regelbar eingerichtet, aber ohne verwertbares Raster — etwa
+            # weil die Steuerentität fehlt, keine Einheit trägt oder gerade nicht
+            # antwortet. Ohne Raster ist nicht zu entscheiden, welche Stufe
+            # anzufordern wäre, und geraten wird hier nicht.
+            status = DeviceStatus.UNAVAILABLE
+        elif ladder is not None:
+            target = choose_level(
+                ladder,
+                reachable_w(budget, currently_on, power_w, level),
+                level,
+                consumer.hysteresis or 0,
+            )
+            status, budget = _rate_modulating(
+                ladder, level, target, currently_on, managed, power_w, budget
+            )
         elif currently_on:
             # Laufende Verbraucher verbrauchen kein Budget: ihr Verbrauch ist im
             # gemessenen Überschuss bereits enthalten, sie würden doppelt zählen.
@@ -301,7 +425,12 @@ def build_views(
                 headroom_w=budget,
                 locked_until=locked_until,
                 lock_kind=lock_kind,
-                required_source=required_source(consumer, power_w, estimated_w),
+                required_source=source,
+                ladder=ladder,
+                level=level,
+                target=target,
+                observed_max_w=observed_max,
+                level_capped=capped,
             )
         )
         rank += 1
@@ -313,6 +442,59 @@ def build_views(
 
     assign_displaceable(views, coordinator, now)
     return views, battery_view
+
+
+def _rate_modulating(
+    ladder: Ladder,
+    level: Level | None,
+    target: Level | None,
+    currently_on: bool,
+    managed: bool,
+    power_w: float | None,
+    budget: float,
+) -> tuple[DeviceStatus, float]:
+    """Ampelzustand und verbleibendes Budget eines regelbaren Verbrauchers.
+
+    **Die riskanteste Rechnung der Stufenregelung.** Ein Vorzeichenfehler hier
+    stürzt nicht ab und erscheint in keinem Log — er führt dazu, dass
+    Verbraucher weiter unten in der Rangfolge gelegentlich falsch geschaltet
+    werden. Deshalb steht sie als eigene Funktion da und nicht in der Schleife.
+
+    Die Regel ist dieselbe wie bisher, nur feiner aufgelöst:
+
+    * **Aus**: Die Zielstufe wird ganz vom Budget abgezogen. Nichts davon steckt
+      im Messwert.
+    * **Läuft**: Nur der **Mehrbedarf** gegenüber dem Ist-Verbrauch wird
+      abgezogen. Was das Gerät schon zieht, ist im gemessenen Überschuss
+      enthalten und würde doppelt zählen.
+
+    Eine Drosselung gibt bewusst **nichts** frei: Die Leistung ist noch nicht
+    zurückgeflossen, der Zähler zeigt sie weiter, und pro Durchlauf findet ohnehin
+    nur eine Handlung statt. Ein tiefer priorisierter Verbraucher, der sie sofort
+    zugeteilt bekäme, würde denselben Überschuss ein zweites Mal vergeben.
+    """
+    if currently_on:
+        if target is None:
+            # Nicht einmal die kleinste Stufe passt — hier hilft nur Abschalten.
+            return DeviceStatus.ON_DEFICIT, budget
+
+        basis = power_w if power_w is not None else (level.w if level is not None else 0.0)
+        if managed:
+            budget -= max(target.w - basis, 0.0)
+
+        if level is not None and target.w < level.w:
+            # Muss heruntergehen: gerade wird mehr gezogen als gedeckt ist.
+            return DeviceStatus.ON_DEFICIT, budget
+        return DeviceStatus.ON_OK, budget
+
+    if target is not None:
+        if managed:
+            budget -= target.w
+        return DeviceStatus.OFF_READY, budget
+
+    if budget >= ladder.min_w * CLOSE_THRESHOLD_RATIO:
+        return DeviceStatus.OFF_CLOSE, budget
+    return DeviceStatus.OFF_INSUFFICIENT, budget
 
 
 def _build_battery_view(
@@ -346,9 +528,16 @@ def displaced_power(view: ConsumerView) -> float:
     Der gemessene Wert, nicht der geschätzte Bedarf: Was tatsächlich fließt,
     ist auch das, was zurückkommt. Ohne Leistungssensor bleibt nur die
     Schätzung.
+
+    Bei einem regelbaren Verbraucher tritt die **gestellte Stufe** an die Stelle
+    der Schätzung: ``required_w`` ist dort die kleinste Stufe und wäre viel zu
+    niedrig — eine Wallbox auf 11 kW gäbe scheinbar nur 4,1 kW frei, und die
+    Verdrängung fiele aus, obwohl sie gereicht hätte.
     """
     if view.power_w is not None and view.power_w > 0:
         return view.power_w
+    if view.level is not None:
+        return view.level.w
     return view.required_w
 
 
@@ -431,6 +620,8 @@ class Blocker(StrEnum):
     MIN_OFF_TIME = "min_off_time"
     TURN_ON_DELAY = "turn_on_delay"
     TURN_OFF_DELAY = "turn_off_delay"
+    LEVEL_HOLD = "level_hold"
+    """Haltezeit zwischen zwei Stufenwechseln läuft noch."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -439,6 +630,13 @@ class Decision:
 
     subentry_id: str
     turn_on: bool
+    """Richtung der Laständerung, nicht zwangsläufig ein Schaltvorgang.
+
+    Bei einem Stufenwechsel steht hier, ob die Last steigt oder fällt. So greifen
+    dieselben Verzögerungsfelder und dieselbe Vorfahrtsregel wie beim Schalten —
+    ohne einen zweiten Satz Bedingungen daneben.
+    """
+
     reason: str
 
     displaces: tuple[str, ...] = ()
@@ -449,6 +647,12 @@ class Decision:
     dazwischen ein anderer den frei gewordenen Überschuss belegen — dann wären
     die einen aus und der andere trotzdem nicht an.
     """
+
+    level: Level | None = None
+    """Die zu stellende Stufe, sofern der Verbraucher regelbar ist."""
+
+    level_only: bool = False
+    """Nur die Stufe stellen; am Schalter ändert sich nichts."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -479,7 +683,11 @@ def update_conditions(
     Verbraucher weichen. Ohne das liefe der Zähler für einen Verdränger nie an,
     und seine Einschaltverzögerung begänne erst nach dem Abschalten der anderen.
     """
-    wants_on = not view.is_on and (view.status is DeviceStatus.OFF_READY or bool(view.displaceable))
+    # Ein Stufenwechsel nach oben zählt als Einschaltwunsch, einer nach unten als
+    # Ausschaltwunsch: Dieselbe Bedingung, dieselbe Verzögerung, ein Satz Felder.
+    wants_on = view.step_up or (
+        not view.is_on and (view.status is DeviceStatus.OFF_READY or bool(view.displaceable))
+    )
     wants_off = view.is_on and view.status is DeviceStatus.ON_DEFICIT
 
     if wants_on:
@@ -533,11 +741,29 @@ def decide_for(
 
     consumer = view.config
 
-    # Einschalten: Der Überschuss muss lange genug gereicht haben.
+    # Einschalten oder hochstufen: Der Überschuss muss lange genug gereicht haben.
     if runtime.on_condition_since is not None:
         elapsed = now - runtime.on_condition_since
         if elapsed < consumer.turn_on_delay:
             return None, Blocker.TURN_ON_DELAY
+
+        if view.step_up:
+            # Ein laufendes Gerät höher zu stellen ist kein Einschalten: Die
+            # Sperre aus der letzten Schaltung ist hier eine Mindestlaufzeit und
+            # spricht nicht dagegen. Gebremst wird nur durch die Haltezeit.
+            if (blocker := _level_hold(consumer, runtime, now)) is not None:
+                return None, blocker
+            return (
+                Decision(
+                    consumer.subentry_id,
+                    True,
+                    "level_up",
+                    level=view.target,
+                    level_only=True,
+                ),
+                None,
+            )
+
         # Sperre aus der letzten Ausschaltung.
         if view.locked_until is not None and now < view.locked_until:
             return None, Blocker.MIN_OFF_TIME
@@ -549,21 +775,62 @@ def decide_for(
                     True,
                     "displaces_lower_priority",
                     displaces=view.displaceable,
+                    level=view.target,
                 ),
                 None,
             )
-        return Decision(consumer.subentry_id, True, "surplus_sufficient"), None
+        return (
+            Decision(consumer.subentry_id, True, "surplus_sufficient", level=view.target),
+            None,
+        )
 
-    # Ausschalten: Das Defizit muss lange genug angehalten haben.
+    # Ausschalten oder herunterstufen: Das Defizit muss lange genug angehalten haben.
     if runtime.off_condition_since is not None:
         elapsed = now - runtime.off_condition_since
         if elapsed < consumer.turn_off_delay:
             return None, Blocker.TURN_OFF_DELAY
+
+        if view.step_down:
+            # Drosseln statt abschalten. Die Mindestlaufzeit schützt davor, ein
+            # Gerät zu früh **abzuschalten** — es läuft weiter, nur schwächer,
+            # und deshalb steht sie hier nicht im Weg.
+            if (blocker := _level_hold(consumer, runtime, now)) is not None:
+                return None, blocker
+            return (
+                Decision(
+                    consumer.subentry_id,
+                    False,
+                    "level_down",
+                    level=view.target,
+                    level_only=True,
+                ),
+                None,
+            )
+
         if view.locked_until is not None and now < view.locked_until:
             return None, Blocker.MIN_RUNTIME
         return Decision(consumer.subentry_id, False, "deficit_persists"), None
 
     return None, None
+
+
+def _level_hold(
+    consumer: ConsumerConfig,
+    runtime: ConsumerRuntime,
+    now: float,
+) -> Blocker | None:
+    """Ist die Haltezeit seit dem letzten Stufenwechsel abgelaufen?
+
+    Ohne sie wanderte die Leiter im Takt der Auswertung auf und ab: Jede
+    Stufenänderung verändert den Überschuss, auf den die nächste sich stützt, und
+    das Beruhigungsfenster allein greift dafür zu grob — es sperrt das Gerät
+    vollständig, auch für das Abschalten.
+    """
+    if not consumer.level_hold or runtime.last_level_ts is None:
+        return None
+    if now - runtime.last_level_ts >= consumer.level_hold:
+        return None
+    return Blocker.LEVEL_HOLD
 
 
 def decide(

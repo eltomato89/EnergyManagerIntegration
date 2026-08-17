@@ -15,16 +15,24 @@ from .const import (
     CONF_BATTERY_DISCHARGE_ENTITY,
     CONF_BATTERY_POWER_ENTITY,
     CONF_BATTERY_SOC_ENTITY,
+    CONF_CONSUMER_TYPE,
+    CONF_CONTROL_ENTITY,
     CONF_HYSTERESIS,
+    CONF_LEVEL_HOLD,
+    CONF_LEVEL_MAP,
     CONF_MAX_POWER,
+    CONF_MIN_LEVEL_W,
     CONF_MIN_OFF_TIME,
     CONF_MIN_POWER,
     CONF_MIN_RUNTIME,
     CONF_NAME,
+    CONF_PHASES,
     CONF_POWER_ENTITY,
     CONF_SWITCH_ENTITY,
     CONF_TURN_OFF_DELAY,
     CONF_TURN_ON_DELAY,
+    CONSUMER_TYPE_MODULATING,
+    CONSUMER_TYPE_SWITCH,
 )
 
 
@@ -139,6 +147,85 @@ class DeviceStatus(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class Level:
+    """Eine Leistungsstufe: was sie zieht und was dafür zu schreiben ist."""
+
+    w: float
+    """Leistung in Watt."""
+
+    command: float | str
+    """Der Wert für die Steuerentität — Ampere, Watt oder ein Optionsschlüssel.
+
+    Getrennt von ``w`` gehalten, weil beides auseinanderfällt: Die Entscheidung
+    fällt in Watt, geschrieben wird in der Sprache des Geräts.
+    """
+
+
+@dataclass(frozen=True, slots=True)
+class Ladder:
+    """Alle Stufen eines Verbrauchers, aufsteigend nach Leistung.
+
+    Ohne die Null: Das Abschalten geht über ``switch_entity`` und ist keine
+    Stufe. Bei einer Wallbox lässt sich über den Ladestrom ohnehin nicht
+    beenden — sein Minimum liegt bei 6 A.
+
+    Zusammengesetzt wird sie in ``ladder.py`` aus den Attributen der
+    Steuerentität; hier steht nur, was man mit ihr tun kann.
+    """
+
+    levels: tuple[Level, ...]
+    source: str
+    """Woher das Raster stammt. Für die Anzeige, damit ein abgeleitetes Raster
+    von einer eingetragenen Zuordnung zu unterscheiden ist."""
+
+    @property
+    def min_w(self) -> float:
+        """Kleinste Stufe — was mindestens nötig ist, um überhaupt anzulaufen."""
+        return self.levels[0].w
+
+    @property
+    def max_w(self) -> float:
+        return self.levels[-1].w
+
+    @property
+    def count(self) -> int:
+        return len(self.levels)
+
+    def at_or_below(self, watts: float) -> Level | None:
+        """Die höchste Stufe, die in ``watts`` noch hineinpasst.
+
+        ``None``, wenn nicht einmal die kleinste passt — dann ist der
+        Verbraucher nicht zu betreiben, und zwar unabhängig davon, ob er läuft.
+        """
+        found: Level | None = None
+        for level in self.levels:
+            if level.w <= watts:
+                found = level
+            else:
+                break
+        return found
+
+    def nearest(self, watts: float) -> Level:
+        """Die Stufe, die ``watts`` am nächsten kommt."""
+        return min(self.levels, key=lambda level: abs(level.w - watts))
+
+    def for_command(self, command: float | str) -> Level | None:
+        """Die Stufe, die zu einem Wert der Steuerentität gehört.
+
+        Bei einer Auswahlliste muss der Schlüssel genau passen — eine unbekannte
+        Option wird nicht geraten. Bei einer Zahl wird die nächstgelegene Stufe
+        genommen: Der gestellte Wert liegt nach einem Eingriff von Hand oder nach
+        dem Ausdünnen des Rasters nicht zwangsläufig darauf.
+        """
+        if isinstance(command, str):
+            return next((level for level in self.levels if level.command == command), None)
+        return min(self.levels, key=lambda level: abs(float(level.command) - command))
+
+    def index_of(self, level: Level) -> int:
+        return self.levels.index(level)
+
+
+@dataclass(frozen=True, slots=True)
 class ConsumerConfig:
     """Konfiguration eines Verbrauchers, aus einem Subentry gelesen."""
 
@@ -146,6 +233,15 @@ class ConsumerConfig:
     name: str
     switch_entity: str
     power_entity: str | None = None
+
+    consumer_type: str = CONSUMER_TYPE_SWITCH
+    """Verhaltenstyp. Siehe ``CONSUMER_TYPE_SWITCH``."""
+
+    control_entity: str | None = None
+    phases: int = 1
+    level_map: dict[str, float] | None = None
+    min_level_w: float | None = None
+    level_hold: int = 0
 
     min_power: float | None = None
     max_power: float | None = None
@@ -156,14 +252,30 @@ class ConsumerConfig:
     turn_on_delay: int = 0
     turn_off_delay: int = 0
 
+    @property
+    def modulating(self) -> bool:
+        """Lässt sich dieser Verbraucher in Stufen fahren?"""
+        return self.consumer_type == CONSUMER_TYPE_MODULATING
+
     @classmethod
     def from_subentry(cls, subentry_id: str, data: dict[str, Any]) -> ConsumerConfig:
-        """Liest die Konfiguration aus den Subentry-Daten."""
+        """Liest die Konfiguration aus den Subentry-Daten.
+
+        Der Rückfallwert des Verhaltenstyps entscheidet über das Verhalten nach
+        einem Update: Bestehenden Subentries fehlt der Schlüssel, und
+        ``switch`` lässt sie unverändert. Eine Migration ist damit nicht nötig.
+        """
         return cls(
             subentry_id=subentry_id,
             name=data[CONF_NAME],
             switch_entity=data[CONF_SWITCH_ENTITY],
             power_entity=data.get(CONF_POWER_ENTITY),
+            consumer_type=data.get(CONF_CONSUMER_TYPE, CONSUMER_TYPE_SWITCH),
+            control_entity=data.get(CONF_CONTROL_ENTITY),
+            phases=int(data.get(CONF_PHASES, 1) or 1),
+            level_map=data.get(CONF_LEVEL_MAP),
+            min_level_w=data.get(CONF_MIN_LEVEL_W),
+            level_hold=data.get(CONF_LEVEL_HOLD, 0),
             min_power=data.get(CONF_MIN_POWER),
             max_power=data.get(CONF_MAX_POWER),
             hysteresis=data.get(CONF_HYSTERESIS, 0.0),
@@ -225,6 +337,37 @@ class ConsumerRuntime:
     sie läuft, lässt die Automatik den Verbraucher in Ruhe.
     """
 
+    last_foreign_change: float | None = None
+    """Wann zuletzt jemand anders als diese Integration geschaltet hat.
+
+    Reine Diagnose — hier hängt keine Entscheidung daran. Der Wert beantwortet
+    über einige Wochen die Frage, wie oft der Fall je Gerät tatsächlich
+    auftritt. Ohne diese Zahl wäre jede Vorgabe für eine befristete
+    Übersteuerung geraten, und bei taktenden Geräten wie einem
+    Warmwasserspeicher ist eine Fehlerkennung der Regelfall statt der Ausnahme.
+
+    Getrennt von ``last_switch_ts``, das den eigenen Schaltzeitpunkt hält: zwei
+    Felder, zwei Zwecke, keine Überlappung.
+    """
+
+    last_foreign_to: bool | None = None
+    """Wohin dabei geschaltet wurde."""
+
+    last_level_ts: float | None = None
+    """Zeitpunkt des letzten Stufenwechsels — Grundlage für ``level_hold``.
+
+    Getrennt von ``last_switch_ts``: Eine Haltezeit zwischen zwei Stufen ist
+    etwas anderes als eine Mindestlaufzeit, und ein Stufenwechsel soll die
+    Sperrzeiten des Ein- und Ausschaltens nicht zurücksetzen.
+    """
+
+    last_level_w: float | None = None
+    """Die zuletzt gestellte Stufe in Watt.
+
+    Nur zur Nachvollziehbarkeit: Was tatsächlich gilt, wird bei jedem Durchlauf
+    aus der Steuerentität gelesen — sie kann auch von Hand verstellt worden sein.
+    """
+
     def as_dict(self) -> dict[str, Any]:
         return {
             "priority": self.priority,
@@ -236,6 +379,10 @@ class ConsumerRuntime:
             "settle_until": self.settle_until,
             "anticipated_w": self.anticipated_w,
             "force_until": self.force_until,
+            "last_foreign_change": self.last_foreign_change,
+            "last_foreign_to": self.last_foreign_to,
+            "last_level_ts": self.last_level_ts,
+            "last_level_w": self.last_level_w,
         }
 
     @classmethod
@@ -250,6 +397,10 @@ class ConsumerRuntime:
             settle_until=data.get("settle_until"),
             anticipated_w=data.get("anticipated_w", 0.0),
             force_until=data.get("force_until"),
+            last_foreign_change=data.get("last_foreign_change"),
+            last_foreign_to=data.get("last_foreign_to"),
+            last_level_ts=data.get("last_level_ts"),
+            last_level_w=data.get("last_level_w"),
         )
 
 
@@ -273,7 +424,31 @@ class ConsumerView:
 
     required_source: str = "default"
     """Woher ``required_w`` stammt: min_power, max_power, measured, estimated,
-    default. Ein geratener Wert soll als solcher erkennbar sein."""
+    ladder, default. Ein geratener Wert soll als solcher erkennbar sein."""
+
+    ladder: Ladder | None = None
+    """Die erreichbaren Stufen, sofern der Verbraucher regelbar ist."""
+
+    level: Level | None = None
+    """Die Stufe, auf der er gerade steht — gelesen aus der Steuerentität."""
+
+    target: Level | None = None
+    """Die Stufe, auf der er laufen soll. ``None`` heißt: keine passt, also aus."""
+
+    observed_max_w: float | None = None
+    """Die höchste Leistung, die dieser Verbraucher seit dem Einschalten erreicht hat.
+
+    Nicht dasselbe wie der Sollwert: Ein Fahrzeug lädt mit 10 A, obwohl 16 A
+    angeboten sind. ``None``, solange nichts beobachtet wurde oder kein
+    Leistungssensor vorliegt.
+    """
+
+    level_capped: bool = False
+    """Wurde die Leiter deswegen beschnitten?
+
+    Die Antwort auf „warum geht sie nicht höher". Ohne diesen Ausweis sähe eine
+    gekappte Leiter aus wie ein Gerät mit weniger Stufen.
+    """
 
     displaceable: tuple[str, ...] = ()
     """Laufende Verbraucher niedrigerer Priorität, die für diesen weichen könnten.
@@ -286,6 +461,32 @@ class ConsumerView:
     Zwei kleine Verbraucher könnten einen großen mit höherem Rang dauerhaft
     aussperren, egal wie weit der Überschuss steigt.
     """
+
+    @property
+    def step_up(self) -> bool:
+        """Soll die Stufe angehoben werden?
+
+        Verglichen wird mit der **gestellten** Stufe, nicht mit dem Messwert: Der
+        Sollwert ist das, was diese Integration steuert.
+
+        Auch dann wahr, wenn gar keine Stufe gelesen werden konnte, der
+        Verbraucher aber läuft — dann ist der Sollwert überhaupt erst zu setzen.
+        Das ist der Fall einer Auswahlliste, die auf „aus" steht, während der
+        Schalter an ist.
+        """
+        if not self.is_on or self.target is None:
+            return False
+        return self.level is None or self.target.w > self.level.w
+
+    @property
+    def step_down(self) -> bool:
+        """Soll die Stufe gesenkt werden?
+
+        Nur bei bekannter aktueller Stufe: Ohne sie gibt es nichts zu senken.
+        """
+        if not self.is_on or self.target is None or self.level is None:
+            return False
+        return self.target.w < self.level.w
 
 
 @dataclass(frozen=True, slots=True)

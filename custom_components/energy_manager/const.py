@@ -76,6 +76,78 @@ CONF_MIN_OFF_TIME: Final = "min_off_time"
 CONF_TURN_ON_DELAY: Final = "turn_on_delay"
 CONF_TURN_OFF_DELAY: Final = "turn_off_delay"
 
+# Verhaltenstyp des Verbrauchers. Bewusst ein Feld im Subentry und **kein**
+# eigener Subentry-Typ: der ist unveränderlich, und ein Wechsel von schaltbar
+# auf regelbar würde Rang, Verlauf und Entitäts-IDs kosten. Als Feld ist er ein
+# gewöhnliches Neukonfigurieren.
+CONF_CONSUMER_TYPE: Final = "consumer_type"
+
+CONSUMER_TYPE_SWITCH: Final = "switch"
+"""An oder aus.
+
+Zugleich der Rückfallwert für alle Verbraucher, die vor der Einführung des
+Feldes angelegt wurden: ihnen fehlt der Schlüssel, und sie sollen sich in jeder
+Hinsicht verhalten wie zuvor.
+"""
+
+CONSUMER_TYPE_MODULATING: Final = "modulating"
+"""Stufen über eine Steuerentität."""
+
+# --- Regelbare Verbraucher --------------------------------------------------
+
+CONF_CONTROL_ENTITY: Final = "control_entity"
+"""Entität, über die die Stufe gestellt wird — ``number`` oder ``select``.
+
+Getrennt von ``switch_entity``, die weiterhin an und aus schaltet. Bei
+Wallboxen ist 0 nämlich nicht auf der Leiter: Der Ladestrom beginnt bei 6 A,
+beenden lässt sich das Laden darüber nicht.
+"""
+
+CONF_PHASES: Final = "phases"
+"""Phasenzahl, nur bei einer Steuerentität in Ampere.
+
+Fest je Verbraucher. Eine Umschaltung im Betrieb bleibt außen vor: Zwischen
+einphasig 16 A (3,68 kW) und dreiphasig 6 A (4,14 kW) liegt eine Lücke, und ein
+Wechsel unterbricht bei den meisten Boxen das Laden. Beides verlangt eine eigene
+Übergangsklasse mit Sperrzeit; mit fester Phasenzahl ist die Leiter dagegen
+gleichmäßig.
+"""
+
+CONF_LEVEL_MAP: Final = "level_map"
+"""Bei einer ``select``-Steuerentität: Leistung in W je Option.
+
+Der einzige Weg, den es hier gibt — eine Auswahlliste hat keine Einheit, aus der
+sich etwas ableiten ließe. Gespeichert wird der rohe Optionsschlüssel, nicht das
+angezeigte Label: Das übersetzt Home Assistant und es wechselt mit der Sprache.
+"""
+
+CONF_MIN_LEVEL_W: Final = "min_level_w"
+"""Untergrenze, unterhalb der nicht gedrosselt, sondern abgeschaltet wird.
+
+Nicht auslesbar und deshalb ein Feld: ``min`` der Steuerentität ist die Grenze
+der **Box**, nicht die des Verbrauchers. Manche Fahrzeuge laden unter 8 A nicht.
+"""
+
+CONF_LEVEL_HOLD: Final = "level_hold"
+"""s, Mindestzeit zwischen zwei Stufenwechseln.
+
+Die einzige neue Zeitangabe: Die vier bestehenden Felder greifen weiter, sie
+regeln aber das Ein- und Ausschalten. Ohne eine eigene Haltezeit wanderte die
+Leiter im Takt der Auswertung auf und ab.
+"""
+
+MAX_LEVELS: Final = 24
+"""Obergrenze der Stufenzahl, unabhängig davon, was die Entität meldet.
+
+Generische Template-Numbers stehen auf ``step: 0.01``; über 6 bis 16 A wären das
+tausend Stufen. Mal Beruhigungszeit ist das nicht mehr regelbar — bei einer
+Aktion je Durchlauf dauerte der Weg von unten nach oben Stunden. Ein zu feines
+Raster wird deshalb ausgedünnt, statt ihm zu folgen.
+"""
+
+NOMINAL_VOLTAGE: Final = 230.0
+"""V je Phase, für die Umrechnung von Ampere in Watt."""
+
 # --- Vorgabewerte -----------------------------------------------------------
 
 # s, Fenster des zeitgewichteten Mittels. Identisch zur Karte.
@@ -124,6 +196,21 @@ MIN_COVERAGE: Final = 0.5
 Direkt nach dem Start stützt sich der Mittelwert auf wenige Sekunden und
 schwankt entsprechend. Auf dieser Grundlage zu schalten hieße, die Glättung
 gerade dann zu übergehen, wenn sie am nötigsten ist.
+"""
+
+FOREIGN_CONFIRM_FACTOR: Final = 2.0
+"""Vielfaches der Beruhigungszeit, in dem eine Zustandsmeldung noch als
+Bestätigung der eigenen Schaltung gilt.
+
+Manche Integrationen reichen den Context der eigenen Schaltung nicht durch: Der
+Befehl geht hinaus, und der neue Zustand kommt später aus einer Abfrage — mit
+frischem Context, also äußerlich wie ein Eingriff von Hand. Innerhalb des
+Beruhigungsfensters ist das ohnehin abgedeckt; dieser Faktor deckt die
+Integrationen ab, die länger brauchen als es.
+
+Bewusst zeitlich begrenzt und nicht unbefristet: Sonst verschluckte die Regel
+jedes Zurückschalten von Hand in dieselbe Richtung, in die die Automatik zuletzt
+geschaltet hat.
 """
 
 # --- Speicher ---------------------------------------------------------------

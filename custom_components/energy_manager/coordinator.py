@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections import deque
 from dataclasses import replace
 from datetime import timedelta
 from typing import Any
@@ -24,9 +25,11 @@ from homeassistant.const import (
 )
 from homeassistant.core import (
     CALLBACK_TYPE,
+    Context,
     Event,
     EventStateChangedData,
     HomeAssistant,
+    State,
     callback,
 )
 from homeassistant.core import DOMAIN as HA_DOMAIN
@@ -66,6 +69,7 @@ from .const import (
     DEFAULT_SMOOTHING_WINDOW,
     DOMAIN,
     ESTIMATE_INTERVAL,
+    FOREIGN_CONFIRM_FACTOR,
     METER_MODE_GRID,
     MIN_COVERAGE,
     STORAGE_MINOR_VERSION,
@@ -82,6 +86,7 @@ from .models import (
     ConsumerConfig,
     ConsumerRuntime,
     ConsumerView,
+    Level,
     ManagerState,
     Reading,
     ReadingReason,
@@ -90,7 +95,15 @@ from .models import (
 )
 from .smoothing import TimeWeightedWindow
 from .surplus import SurplusInput, apply_reserve, compute_surplus
-from .units import combine_battery, invert, read_percent, read_power_w
+from .units import (
+    combine_battery,
+    invert,
+    is_on,
+    is_unavailable,
+    read_percent,
+    read_power_w,
+    round_w,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -111,6 +124,15 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         )
         self.consumers: dict[str, ConsumerConfig] = {}
         self.runtime: dict[str, ConsumerRuntime] = {}
+        # Schalt-Entität → Verbraucher. Nur für die Rückrichtung: ein
+        # Zustandsereignis nennt die Entität, gebraucht wird der Verbraucher.
+        # Eindeutig, weil der Config-Flow zwei Einträge für dasselbe Gerät
+        # abweist.
+        self._switch_owners: dict[str, str] = {}
+        # Contexts der eigenen Schaltungen. Begrenzt, weil je Durchlauf
+        # höchstens eine Handlung stattfindet — mehr als eine Handvoll kann
+        # nie offen sein.
+        self._own_contexts: deque[str] = deque(maxlen=32)
         # Hauptschalter. Standardmäßig aus: nach dem Einrichten soll erst
         # beobachtet und dann bewusst scharfgeschaltet werden.
         self.automation_enabled = False
@@ -152,6 +174,12 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         # Abfrage geht an die Datenbank und gehört nicht in jeden Durchlauf.
         self._estimated: dict[str, float] = {}
 
+        # Höchste beobachtete Leistung je regelbarem Verbraucher, seit er
+        # eingeschaltet wurde. Bewusst **nicht** persistiert: Am Kabel hängt
+        # morgen ein anderes Fahrzeug, und eine alte Grenze wäre dann falsch.
+        # Zurückgesetzt wird bei jeder eigenen Schaltung, siehe _switch.
+        self._observed_max: dict[str, float] = {}
+
     # -- Einrichtung ---------------------------------------------------------
 
     async def async_load(self) -> None:
@@ -175,6 +203,10 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             subentry_id: ConsumerConfig.from_subentry(subentry_id, dict(subentry.data))
             for subentry_id, subentry in entry.subentries.items()
             if subentry.subentry_type == SUBENTRY_TYPE_CONSUMER
+        }
+
+        self._switch_owners = {
+            consumer.switch_entity: subentry_id for subentry_id, consumer in self.consumers.items()
         }
 
         # Laufzeitzustand für neue Verbraucher anlegen, für entfernte verwerfen.
@@ -277,6 +309,12 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             ids.add(consumer.switch_entity)
             if consumer.power_entity:
                 ids.add(consumer.power_entity)
+            # Die Steuerentität: Ihr Zustand ist die aktuelle Stufe, und ihre
+            # Attribute sind das Raster. Beides kann sich im Betrieb ändern —
+            # manche Wallboxen verengen ihr Maximum, wenn das Fahrzeug seine
+            # Grenze meldet.
+            if consumer.control_entity:
+                ids.add(consumer.control_entity)
 
         return ids
 
@@ -294,8 +332,93 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         if old_state is not None and old_state.state == new_state.state:
             return
 
+        self._note_foreign_change(event, old_state, new_state)
+
         self.config_entry.async_create_background_task(
             self.hass, self._debouncer.async_call(), name=f"{DOMAIN} evaluate"
+        )
+
+    @callback
+    def _own_context(self) -> Context:
+        """Ein Context, an dem die eigene Schaltung wiederzuerkennen ist.
+
+        Home Assistant reicht ihn bis in den Zustandsschreibvorgang durch. Ohne
+        ihn wäre die eigene Schaltung von einem Eingriff von Hand nicht zu
+        unterscheiden.
+        """
+        context = Context()
+        self._own_contexts.append(context.id)
+        return context
+
+    @callback
+    def _note_foreign_change(
+        self,
+        event: Event[EventStateChangedData],
+        old_state: State | None,
+        new_state: State,
+    ) -> None:
+        """Hält fest, dass jemand anders geschaltet hat.
+
+        **Reine Diagnose.** Hier wird nichts entschieden und nichts verhindert;
+        der Wert steht nur in den Attributen. Er soll über einige Wochen
+        beantworten, wie oft der Fall je Gerät auftritt und ob die Filter unten
+        in der Praxis greifen — beides ist nicht vorhersagbar, weil es an der
+        Geräteklasse hängt und nicht am Nutzer. Ein Warmwasserspeicher, der
+        seine Temperatur erreicht, meldet „aus" und ist von einem Eingriff von
+        Hand nicht zu unterscheiden.
+
+        „Jemand anders" heißt: nicht diese Integration. Ob am Gerät, in der
+        Oberfläche oder aus einer fremden Automation, bleibt bewusst
+        ungeschieden — die Folgerung wäre in allen drei Fällen dieselbe.
+        """
+        if not self._started:
+            # Beim Start meldet jede Entität ihren Zustand neu, mit frischem
+            # Context. Das hat niemand geschaltet.
+            return
+
+        subentry_id = self._switch_owners.get(new_state.entity_id)
+        if subentry_id is None:
+            return
+
+        # Ein Gerät, das gerade erst wieder erreichbar wird, wurde nicht
+        # geschaltet — es war nur eine Weile nicht zu sprechen.
+        if old_state is None or is_unavailable(old_state) or is_unavailable(new_state):
+            return
+
+        if event.context.id in self._own_contexts:
+            return
+
+        runtime = self.runtime_for(subentry_id)
+        now = dt_util.utcnow().timestamp()
+
+        # Im Beruhigungsfenster gilt eine Änderung als die eigene: Träge
+        # Integrationen bestätigen erst per Abfrage, und dann mit frischem
+        # Context.
+        if runtime.settle_until is not None and now < runtime.settle_until:
+            return
+
+        turned_on = is_on(new_state)
+
+        # Dieselbe verspätete Bestätigung, nur bei einer Integration, die länger
+        # braucht als das Beruhigungsfenster. Siehe FOREIGN_CONFIRM_FACTOR: die
+        # Grenze ist zeitlich, sonst verschluckte diese Regel jedes
+        # Zurückschalten von Hand in dieselbe Richtung.
+        if (
+            runtime.last_switch_ts is not None
+            and runtime.last_switch_to == turned_on
+            and now - runtime.last_switch_ts < self._settle_time() * FOREIGN_CONFIRM_FACTOR
+        ):
+            return
+
+        runtime.last_foreign_change = now
+        runtime.last_foreign_to = turned_on
+        self.schedule_save()
+
+        consumer = self.consumers.get(subentry_id)
+        _LOGGER.info(
+            "%s wurde von außen %s",
+            consumer.name if consumer is not None else subentry_id,
+            "eingeschaltet" if turned_on else "ausgeschaltet",
         )
 
     async def _handle_estimate_tick(self, _now: Any) -> None:
@@ -329,6 +452,48 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
     def estimated_power(self, subentry_id: str) -> float | None:
         """Geschätzte Nennleistung, oder None."""
         return self._estimated.get(subentry_id)
+
+    def observed_max(self, subentry_id: str) -> float | None:
+        """Höchste erreichte Leistung seit dem Einschalten, oder None."""
+        return self._observed_max.get(subentry_id)
+
+    @callback
+    def _track_following(self, now: float) -> None:
+        """Hält fest, welche Leistung ein regelbarer Verbraucher wirklich erreicht.
+
+        Der Sollwert anzukommen heißt nicht, dass die Last ihm folgt. Ohne diese
+        Beobachtung fordert die Automatik dauerhaft eine Stufe an, die nicht
+        erreicht wird, und legt die Differenz für einen Verbraucher zurück, der
+        sie nie abruft.
+
+        Gemerkt wird das **Maximum**, nicht der letzte Wert: Ein Fahrzeug, das
+        eine Ladepause macht, würde die Grenze sonst auf null ziehen und käme
+        danach nicht mehr hoch.
+
+        Nur nach Ablauf des Beruhigungsfensters — davor hat die Last noch nicht
+        auf den neuen Sollwert reagiert, und ein Wert aus der Rampe wäre als
+        Grenze zu niedrig. Und nur mit Leistungssensor: Ohne Messwert ist nicht
+        zu erkennen, ob die Last folgt.
+        """
+        for subentry_id, consumer in self.consumers.items():
+            if not consumer.modulating or not consumer.power_entity:
+                continue
+
+            runtime = self.runtime_for(subentry_id)
+            if runtime.settle_until is not None and now < runtime.settle_until:
+                continue
+
+            state = self.hass.states.get(consumer.switch_entity)
+            if state is None or is_unavailable(state) or not is_on(state):
+                continue
+
+            reading = read_power_w(self.hass, consumer.power_entity)
+            if reading.w is None:
+                continue
+
+            gemessen = round_w(reading.w)
+            if gemessen > self._observed_max.get(subentry_id, 0.0):
+                self._observed_max[subentry_id] = gemessen
 
     async def _handle_tick(self, _now: Any) -> None:
         """Zeitbedingungen prüfen — ohne Entprellung, der Takt ist langsam genug."""
@@ -365,6 +530,9 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         """
         async with self._lock:
             now = dt_util.utcnow().timestamp()
+            # Vor der Bewertung: Die beobachtete Grenze begrenzt die Leiter, auf
+            # der die Bewertung dann rechnet.
+            self._track_following(now)
             measured = self._compute(now)
             surplus = self._with_anticipation(measured, anticipated_w(self.runtime, now))
             views, battery = self._build_views(surplus)
@@ -460,18 +628,43 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             )
             await self._switch(opfer, turn_on=False, now=now)
 
+        if action.level_only:
+            assert action.level is not None
+            _LOGGER.info(
+                "%s wird auf %.0f W gestellt (%s)",
+                view.config.name,
+                action.level.w,
+                action.reason,
+            )
+            await self._set_level(view, action.level, now=now)
+            return
+
         _LOGGER.info(
             "%s wird %s (%s, %.0f W)",
             view.config.name,
             "eingeschaltet" if action.turn_on else "ausgeschaltet",
             action.reason,
-            view.required_w,
+            action.level.w if action.level is not None else view.required_w,
         )
-        await self._switch(view, turn_on=action.turn_on, now=now)
+        await self._switch(view, turn_on=action.turn_on, now=now, level=action.level)
 
-    async def _switch(self, view: ConsumerView, *, turn_on: bool, now: float) -> None:
+    async def _switch(
+        self,
+        view: ConsumerView,
+        *,
+        turn_on: bool,
+        now: float,
+        level: Level | None = None,
+    ) -> None:
         """Schaltet einen Verbraucher und schreibt seinen Laufzeitzustand fort."""
         runtime = self.runtime_for(view.config.subentry_id)
+
+        # Bei einem regelbaren Verbraucher zählt die Zielstufe, nicht der
+        # Mindestbedarf: Er läuft mit dem, was angefordert wurde.
+        neue_last = level.w if level is not None else view.required_w
+        alte_last = view.power_w
+        if alte_last is None:
+            alte_last = view.level.w if view.level is not None else view.required_w
 
         # Erst merken, dann schalten. Andersherum könnte das Zustandsereignis
         # der eigenen Schaltung eine zweite Auswertung anstoßen, bevor das
@@ -481,16 +674,75 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         runtime.settle_until = now + self._settle_time()
         # Beim Einschalten fehlt die neue Last im Messwert, beim Ausschalten
         # ist die alte noch enthalten — deshalb das umgekehrte Vorzeichen.
-        runtime.anticipated_w = view.required_w if turn_on else -(view.power_w or view.required_w)
+        runtime.anticipated_w = neue_last if turn_on else -alte_last
         runtime.on_condition_since = None
         runtime.off_condition_since = None
+        # Jede Schaltung beginnt eine neue Lage: Nach dem Ausschalten hängt beim
+        # nächsten Mal vielleicht ein anderes Fahrzeug am Kabel, und nach dem
+        # Einschalten ist noch nichts beobachtet.
+        self._observed_max.pop(view.config.subentry_id, None)
         self.schedule_save()
+
+        # Die Stufe **vor** dem Einschalten stellen: Sonst läuft das Gerät für
+        # die Dauer eines Durchlaufs auf der alten, womöglich höchsten Stufe an.
+        # Weist eine Steuerentität den Wert im ausgeschalteten Zustand ab, zieht
+        # der nächste Durchlauf ihn nach.
+        if turn_on and level is not None:
+            await self._write_level(view, level, now=now)
 
         await self.hass.services.async_call(
             HA_DOMAIN,
             SERVICE_TURN_ON if turn_on else SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: view.config.switch_entity},
             blocking=True,
+            context=self._own_context(),
+        )
+
+    async def _set_level(self, view: ConsumerView, level: Level, *, now: float) -> None:
+        """Stellt eine neue Stufe, ohne am Schalter zu drehen.
+
+        Auch hier greift das Beruhigungsfenster: Eine Stufenänderung verändert
+        den Messwert genauso wie eine Schaltung, und die Automatik darf nicht auf
+        ihre eigene Wirkung reagieren. ``last_switch_ts`` bleibt dagegen
+        unangetastet — Mindestlaufzeit und Mindestpause beziehen sich auf das
+        Ein- und Ausschalten, nicht auf die Stufe.
+        """
+        runtime = self.runtime_for(view.config.subentry_id)
+
+        alte_last = view.power_w
+        if alte_last is None:
+            alte_last = view.level.w if view.level is not None else 0.0
+
+        runtime.settle_until = now + self._settle_time()
+        runtime.anticipated_w = level.w - alte_last
+        runtime.on_condition_since = None
+        runtime.off_condition_since = None
+        self.schedule_save()
+
+        await self._write_level(view, level, now=now)
+
+    async def _write_level(self, view: ConsumerView, level: Level, *, now: float) -> None:
+        """Schreibt die Stellgröße in die Steuerentität."""
+        entity_id = view.config.control_entity
+        if not entity_id:
+            return
+
+        runtime = self.runtime_for(view.config.subentry_id)
+        runtime.last_level_ts = now
+        runtime.last_level_w = level.w
+
+        domain = entity_id.split(".", 1)[0]
+        if domain == "select":
+            service, data = "select_option", {"option": str(level.command)}
+        else:
+            service, data = "set_value", {"value": level.command}
+
+        await self.hass.services.async_call(
+            domain,
+            service,
+            {ATTR_ENTITY_ID: entity_id, **data},
+            blocking=True,
+            context=self._own_context(),
         )
 
     def _settle_time(self) -> float:
@@ -677,11 +929,15 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             return
 
         _LOGGER.info("%s wird für %.0f s zwangsfreigegeben", consumer.name, seconds)
+        # Auch dies ist eine Schaltung dieser Integration, nur auf Anweisung.
+        # Ohne den eigenen Context erschiene sie als Eingriff von außen — die
+        # Zwangsfreigabe zählte sich selbst als Übersteuerung.
         await self.hass.services.async_call(
             HA_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: consumer.switch_entity},
             blocking=True,
+            context=self._own_context(),
         )
         await self.async_request_refresh_now()
 
