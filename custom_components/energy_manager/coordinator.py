@@ -616,6 +616,21 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         if view is None:
             return
 
+        # Drosseln vor Abschalten, wie die Engine es gesammelt hat: Wer
+        # weiterlaufen kann, soll es.
+        for subentry_id in action.throttles:
+            gedrosselt = by_id.get(subentry_id)
+            if gedrosselt is None or gedrosselt.ladder is None:
+                continue
+            kleinste = gedrosselt.ladder.levels[0]
+            _LOGGER.info(
+                "%s geht für %s auf %.0f W herunter",
+                gedrosselt.config.name,
+                view.config.name,
+                kleinste.w,
+            )
+            await self._set_level(gedrosselt, kleinste, now=now)
+
         for subentry_id in action.displaces:
             opfer = by_id.get(subentry_id)
             if opfer is None:

@@ -462,6 +462,14 @@ class ConsumerView:
     aussperren, egal wie weit der Überschuss steigt.
     """
 
+    throttleable: tuple[str, ...] = ()
+    """Laufende Verbraucher niedrigerer Priorität, die für diesen **heruntergehen**.
+
+    Das gelindere Mittel: Ein regelbarer Verbraucher gibt die Differenz bis zu
+    seiner kleinsten Stufe her und läuft dabei weiter. Erst wenn das
+    zusammengenommen nicht reicht, steht er in ``displaceable`` und geht ganz aus.
+    """
+
     @property
     def step_up(self) -> bool:
         """Soll die Stufe angehoben werden?

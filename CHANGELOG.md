@@ -55,6 +55,19 @@ bestehende Testsuite unverändert grün bleibt.
   eine Stufe herunter, statt auszugehen. Eine laufende **Mindestlaufzeit steht dem nicht im Weg**:
   Sie schützt davor, ein Gerät zu früh abzuschalten — es läuft weiter, nur schwächer.
 
+- **Auch beim Verdrängen geht Drosseln vor Abschalten.** Braucht ein höher priorisierter Verbraucher
+  Platz, gibt ein regelbarer unter ihm zuerst nur die Differenz bis zu seiner kleinsten Stufe her und
+  läuft dabei weiter. Reicht das zusammengenommen nicht, wird in einem zweiten Durchgang aus Drosseln
+  Abschalten — wieder von unten und nur so weit wie nötig.
+
+  Der zweite Durchgang ist keine Feinheit, sondern Bedingung: Ohne ihn gäbe ein verdrängter
+  regelbarer Verbraucher nur noch einen Teil seiner Leistung her, und ein Fall, der vorher aufging,
+  würde aufhören zu funktionieren.
+
+  Die Haltezeit zwischen zwei Stufen gilt auch hier — eine Verdrängung ist kein Grund, die Leiter
+  schneller zu bewegen als eingestellt. Neues Attribut `throttles` neben `displaces`: Es ist ein
+  Unterschied, ob ein Gerät ausgeht oder nur heruntergeht.
+
 - **Folgt die Last dem Sollwert?** Erreicht ein Gerät die angeforderte Stufe nicht, wird seine Leiter
   auf das begrenzt, was es tatsächlich zieht — eine Stufe darüber bleibt als Versuch erlaubt, sonst
   wäre die Grenze selbsterfüllend.

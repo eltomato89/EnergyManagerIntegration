@@ -248,10 +248,13 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
             # Ohne diese Angabe ist "die Automatik tut nichts" nicht von einem
             # Fehler zu unterscheiden — die häufigste Rückfrage überhaupt.
             "blocked_by": self._blocked_by(),
-            # Wie viele laufende Verbraucher für diesen weichen würden. Erklärt
-            # den sonst überraschenden Fall, dass ein Gerät angeht, obwohl der
-            # Überschuss allein nicht reicht.
+            # Wie viele laufende Verbraucher für diesen zurückstecken würden.
+            # Erklärt den sonst überraschenden Fall, dass ein Gerät angeht,
+            # obwohl der Überschuss allein nicht reicht. Getrennt gezählt, weil
+            # es ein Unterschied ist, ob ein anderes Gerät ausgeht oder nur
+            # heruntergeht.
             "displaces": len(view.displaceable),
+            "throttles": len(view.throttleable),
             # Wann zuletzt jemand anders geschaltet hat — und wohin. Reine
             # Diagnose: die Automatik richtet sich nicht danach. Ausgewiesen,
             # damit sich vor dem Einschalten einer befristeten Übersteuerung

@@ -96,10 +96,18 @@ a more important one, those give way. As few as possible give way, the least imp
 only if it is actually sufficient in the end — otherwise you would have switched things off and
 gained nothing.
 
+**Turning down comes before turning off.** A modulating load first gives up only the difference down
+to its smallest level and keeps running. If that is not enough taken together, a second pass turns
+throttling into switching off — again from the bottom, and only as far as needed. The status sensor
+counts both separately: `throttles` is how many would turn down for a given load, `displaces` how
+many would go off.
+
 **Not displaced** is anything working through a minimum runtime (a wash cycle in progress is not
 aborted), anything not participating in the automation, anything under a forced run, and anything
-just switched. The `displaces` attribute on the status sensor shows how many would give way for a
-given load.
+just switched. A minimum runtime does **not** prevent throttling, though: it guards against
+switching a device off too early, and a throttled device keeps running. What does apply to
+throttling is the hold time between two levels — a displacement is no reason to move the ladder
+faster than that.
 
 ### The battery as a shiftable load
 

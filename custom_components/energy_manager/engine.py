@@ -541,22 +541,59 @@ def displaced_power(view: ConsumerView) -> float:
     return view.required_w
 
 
+def throttled_power(view: ConsumerView) -> float:
+    """Wie viel frei wird, wenn dieser Verbraucher auf seine kleinste Stufe geht.
+
+    0, wenn nichts zu holen ist: kein Raster, keine gelesene Stufe, oder er läuft
+    schon unten. Grundlage ist die **gestellte** Stufe und nicht der Messwert —
+    was tatsächlich frei wird, ist die Differenz der beiden Sollwerte. Ein Gerät,
+    das seinem Sollwert ohnehin nicht folgt, gibt weniger her, und genau dafür
+    begrenzt :func:`cap_ladder` die Leiter.
+    """
+    if view.ladder is None or view.level is None:
+        return 0.0
+    return max(view.level.w - view.ladder.min_w, 0.0)
+
+
 def may_be_displaced(view: ConsumerView, runtime: ConsumerRuntime, now: float) -> bool:
     """Darf dieser laufende Verbraucher für einen wichtigeren weichen?
 
     Die Ausnahmen sind dieselben, die auch sonst vor einer Schaltung schützen —
     eine Verdrängung ist kein Freibrief, die Mindestlaufzeit zu übergehen.
     """
+    if not may_be_touched(view, runtime, now):
+        return False
+    # Mindestlaufzeit: ein angefangener Waschgang wird nicht abgebrochen.
+    return not (view.locked_until is not None and now < view.locked_until)
+
+
+def may_be_throttled(view: ConsumerView, runtime: ConsumerRuntime, now: float) -> bool:
+    """Darf dieser laufende Verbraucher für einen wichtigeren gedrosselt werden?
+
+    Dieselben Ausnahmen wie beim Weichen, **ohne** die Mindestlaufzeit: Sie
+    schützt davor, ein Gerät zu früh abzuschalten. Gedrosselt läuft es weiter,
+    nur schwächer — ein angefangener Waschgang wird davon nicht abgebrochen.
+
+    Die Haltezeit zwischen zwei Stufen gilt dagegen auch hier: Sie ist der
+    Schutz davor, die Leiter im Takt der Auswertung zu bewegen, und eine
+    Verdrängung ist kein Grund, ihn zu übergehen.
+    """
+    if not may_be_touched(view, runtime, now):
+        return False
+    if _level_hold(view.config, runtime, now) is not None:
+        return False
+    return throttled_power(view) > 0
+
+
+def may_be_touched(view: ConsumerView, runtime: ConsumerRuntime, now: float) -> bool:
+    """Die Ausnahmen, die für jeden Eingriff von außen gelten."""
     if not view.is_on or not view.available:
         return False
     if not view.managed:
         return False
     if is_forced(runtime, now):
         return False
-    if runtime.settle_until is not None and now < runtime.settle_until:
-        return False
-    # Mindestlaufzeit: ein angefangener Waschgang wird nicht abgebrochen.
-    return not (view.locked_until is not None and now < view.locked_until)
+    return not (runtime.settle_until is not None and now < runtime.settle_until)
 
 
 def assign_displaceable(
@@ -564,12 +601,20 @@ def assign_displaceable(
     coordinator: EnergyManagerCoordinator,
     now: float,
 ) -> None:
-    """Bestimmt je Verbraucher, wer für ihn weichen müsste.
+    """Bestimmt je Verbraucher, wer für ihn zurückstecken müsste.
 
     Nur für ausgeschaltete, die es aus eigener Kraft nicht schaffen. Gesammelt
     wird von der niedrigsten Priorität aufwärts und nur so viel wie nötig — wer
-    am wenigsten wichtig ist, weicht zuerst, und niemand wird ohne Not
-    abgeschaltet.
+    am wenigsten wichtig ist, steckt zuerst zurück, und niemand wird ohne Not
+    angefasst.
+
+    **Drosseln geht vor Abschalten.** Ein regelbarer Verbraucher gibt zuerst nur
+    die Differenz bis zu seiner kleinsten Stufe her und läuft dabei weiter. Reicht
+    das zusammengenommen nicht, wird in einem zweiten Durchgang aus Drosseln
+    Abschalten — wieder von unten, und nur so weit wie nötig. Ohne diesen zweiten
+    Durchgang ginge Können verloren: Bisher gab ein verdrängter regelbarer
+    Verbraucher seine ganze Leistung her, und ein Fall, der heute aufgeht, würde
+    aufhören zu funktionieren.
     """
     for index, view in enumerate(views):
         if view.is_on or not view.available or not view.managed:
@@ -583,22 +628,60 @@ def assign_displaceable(
         if fehlend <= 0:
             continue
 
-        opfer: list[str] = []
-        gewinn = 0.0
-        # Von hinten: die unwichtigsten zuerst.
-        for kandidat in reversed(views[index + 1 :]):
+        _assign_one(view, views[index + 1 :], coordinator, now, fehlend)
+
+
+def _assign_one(
+    view: ConsumerView,
+    kandidaten: list[ConsumerView],
+    coordinator: EnergyManagerCoordinator,
+    now: float,
+    fehlend: float,
+) -> None:
+    """Sammelt für **einen** Verbraucher, wer zurückstecken müsste."""
+    drosseln: list[tuple[ConsumerView, float]] = []
+    abschalten: list[tuple[ConsumerView, float]] = []
+    gewinn = 0.0
+
+    # Erster Durchgang, von hinten: die unwichtigsten zuerst, und jeder mit dem
+    # gelindesten Mittel, das er anzubieten hat.
+    for kandidat in reversed(kandidaten):
+        runtime = coordinator.runtime_for(kandidat.config.subentry_id)
+
+        if may_be_throttled(kandidat, runtime, now):
+            beitrag = throttled_power(kandidat)
+            drosseln.append((kandidat, beitrag))
+        elif may_be_displaced(kandidat, runtime, now):
+            beitrag = displaced_power(kandidat)
+            abschalten.append((kandidat, beitrag))
+        else:
+            continue
+
+        gewinn += beitrag
+        if gewinn >= fehlend:
+            break
+
+    # Zweiter Durchgang: aus Drosseln wird Abschalten, solange es nicht reicht.
+    # Wieder von unten — die zuletzt gesammelten sind die unwichtigsten.
+    if gewinn < fehlend:
+        for eintrag in list(drosseln):
+            kandidat, gedrosselt = eintrag
             runtime = coordinator.runtime_for(kandidat.config.subentry_id)
             if not may_be_displaced(kandidat, runtime, now):
                 continue
-            opfer.append(kandidat.config.subentry_id)
-            gewinn += displaced_power(kandidat)
+            drosseln.remove(eintrag)
+            abschalten.append((kandidat, displaced_power(kandidat)))
+            gewinn += displaced_power(kandidat) - gedrosselt
             if gewinn >= fehlend:
                 break
 
-        # Nur übernehmen, wenn es am Ende auch reicht. Sonst hätte man
-        # abgeschaltet und trotzdem nichts gewonnen.
-        if gewinn >= fehlend:
-            view.displaceable = tuple(opfer)
+    # Nur übernehmen, wenn es am Ende auch reicht. Sonst hätte man abgeschaltet
+    # und trotzdem nichts gewonnen.
+    if gewinn < fehlend:
+        return
+
+    view.displaceable = tuple(kandidat.config.subentry_id for kandidat, _ in abschalten)
+    view.throttleable = tuple(kandidat.config.subentry_id for kandidat, _ in drosseln)
 
 
 # --- Schaltentscheidung -----------------------------------------------------
@@ -648,6 +731,13 @@ class Decision:
     die einen aus und der andere trotzdem nicht an.
     """
 
+    throttles: tuple[str, ...] = ()
+    """Verbraucher, die dafür auf ihre kleinste Stufe heruntergehen.
+
+    Zusammen mit ``displaces`` und dem Einschalten **eine** Handlung. Das
+    gelindere Mittel: Diese laufen weiter, nur schwächer.
+    """
+
     level: Level | None = None
     """Die zu stellende Stufe, sofern der Verbraucher regelbar ist."""
 
@@ -686,7 +776,12 @@ def update_conditions(
     # Ein Stufenwechsel nach oben zählt als Einschaltwunsch, einer nach unten als
     # Ausschaltwunsch: Dieselbe Bedingung, dieselbe Verzögerung, ein Satz Felder.
     wants_on = view.step_up or (
-        not view.is_on and (view.status is DeviceStatus.OFF_READY or bool(view.displaceable))
+        not view.is_on
+        and (
+            view.status is DeviceStatus.OFF_READY
+            or bool(view.displaceable)
+            or bool(view.throttleable)
+        )
     )
     wants_off = view.is_on and view.status is DeviceStatus.ON_DEFICIT
 
@@ -768,13 +863,14 @@ def decide_for(
         if view.locked_until is not None and now < view.locked_until:
             return None, Blocker.MIN_OFF_TIME
 
-        if view.displaceable:
+        if view.displaceable or view.throttleable:
             return (
                 Decision(
                     consumer.subentry_id,
                     True,
                     "displaces_lower_priority",
                     displaces=view.displaceable,
+                    throttles=view.throttleable,
                     level=view.target,
                 ),
                 None,
