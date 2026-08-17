@@ -10,6 +10,22 @@ bestehende Testsuite unverändert grün bleibt.
 
 ### Hinzugefügt
 
+- **Manuelle Übersteuerung.** Hat jemand anders einen Verbraucher geschaltet, hält sich die Automatik
+  für die eingetragene Dauer von ihm fern (`manual_override_time`, neuer Grund `manual`, neuer Dienst
+  `energy_manager.clear_manual`). Das behebt einen Defekt: Ein von Hand ausgeschaltetes Gerät wurde
+  bisher binnen Sekunden wieder eingeschaltet, weil `turn_on_delay` standardmäßig 0 ist und die
+  Sperrzeiten nur eigene Schaltungen kennen.
+
+  **Vorgabe 0, also aus** — bestehende Verbraucher verhalten sich unverändert. Absicht: Ob eine
+  Übersteuerung sinnvoll ist, hängt an der Geräteklasse und nicht am Nutzer. Ein Entfeuchter schaltet
+  sich nie selbst; ein Warmwasserspeicher taktet, und für ihn wäre jede Erkennung eine Fehlerkennung.
+  Wie oft der Fall bei einem Gerät auftritt, zeigt `last_foreign_change`.
+
+  Zwei Zusagen: Die Sperre ist **befristet**, damit eine Fehlerkennung von selbst abläuft statt einen
+  Verbraucher unbemerkt aus der Automatik zu nehmen. Und der `managed`-Schalter wird **nie** von der
+  Integration geschrieben — er bleibt Nutzerkonfiguration. Ein übersteuerter Verbraucher wird
+  außerdem nicht verdrängt und nicht gedrosselt; sonst wäre die Sperre nur halb wirksam.
+
 - **Verhaltenstyp im Formular.** Beim Anlegen eines Verbrauchers ist zu wählen, ob er nur schaltbar
   oder regelbar ist. Ein schaltbarer bleibt einschrittig wie bisher; ein regelbarer bekommt einen
   zweiten Schritt für die Steuerentität und, bei einer Auswahlliste, einen dritten für die

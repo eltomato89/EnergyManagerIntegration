@@ -263,6 +263,10 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
             # Übersteuerung die falsche Antwort.
             "last_foreign_change": _as_iso(runtime.last_foreign_change),
             "last_foreign_to": runtime.last_foreign_to,
+            # Wie lange sich die Automatik nach dem Eingriff noch fernhält.
+            # Damit kann eine Anzeige einen Countdown führen, ohne die
+            # eingetragene Dauer zu kennen.
+            "manual_until": _as_iso(runtime.manual_until),
         }
 
     def _blocked_by(self) -> str | None:

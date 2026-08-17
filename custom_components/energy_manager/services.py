@@ -1,8 +1,12 @@
 """Dienste für den Eingriff von Hand.
 
-Drei Dinge, die sich über Entitäten allein nicht ausdrücken lassen, weil ihnen
-eine **Dauer** fehlt: eine Zwangsfreigabe, eine befristete Pause und deren
-vorzeitiges Ende. Der Hauptschalter kann nur an oder aus.
+Was sich über Entitäten allein nicht ausdrücken lässt, weil ihm eine **Dauer**
+fehlt: eine Zwangsfreigabe, eine befristete Pause und deren vorzeitiges Ende.
+Der Hauptschalter kann nur an oder aus.
+
+Dazu das vorzeitige Ende einer manuellen Übersteuerung. Bewusst ein eigener
+Dienst neben ``clear_force``: Die beiden Sperren haben verschiedene Gründe, und
+wer eine Zwangsfreigabe beendet, meint nicht dasselbe.
 """
 
 from __future__ import annotations
@@ -26,6 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 
 SERVICE_FORCE_ON = "force_on"
 SERVICE_CLEAR_FORCE = "clear_force"
+SERVICE_CLEAR_MANUAL = "clear_manual"
 SERVICE_PAUSE = "pause"
 SERVICE_RESUME = "resume"
 
@@ -44,6 +49,8 @@ _DURATION = vol.All(cv.time_period, vol.Range(min=timedelta(seconds=1)))
 FORCE_ON_SCHEMA = vol.Schema({**_TARGET_SCHEMA, vol.Required(ATTR_DURATION): _DURATION})
 
 CLEAR_FORCE_SCHEMA = vol.Schema(_TARGET_SCHEMA)
+
+CLEAR_MANUAL_SCHEMA = vol.Schema(_TARGET_SCHEMA)
 
 PAUSE_SCHEMA = vol.Schema({vol.Optional(ATTR_DURATION): _DURATION})
 
@@ -124,6 +131,11 @@ def async_setup_services(hass: HomeAssistant) -> None:
         for subentry_id in _subentry_ids(hass, call):
             await coordinator.async_clear_force(subentry_id)
 
+    async def clear_manual(call: ServiceCall) -> None:
+        coordinator = _coordinator(hass)
+        for subentry_id in _subentry_ids(hass, call):
+            await coordinator.async_clear_manual(subentry_id)
+
     async def pause(call: ServiceCall) -> None:
         duration: Any = call.data.get(ATTR_DURATION)
         await _coordinator(hass).async_pause(None if duration is None else duration.total_seconds())
@@ -134,6 +146,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
     for name, handler, schema in (
         (SERVICE_FORCE_ON, force_on, FORCE_ON_SCHEMA),
         (SERVICE_CLEAR_FORCE, clear_force, CLEAR_FORCE_SCHEMA),
+        (SERVICE_CLEAR_MANUAL, clear_manual, CLEAR_MANUAL_SCHEMA),
         (SERVICE_PAUSE, pause, PAUSE_SCHEMA),
         (SERVICE_RESUME, resume, RESUME_SCHEMA),
     ):
@@ -143,5 +156,11 @@ def async_setup_services(hass: HomeAssistant) -> None:
 @callback
 def async_remove_services(hass: HomeAssistant) -> None:
     """Entfernt die Dienste, wenn der letzte Eintrag geht."""
-    for name in (SERVICE_FORCE_ON, SERVICE_CLEAR_FORCE, SERVICE_PAUSE, SERVICE_RESUME):
+    for name in (
+        SERVICE_FORCE_ON,
+        SERVICE_CLEAR_FORCE,
+        SERVICE_CLEAR_MANUAL,
+        SERVICE_PAUSE,
+        SERVICE_RESUME,
+    ):
         hass.services.async_remove(DOMAIN, name)

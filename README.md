@@ -79,6 +79,22 @@ switching decision:
 In addition, each load has the four timing fields (`turn_on_delay`, `turn_off_delay`,
 `min_runtime`, `min_off_time`) and its own automation switch.
 
+### When someone else switches
+
+Switching that did not come from this integration is recognised from the service call context — at
+the device, in the interface, or from another automation. With a **manual override** time set, the
+automation then keeps away from that load for the configured period.
+
+The default is 0, which means off, and that is deliberate: whether an override makes sense depends on
+the device class, not on the user. A dehumidifier never switches itself; a hot water tank cycles, and
+for it every detection would be a false one. A value that is right for the one and systematically
+wrong for the other does not belong in a default for all. The `last_foreign_change` attribute shows
+how often the case actually occurs for a given device.
+
+The automation switch is **never** written by the integration. It stays user configuration — and
+because the override is time-limited, a false detection expires by itself instead of leaving a load
+out of the automation until someone notices.
+
 ## What priority means
 
 It determines two things:
@@ -141,6 +157,7 @@ The **status sensor of each load** in its `blocked_by` attribute for the individ
 | `unavailable` | The switch entity reports no state |
 | `settling` | The settling window after the last switching action is running |
 | `forced` | A forced run is active — the automation keeps away |
+| `manual` | Someone else switched this load — the automation keeps away for the configured time |
 | `turn_on_delay` / `turn_off_delay` | The condition has not held long enough yet |
 | `min_runtime` / `min_off_time` | A lockout is running, see "locked until" |
 
@@ -186,6 +203,7 @@ only knows on and off.
 | --- | --- |
 | `energy_manager.force_on` | Switches a load on immediately and keeps it running for the given time, regardless of surplus. Works even with the main switch off, since this is an operation rather than an automation decision |
 | `energy_manager.clear_force` | Ends a forced run early. Nothing is switched off; from then on the surplus decides again |
+| `energy_manager.clear_manual` | Ends a manual override early. Nothing is switched; from then on the surplus decides again |
 | `energy_manager.pause` | Stops the automation, optionally for a set time ("two hours of quiet", during maintenance for instance) |
 | `energy_manager.resume` | Arms it again |
 

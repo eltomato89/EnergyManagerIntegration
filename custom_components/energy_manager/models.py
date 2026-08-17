@@ -20,6 +20,7 @@ from .const import (
     CONF_HYSTERESIS,
     CONF_LEVEL_HOLD,
     CONF_LEVEL_MAP,
+    CONF_MANUAL_OVERRIDE_TIME,
     CONF_MAX_POWER,
     CONF_MIN_LEVEL_W,
     CONF_MIN_OFF_TIME,
@@ -242,6 +243,7 @@ class ConsumerConfig:
     level_map: dict[str, float] | None = None
     min_level_w: float | None = None
     level_hold: int = 0
+    manual_override_time: int = 0
 
     min_power: float | None = None
     max_power: float | None = None
@@ -276,6 +278,7 @@ class ConsumerConfig:
             level_map=data.get(CONF_LEVEL_MAP),
             min_level_w=data.get(CONF_MIN_LEVEL_W),
             level_hold=data.get(CONF_LEVEL_HOLD, 0),
+            manual_override_time=data.get(CONF_MANUAL_OVERRIDE_TIME, 0),
             min_power=data.get(CONF_MIN_POWER),
             max_power=data.get(CONF_MAX_POWER),
             hysteresis=data.get(CONF_HYSTERESIS, 0.0),
@@ -353,6 +356,22 @@ class ConsumerRuntime:
     last_foreign_to: bool | None = None
     """Wohin dabei geschaltet wurde."""
 
+    manual_until: float | None = None
+    """Bis dahin hält sich die Automatik nach einem Eingriff von außen fern.
+
+    Zwilling von ``force_until``: gleiche Wirkung, eigener Grund. Getrennt
+    gehalten, weil „warum passiert hier nichts" die Frage ist, auf die diese
+    Integration die beste Antwort geben soll — und eine Zwangsfreigabe ist etwas
+    anderes als ein übergangener Eingriff von Hand.
+
+    **Befristet**, und das ist der Kern: Es gibt eine Klasse von Fehlerkennungen,
+    die nicht wegzufiltern ist — Geräte, die ihren eigenen Zustand ändern. Eine
+    Wallbox meldet „aus", weil das Laden fertig ist; ein Warmwasserspeicher
+    erreicht seine Temperatur. Eine befristete Sperre läuft in so einem Fall von
+    selbst ab. Ein selbst abgeschalteter Automatik-Schalter wäre dauerhafter
+    Schaden.
+    """
+
     last_level_ts: float | None = None
     """Zeitpunkt des letzten Stufenwechsels — Grundlage für ``level_hold``.
 
@@ -381,6 +400,7 @@ class ConsumerRuntime:
             "force_until": self.force_until,
             "last_foreign_change": self.last_foreign_change,
             "last_foreign_to": self.last_foreign_to,
+            "manual_until": self.manual_until,
             "last_level_ts": self.last_level_ts,
             "last_level_w": self.last_level_w,
         }
@@ -399,6 +419,7 @@ class ConsumerRuntime:
             force_until=data.get("force_until"),
             last_foreign_change=data.get("last_foreign_change"),
             last_foreign_to=data.get("last_foreign_to"),
+            manual_until=data.get("manual_until"),
             last_level_ts=data.get("last_level_ts"),
             last_level_w=data.get("last_level_w"),
         )

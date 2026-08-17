@@ -32,6 +32,7 @@ from .const import (
     CONF_HYSTERESIS,
     CONF_INVERT_GRID,
     CONF_LEVEL_HOLD,
+    CONF_MANUAL_OVERRIDE_TIME,
     CONF_MAX_POWER,
     CONF_METER_MODE,
     CONF_MIN_LEVEL_W,
@@ -197,6 +198,9 @@ CONSUMER_SCHEMA = vol.Schema(
         vol.Optional(CONF_TURN_OFF_DELAY, default=0): seconds(3600, 10),
         vol.Optional(CONF_MIN_RUNTIME, default=0): seconds(86400, 60),
         vol.Optional(CONF_MIN_OFF_TIME, default=0): seconds(86400, 60),
+        # 0 bedeutet hier "aus" und gehört gespeichert — wie bei den vier
+        # Zeitfeldern und anders als bei der Nennleistung.
+        vol.Optional(CONF_MANUAL_OVERRIDE_TIME, default=0): seconds(86400, 60),
     }
 )
 

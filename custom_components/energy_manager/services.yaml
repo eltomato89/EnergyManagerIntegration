@@ -30,6 +30,14 @@ clear_force:
           integration: energy_manager
           model: Verbraucher
 
+clear_manual:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: energy_manager
+          model: Verbraucher
 pause:
   fields:
     duration:

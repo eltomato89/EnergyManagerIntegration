@@ -106,7 +106,8 @@
             "turn_on_delay": "Switch-on delay",
             "turn_off_delay": "Switch-off delay",
             "min_runtime": "Minimum runtime",
-            "min_off_time": "Minimum pause"
+            "min_off_time": "Minimum pause",
+            "manual_override_time": "Manual override"
           },
           "data_description": {
             "consumer_type": "Modulating means the power is set in steps through an entity of its own, such as a wallbox charging current. A further step follows.",
@@ -117,7 +118,8 @@
             "turn_on_delay": "The surplus must be sufficient for this long without interruption before switching on. Bridges brief dips in production. Also applies to a level change upwards.",
             "turn_off_delay": "The deficit must persist for this long before switching off. Bridges brief dips. Also applies to a level change downwards.",
             "min_runtime": "The device stays on at least this long after switching on. Lowering the level remains possible.",
-            "min_off_time": "The device stays off at least this long after switching off. Protects compressors from restarting too early."
+            "min_off_time": "The device stays off at least this long after switching off. Protects compressors from restarting too early.",
+            "manual_override_time": "How long the automation keeps away after someone else switched the device -- at the device, in the interface, or from another automation. 0 disables it. For devices that cycle on their own, a hot water tank for instance, 0 is the right value: a detected intervention there is usually none."
           }
         },
         "reconfigure": {
@@ -133,7 +135,8 @@
             "turn_on_delay": "Switch-on delay",
             "turn_off_delay": "Switch-off delay",
             "min_runtime": "Minimum runtime",
-            "min_off_time": "Minimum pause"
+            "min_off_time": "Minimum pause",
+            "manual_override_time": "Manual override"
           }
         },
         "control": {
@@ -262,6 +265,16 @@
         "device_id": {
           "name": "Load",
           "description": "The load's device. An entity of the same device is also accepted."
+        }
+      }
+    },
+    "clear_manual": {
+      "name": "End manual override",
+      "description": "Ends a running manual override early. Nothing is switched; from that point the surplus decides again.",
+      "fields": {
+        "device_id": {
+          "name": "Load",
+          "description": "The device of the load. An entity of the same device works just as well."
         }
       }
     },

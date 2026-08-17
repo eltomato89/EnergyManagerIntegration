@@ -128,6 +128,19 @@ Nicht auslesbar und deshalb ein Feld: ``min`` der Steuerentität ist die Grenze
 der **Box**, nicht die des Verbrauchers. Manche Fahrzeuge laden unter 8 A nicht.
 """
 
+CONF_MANUAL_OVERRIDE_TIME: Final = "manual_override_time"
+"""s, so lange hält sich die Automatik nach einem Eingriff von außen fern.
+
+0 schaltet das ab und ist der **Rückfallwert**: Bestehenden Verbrauchern fehlt
+der Schlüssel, und sie verhalten sich damit unverändert.
+
+Bewusst keine globale Vorgabe über 0, denn die richtige Zahl hängt an der
+Geräteklasse und nicht am Nutzer. Ein Entfeuchter schaltet sich nie selbst; ein
+Warmwasserspeicher taktet, und für ihn wäre jede Erkennung eine Fehlerkennung.
+Ein Wert, der für das eine richtig und für das andere systematisch falsch ist,
+gehört nicht in eine Vorgabe für alle.
+"""
+
 CONF_LEVEL_HOLD: Final = "level_hold"
 """s, Mindestzeit zwischen zwei Stufenwechseln.
 

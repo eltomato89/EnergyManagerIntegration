@@ -412,14 +412,39 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
 
         runtime.last_foreign_change = now
         runtime.last_foreign_to = turned_on
-        self.schedule_save()
 
         consumer = self.consumers.get(subentry_id)
+        # Wirksam nur, wenn eine Dauer eingetragen ist. Ohne sie bleibt es bei der
+        # Aufzeichnung, und das Verhalten ist unverändert — der Rückfallwert 0
+        # sorgt dafür, dass bestehende Verbraucher nichts davon merken.
+        dauer = consumer.manual_override_time if consumer is not None else 0
+        if dauer > 0:
+            runtime.manual_until = now + dauer
+            # Die Verzögerungszähler beginnen von vorn: Nach dem Ende soll neu
+            # bewertet werden und nicht auf einem alten Stand aufgesetzt.
+            runtime.on_condition_since = None
+            runtime.off_condition_since = None
+
+        self.schedule_save()
+
         _LOGGER.info(
-            "%s wurde von außen %s",
+            "%s wurde von außen %s%s",
             consumer.name if consumer is not None else subentry_id,
             "eingeschaltet" if turned_on else "ausgeschaltet",
+            f"; die Automatik hält sich {dauer:.0f} s fern" if dauer > 0 else "",
         )
+
+    async def async_clear_manual(self, subentry_id: str) -> None:
+        """Beendet eine manuelle Übersteuerung vorzeitig.
+
+        Geschaltet wird dabei nicht: Ob das Gerät weiterlaufen darf, entscheidet
+        ab jetzt wieder der Überschuss. Gegenstück zu ``clear_force``, und
+        bewusst ein eigener Dienst — die beiden Sperren haben verschiedene
+        Gründe, und wer eine Zwangsfreigabe beendet, meint nicht dasselbe.
+        """
+        self.runtime_for(subentry_id).manual_until = None
+        self.schedule_save()
+        await self.async_request_refresh_now()
 
     async def _handle_estimate_tick(self, _now: Any) -> None:
         await self.async_update_estimates()

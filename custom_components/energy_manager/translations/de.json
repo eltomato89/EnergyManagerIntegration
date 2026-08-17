@@ -106,7 +106,8 @@
             "turn_on_delay": "Einschaltverzögerung",
             "turn_off_delay": "Ausschaltverzögerung",
             "min_runtime": "Mindestlaufzeit",
-            "min_off_time": "Mindestpause"
+            "min_off_time": "Mindestpause",
+            "manual_override_time": "Manuelle Übersteuerung"
           },
           "data_description": {
             "consumer_type": "Regelbar bedeutet: Die Leistung wird über eine eigene Entität in Stufen gestellt, etwa der Ladestrom einer Wallbox. Dazu folgt ein weiterer Schritt.",
@@ -117,7 +118,8 @@
             "turn_on_delay": "Der Überschuss muss so lange ununterbrochen ausreichen, bevor eingeschaltet wird. Überbrückt kurze Einbrüche der Erzeugung. Gilt auch für einen Stufenwechsel nach oben.",
             "turn_off_delay": "Das Defizit muss so lange anhalten, bevor ausgeschaltet wird. Überbrückt kurzzeitige Einbrüche. Gilt auch für einen Stufenwechsel nach unten.",
             "min_runtime": "So lange bleibt das Gerät nach dem Einschalten mindestens an. Ein Absenken der Stufe bleibt möglich.",
-            "min_off_time": "So lange bleibt das Gerät nach dem Ausschalten mindestens aus. Schützt Kompressoren vor zu frühem Wiederanlauf."
+            "min_off_time": "So lange bleibt das Gerät nach dem Ausschalten mindestens aus. Schützt Kompressoren vor zu frühem Wiederanlauf.",
+            "manual_override_time": "So lange hält sich die Automatik fern, nachdem jemand anders das Gerät geschaltet hat: am Gerät, in der Oberfläche oder aus einer fremden Automation. 0 schaltet das ab. Bei Geräten, die selbst takten, etwa einem Warmwasserspeicher, ist 0 richtig; dort ist ein erkannter Eingriff meist keiner."
           }
         },
         "reconfigure": {
@@ -133,7 +135,8 @@
             "turn_on_delay": "Einschaltverzögerung",
             "turn_off_delay": "Ausschaltverzögerung",
             "min_runtime": "Mindestlaufzeit",
-            "min_off_time": "Mindestpause"
+            "min_off_time": "Mindestpause",
+            "manual_override_time": "Manuelle Übersteuerung"
           }
         },
         "control": {
@@ -258,6 +261,16 @@
     "clear_force": {
       "name": "Zwangsfreigabe beenden",
       "description": "Beendet eine laufende Zwangsfreigabe vorzeitig. Es wird nichts ausgeschaltet; ab diesem Zeitpunkt entscheidet wieder der Überschuss.",
+      "fields": {
+        "device_id": {
+          "name": "Verbraucher",
+          "description": "Das Gerät des Verbrauchers. Eine Entität desselben Geräts ist ebenfalls zulässig."
+        }
+      }
+    },
+    "clear_manual": {
+      "name": "Manuelle Übersteuerung beenden",
+      "description": "Beendet eine laufende manuelle Übersteuerung vorzeitig. Es wird nichts geschaltet; ab diesem Zeitpunkt entscheidet wieder der Überschuss.",
       "fields": {
         "device_id": {
           "name": "Verbraucher",

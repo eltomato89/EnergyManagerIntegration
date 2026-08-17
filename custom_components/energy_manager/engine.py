@@ -591,7 +591,9 @@ def may_be_touched(view: ConsumerView, runtime: ConsumerRuntime, now: float) -> 
         return False
     if not view.managed:
         return False
-    if is_forced(runtime, now):
+    # Wer ausdrücklich in Ruhe gelassen werden soll, wird auch nicht verdrängt
+    # oder gedrosselt: Sonst wäre die Übersteuerung nur halb wirksam.
+    if is_forced(runtime, now) or is_manual(runtime, now):
         return False
     return not (runtime.settle_until is not None and now < runtime.settle_until)
 
@@ -699,6 +701,8 @@ class Blocker(StrEnum):
     SETTLING = "settling"
     FORCED = "forced"
     """Zwangsfreigabe läuft — die Automatik hält sich fern."""
+    MANUAL = "manual"
+    """Nach einem Eingriff von außen hält sich die Automatik befristet fern."""
     MIN_RUNTIME = "min_runtime"
     MIN_OFF_TIME = "min_off_time"
     TURN_ON_DELAY = "turn_on_delay"
@@ -818,6 +822,11 @@ def is_forced(runtime: ConsumerRuntime, now: float) -> bool:
     return runtime.force_until is not None and now < runtime.force_until
 
 
+def is_manual(runtime: ConsumerRuntime, now: float) -> bool:
+    """Wirkt für diesen Verbraucher gerade eine manuelle Übersteuerung?"""
+    return runtime.manual_until is not None and now < runtime.manual_until
+
+
 def decide_for(
     view: ConsumerView,
     runtime: ConsumerRuntime,
@@ -830,6 +839,12 @@ def decide_for(
     # dieser Zeit nur davon fern, es wieder abzuschalten.
     if is_forced(runtime, now):
         return None, Blocker.FORCED
+
+    # Ein Eingriff von außen ist ebenso eine Ansage des Nutzers, nur ohne
+    # Serviceaufruf: am Gerät, in der Oberfläche oder aus einer fremden
+    # Automation. Befristet, damit eine Fehlerkennung von selbst abläuft.
+    if is_manual(runtime, now):
+        return None, Blocker.MANUAL
 
     if (blocker := check_blockers(view, runtime, now)) is not None:
         return None, blocker
