@@ -24,17 +24,22 @@ from .const import (
     CONF_BATTERY_POWER_ENTITY,
     CONF_BATTERY_RESERVE_W,
     CONF_BATTERY_SOC_ENTITY,
+    CONF_CONSUMER_TYPE,
     CONF_CONSUMPTION_ENTITY,
     CONF_CONSUMPTION_INCLUDES_BATTERY,
+    CONF_CONTROL_ENTITY,
     CONF_GRID_ENTITY,
     CONF_HYSTERESIS,
     CONF_INVERT_GRID,
+    CONF_LEVEL_HOLD,
     CONF_MAX_POWER,
     CONF_METER_MODE,
+    CONF_MIN_LEVEL_W,
     CONF_MIN_OFF_TIME,
     CONF_MIN_POWER,
     CONF_MIN_RUNTIME,
     CONF_NAME,
+    CONF_PHASES,
     CONF_POWER_ENTITY,
     CONF_PRODUCTION_ENTITY,
     CONF_SETTLE_TIME,
@@ -42,6 +47,8 @@ from .const import (
     CONF_SWITCH_ENTITY,
     CONF_TURN_OFF_DELAY,
     CONF_TURN_ON_DELAY,
+    CONSUMER_TYPE_MODULATING,
+    CONSUMER_TYPE_SWITCH,
     DEFAULT_SETTLE_TIME,
     DEFAULT_SMOOTHING_WINDOW,
     METER_MODE_GRID,
@@ -170,6 +177,16 @@ CONSUMER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_NAME): selector.TextSelector(),
         vol.Required(CONF_SWITCH_ENTITY): SWITCHABLE,
+        # Der Verhaltenstyp steht im ersten Schritt, weil er entscheidet, ob ein
+        # zweiter folgt. Vorgabe ist der bisherige Fall — wer nichts umstellt,
+        # bekommt dasselbe Formular wie zuvor.
+        vol.Required(CONF_CONSUMER_TYPE, default=CONSUMER_TYPE_SWITCH): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[CONSUMER_TYPE_SWITCH, CONSUMER_TYPE_MODULATING],
+                translation_key="consumer_type",
+                mode=selector.SelectSelectorMode.LIST,
+            )
+        ),
         vol.Optional(CONF_POWER_ENTITY): POWER_SENSOR,
         vol.Optional(CONF_MIN_POWER): watts(),
         vol.Optional(CONF_MAX_POWER): watts(),
@@ -184,10 +201,57 @@ CONSUMER_SCHEMA = vol.Schema(
 )
 
 
+# --- Regelbare Verbraucher --------------------------------------------------
+
+CONTROL_SCHEMA = vol.Schema(
+    {
+        # Nur number und select: Beide beschreiben ihr Raster selbst — die eine
+        # über min/max/step und ihre Einheit, die andere über ihre Optionen.
+        vol.Required(CONF_CONTROL_ENTITY): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["number", "select"])
+        ),
+        vol.Required(CONF_PHASES, default="1"): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=["1", "3"],
+                translation_key="phases",
+                mode=selector.SelectSelectorMode.LIST,
+            )
+        ),
+        vol.Optional(CONF_MIN_LEVEL_W): watts(),
+        vol.Optional(CONF_LEVEL_HOLD, default=0): seconds(3600, 10),
+    }
+)
+
+
+def levels_schema(options: list[str], current: dict[str, float] | None = None) -> vol.Schema:
+    """Ein Watt-Feld je Option einer Auswahlliste.
+
+    Zur Laufzeit gebaut, weil die Optionen erst mit der gewählten Entität
+    bekannt sind. Die Feldnamen sind die **rohen** Optionsschlüssel: Home
+    Assistant übersetzt die angezeigten Bezeichnungen, und die wechseln mit der
+    Sprache der Instanz — gespeichert werden muss der Schlüssel.
+
+    Eine Option mit 0 W ist die Aus-Stellung und wird keine Stufe; abgeschaltet
+    wird über die Schalt-Entität.
+    """
+    vorher = current or {}
+    return vol.Schema(
+        {
+            vol.Optional(option, default=float(vorher.get(option, 0))): watts(30000, 50)
+            for option in options
+        }
+    )
+
+
 # Bei diesen Feldern ist 0 keine Angabe, sondern das Fehlen einer. Anders als
 # bei `hysteresis` oder den Zeitfeldern, wo 0 "aus" bedeutet und gespeichert
 # gehört.
-_NULL_IST_LEER = (CONF_MIN_POWER, CONF_MAX_POWER, CONF_BATTERY_MAX_CHARGE_W)
+_NULL_IST_LEER = (
+    CONF_MIN_POWER,
+    CONF_MAX_POWER,
+    CONF_BATTERY_MAX_CHARGE_W,
+    CONF_MIN_LEVEL_W,
+)
 
 
 def clean(data: dict[str, Any]) -> dict[str, Any]:

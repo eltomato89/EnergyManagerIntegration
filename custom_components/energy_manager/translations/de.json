@@ -98,6 +98,7 @@
           "data": {
             "name": "Name",
             "switch_entity": "Schaltbare Entität",
+            "consumer_type": "Ansteuerung",
             "power_entity": "Leistungssensor",
             "min_power": "Einschaltschwelle",
             "max_power": "Nennleistung",
@@ -108,13 +109,14 @@
             "min_off_time": "Mindestpause"
           },
           "data_description": {
+            "consumer_type": "Regelbar bedeutet: Die Leistung wird über eine eigene Entität in Stufen gestellt, etwa der Ladestrom einer Wallbox. Dazu folgt ein weiterer Schritt.",
             "power_entity": "Aktuelle Leistungsaufnahme. Ohne ihn wird mit der Nennleistung gerechnet.",
             "min_power": "Ab diesem Überschuss wird eingeschaltet. Ohne Angabe gilt die Nennleistung.",
             "max_power": "Ersatzwert für den Bedarf, solange keine Einschaltschwelle eingetragen ist. Eine Obergrenze für den Betrieb ist damit nicht gesetzt.",
-            "hysteresis": "Totband gegen Pendeln um den Nullpunkt.",
-            "turn_on_delay": "Der Überschuss muss so lange ununterbrochen ausreichen, bevor eingeschaltet wird. Überbrückt kurze Einbrüche der Erzeugung.",
-            "turn_off_delay": "Das Defizit muss so lange anhalten, bevor ausgeschaltet wird. Überbrückt kurzzeitige Einbrüche.",
-            "min_runtime": "So lange bleibt das Gerät nach dem Einschalten mindestens an.",
+            "hysteresis": "Totband gegen Pendeln um den Nullpunkt. Bei regelbaren Verbrauchern zugleich das Totband, unter dem ein Stufenwechsel unterbleibt.",
+            "turn_on_delay": "Der Überschuss muss so lange ununterbrochen ausreichen, bevor eingeschaltet wird. Überbrückt kurze Einbrüche der Erzeugung. Gilt auch für einen Stufenwechsel nach oben.",
+            "turn_off_delay": "Das Defizit muss so lange anhalten, bevor ausgeschaltet wird. Überbrückt kurzzeitige Einbrüche. Gilt auch für einen Stufenwechsel nach unten.",
+            "min_runtime": "So lange bleibt das Gerät nach dem Einschalten mindestens an. Ein Absenken der Stufe bleibt möglich.",
             "min_off_time": "So lange bleibt das Gerät nach dem Ausschalten mindestens aus. Schützt Kompressoren vor zu frühem Wiederanlauf."
           }
         },
@@ -123,6 +125,7 @@
           "data": {
             "name": "Name",
             "switch_entity": "Schaltbare Entität",
+            "consumer_type": "Ansteuerung",
             "power_entity": "Leistungssensor",
             "min_power": "Einschaltschwelle",
             "max_power": "Nennleistung",
@@ -132,13 +135,38 @@
             "min_runtime": "Mindestlaufzeit",
             "min_off_time": "Mindestpause"
           }
+        },
+        "control": {
+          "title": "Regelung",
+          "description": "Das Stufenraster wird aus der Entität gelesen: bei einer Zahl aus Minimum, Maximum, Schrittweite und Einheit, bei einer Auswahlliste aus ihren Optionen. Erkanntes Raster: {detected}",
+          "data": {
+            "control_entity": "Steuerentität",
+            "phases": "Phasen",
+            "min_level_w": "Mindeststufe",
+            "level_hold": "Haltezeit"
+          },
+          "data_description": {
+            "control_entity": "Eine Zahl oder eine Auswahlliste. Eine Zahl braucht eine Einheit: W, kW oder A. Ohne Einheit lässt sich nicht entscheiden, ob 16 sechzehn Watt oder sechzehn Ampere bedeutet.",
+            "phases": "Nur bei einer Steuerentität in Ampere. Bestimmt die Umrechnung in Watt, gerechnet mit 230 V je Phase.",
+            "min_level_w": "Unterhalb dieser Leistung wird abgeschaltet statt gedrosselt. Nötig, wenn das Gerät weniger nicht annimmt: Das Minimum der Steuerentität ist die Grenze der Ladestation, nicht die des Fahrzeugs.",
+            "level_hold": "Mindestzeit zwischen zwei Stufenwechseln. Ohne sie folgt die Stufe jeder Schwankung des Überschusses."
+          }
+        },
+        "levels": {
+          "title": "Leistung je Stufe",
+          "description": "Eine Auswahlliste sagt nichts über Leistung; die Zuordnung ist deshalb einzutragen. Optionen mit 0 W gelten als Aus-Stellung und werden keine Stufe. Entität: {entity}"
         }
       },
       "abort": {
         "reconfigure_successful": "Der Verbraucher wurde geändert."
       },
       "error": {
-        "switch_in_use": "Dieses Gerät wird bereits von einem anderen Verbraucher geschaltet. Zwei Einträge für dasselbe Gerät führen dazu, dass die Automatik es doppelt verplant. Die Entitäts-ID muss nicht mit dem Anzeigenamen übereinstimmen; bitte prüfen."
+        "switch_in_use": "Dieses Gerät wird bereits von einem anderen Verbraucher geschaltet. Zwei Einträge für dasselbe Gerät führen dazu, dass die Automatik es doppelt verplant. Die Entitäts-ID muss nicht mit dem Anzeigenamen übereinstimmen; bitte prüfen.",
+        "control_unit_required": "Diese Entität führt keine verwertbare Einheit. Zulässig sind W, kW und A. Ohne Einheit bliebe offen, ob ein Wert von 16 sechzehn Watt oder sechzehn Ampere bedeutet; im zweiten Fall läge die Rechnung um den Faktor 690 daneben.",
+        "control_entity_unavailable": "Diese Entität liefert gerade keinen Zustand. Das Raster wird aus ihren Attributen gelesen und ist deshalb nicht ermittelbar.",
+        "no_levels": "Aus dieser Entität ergibt sich keine verwertbare Stufe. Zu prüfen sind Minimum, Maximum und Schrittweite; bei einer Auswahlliste mindestens eine Option mit einer Leistung über 0 W.",
+        "min_level_too_high": "Die Mindeststufe liegt über allem, was dieses Gerät leisten kann. Damit bliebe keine Stufe übrig.",
+        "select_not_ready": "Diese Auswahlliste meldet keine Optionen. Ohne sie lässt sich kein Feld je Stufe anbieten."
       }
     }
   },
@@ -197,6 +225,18 @@
       "options": {
         "charge_only": "Nur Laden anrechnen",
         "full": "Entladung abziehen (reiner PV-Überschuss)"
+      }
+    },
+    "consumer_type": {
+      "options": {
+        "switch": "Nur schaltbar (an oder aus)",
+        "modulating": "Regelbar (Stufen über eine Steuerentität)"
+      }
+    },
+    "phases": {
+      "options": {
+        "1": "Einphasig",
+        "3": "Dreiphasig"
       }
     }
   },

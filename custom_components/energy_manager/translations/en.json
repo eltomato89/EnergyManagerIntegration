@@ -98,6 +98,7 @@
           "data": {
             "name": "Name",
             "switch_entity": "Switchable entity",
+            "consumer_type": "Control method",
             "power_entity": "Power sensor",
             "min_power": "Switch-on threshold",
             "max_power": "Rated power",
@@ -108,13 +109,14 @@
             "min_off_time": "Minimum pause"
           },
           "data_description": {
+            "consumer_type": "Modulating means the power is set in steps through an entity of its own, such as a wallbox charging current. A further step follows.",
             "power_entity": "Current power draw. Without it the rated power is used.",
             "min_power": "Switching on starts at this surplus. Without a value the rated power applies.",
             "max_power": "Fallback for the demand while no switch-on threshold is set. It does not cap the device during operation.",
-            "hysteresis": "Dead band against oscillation around zero.",
-            "turn_on_delay": "The surplus must be sufficient for this long without interruption before switching on. Bridges short drops in production.",
-            "turn_off_delay": "The deficit must persist for this long before switching off. Bridges brief drops.",
-            "min_runtime": "The device stays on at least this long after being switched on.",
+            "hysteresis": "Deadband against oscillation around zero. For modulating loads this is also the deadband below which no level change happens.",
+            "turn_on_delay": "The surplus must be sufficient for this long without interruption before switching on. Bridges brief dips in production. Also applies to a level change upwards.",
+            "turn_off_delay": "The deficit must persist for this long before switching off. Bridges brief dips. Also applies to a level change downwards.",
+            "min_runtime": "The device stays on at least this long after switching on. Lowering the level remains possible.",
             "min_off_time": "The device stays off at least this long after switching off. Protects compressors from restarting too early."
           }
         },
@@ -123,6 +125,7 @@
           "data": {
             "name": "Name",
             "switch_entity": "Switchable entity",
+            "consumer_type": "Control method",
             "power_entity": "Power sensor",
             "min_power": "Switch-on threshold",
             "max_power": "Rated power",
@@ -132,13 +135,38 @@
             "min_runtime": "Minimum runtime",
             "min_off_time": "Minimum pause"
           }
+        },
+        "control": {
+          "title": "Modulation",
+          "description": "The step grid is read from the entity: from minimum, maximum, step size and unit for a number, from its options for a select. Detected grid: {detected}",
+          "data": {
+            "control_entity": "Control entity",
+            "phases": "Phases",
+            "min_level_w": "Minimum level",
+            "level_hold": "Hold time"
+          },
+          "data_description": {
+            "control_entity": "A number or a select. A number needs a unit: W, kW or A. Without a unit there is no way to tell whether 16 means sixteen watts or sixteen amperes.",
+            "phases": "Only for a control entity in amperes. Determines the conversion to watts, calculated with 230 V per phase.",
+            "min_level_w": "Below this power the load is switched off rather than throttled. Needed where the device will not accept less: the minimum of the control entity is the limit of the charging station, not that of the vehicle.",
+            "level_hold": "Minimum time between two level changes. Without it the level follows every fluctuation of the surplus."
+          }
+        },
+        "levels": {
+          "title": "Power per level",
+          "description": "A select says nothing about power, so the mapping has to be entered. Options at 0 W count as the off position and do not become a level. Entity: {entity}"
         }
       },
       "abort": {
         "reconfigure_successful": "The load was changed."
       },
       "error": {
-        "switch_in_use": "This device is already switched by another load. Two entries for the same device cause the automation to plan it twice. The entity ID need not match the display name; please verify."
+        "switch_in_use": "This device is already switched by another load. Two entries for the same device cause the automation to plan it twice. The entity ID need not match the display name; please verify.",
+        "control_unit_required": "This entity carries no usable unit. W, kW and A are accepted. Without a unit it would remain open whether a value of 16 means sixteen watts or sixteen amperes; in the latter case the calculation would be off by a factor of 690.",
+        "control_entity_unavailable": "This entity currently reports no state. The grid is read from its attributes and therefore cannot be determined.",
+        "no_levels": "This entity yields no usable level. Check minimum, maximum and step size; for a select, at least one option with a power above 0 W.",
+        "min_level_too_high": "The minimum level exceeds everything this device can deliver. No level would be left.",
+        "select_not_ready": "This select reports no options. Without them no field per level can be offered."
       }
     }
   },
@@ -197,6 +225,18 @@
       "options": {
         "charge_only": "Count charging only",
         "full": "Subtract discharging (pure solar surplus)"
+      }
+    },
+    "consumer_type": {
+      "options": {
+        "switch": "Switchable only (on or off)",
+        "modulating": "Modulating (steps through a control entity)"
+      }
+    },
+    "phases": {
+      "options": {
+        "1": "Single-phase",
+        "3": "Three-phase"
       }
     }
   },
