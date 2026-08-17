@@ -2,6 +2,112 @@
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+## [Unveröffentlicht]
+
+Regelbare Verbraucher: Die Automatik kann Lasten jetzt in **Stufen** fahren statt nur ein- und
+auszuschalten. Für rein schaltbare Verbraucher ändert sich nichts — nachgewiesen dadurch, dass die
+bestehende Testsuite unverändert grün bleibt.
+
+### Hinzugefügt
+
+- **Verhaltenstyp im Formular.** Beim Anlegen eines Verbrauchers ist zu wählen, ob er nur schaltbar
+  oder regelbar ist. Ein schaltbarer bleibt einschrittig wie bisher; ein regelbarer bekommt einen
+  zweiten Schritt für die Steuerentität und, bei einer Auswahlliste, einen dritten für die
+  Watt-Zuordnung je Option.
+
+  Der Typ ist ein **Feld**, kein eigener Subentry-Typ: Der wäre unveränderlich, und ein Wechsel von
+  schaltbar auf regelbar würde Rang, Verlauf und Entitäts-IDs kosten. So ist er ein gewöhnliches
+  Bearbeiten. Der Wechsel zurück lässt keine Reste in den Daten.
+
+- **Das erkannte Raster steht im Formular** (`11 @ 4140-11040 W`). Der Nachweis, dass die
+  Integration die Entität versteht, abzulesen bevor scharfgeschaltet wird.
+
+- **Was sich nicht in ein Raster übersetzen lässt, wird abgewiesen** statt angenommen: fehlende oder
+  falsche Einheit, Entität ohne Zustand, Auswahlliste ohne Optionen, Mindeststufe über dem Maximum.
+  Jeder Fall mit eigener Meldung am verursachenden Feld.
+
+- **Stufenlasten.** Ein Verbraucher mit `consumer_type: modulating` bekommt eine **Steuerentität**
+  (`control_entity`) — eine `number` in W, kW oder A oder ein `select`. Das Stufenraster wird aus
+  deren Attributen **gelesen**, nicht konfiguriert: `min`, `max`, `step` und die Einheit bei einer
+  `number`, `options` bei einem `select`. Konfiguriert wird nur, was Home Assistant nicht wissen
+  kann — die Phasenzahl (`phases`) bei einer Stellgröße in Ampere und die Watt-Zuordnung je Option
+  (`level_map`) bei einer Auswahlliste.
+
+  Bewusst bei jedem Durchlauf neu gelesen: Manche Wallbox-Integrationen verengen ihr Maximum im
+  Betrieb, weil das Fahrzeug seine Grenze meldet. Wer das Raster puffert, verschenkt diese Angabe.
+
+- **Fehlt die Einheit, gibt es kein Raster.** Strenger als bei einem Leistungssensor, wo W
+  angenommen wird: Eine als Watt gelesene Ampere-Entität ergäbe eine Leiter von 6 bis 16 W, die in
+  jeden Überschuss passt — und die Automatik schriebe 16, während das Gerät 16 A zieht.
+
+- **Ein zu feines Raster wird ausgedünnt** (höchstens 24 Stufen). Generische Template-Numbers stehen
+  auf `step: 0.01`; bei einer Aktion je Durchlauf dauerte der Weg von unten nach oben Stunden. Das
+  Maximum bleibt dabei immer erhalten.
+
+- **`min_level_w`** streicht Stufen darunter: `min` der Steuerentität ist die Grenze der Box, nicht
+  die des Verbrauchers — manche Fahrzeuge laden unter 8 A nicht.
+
+- **`level_hold`** als Mindestzeit zwischen zwei Stufenwechseln. Die vier bestehenden Zeitfelder
+  greifen weiter; ein Stufenwechsel nach oben nutzt `turn_on_delay`, einer nach unten
+  `turn_off_delay`. Neuer Blocker-Grund `level_hold`.
+
+- **Drosseln statt abschalten.** Reicht der Überschuss nicht mehr, geht ein regelbarer Verbraucher
+  eine Stufe herunter, statt auszugehen. Eine laufende **Mindestlaufzeit steht dem nicht im Weg**:
+  Sie schützt davor, ein Gerät zu früh abzuschalten — es läuft weiter, nur schwächer.
+
+- **Folgt die Last dem Sollwert?** Erreicht ein Gerät die angeforderte Stufe nicht, wird seine Leiter
+  auf das begrenzt, was es tatsächlich zieht — eine Stufe darüber bleibt als Versuch erlaubt, sonst
+  wäre die Grenze selbsterfüllend.
+
+  Ohne diese Beobachtung war der Schaden nicht auf das Beruhigungsfenster beschränkt: Fordert die
+  Automatik 11 kW an und das Fahrzeug lädt mit 7 kW, legte die Budget-Kaskade **dauerhaft** 4 kW für
+  einen Verbraucher zurück, der sie nie abruft. Tiefer priorisierte gingen leer aus, und die Leistung
+  wurde eingespeist statt genutzt.
+
+  Gemerkt wird das Maximum seit dem Einschalten, nicht der letzte Messwert: Eine Ladepause würde die
+  Grenze sonst auf null ziehen, und das Fahrzeug käme danach nicht mehr hoch. Zurückgesetzt bei jeder
+  Schaltung, weil am Kabel beim nächsten Mal ein anderes Fahrzeug hängen kann. Bewusst nicht
+  persistiert, und nur mit Leistungssensor — ohne Messwert ist nicht zu erkennen, ob die Last folgt.
+
+- Neue Attribute am Status-Sensor, nur bei regelbaren Verbrauchern: `control_entity`,
+  `level_source`, `level_count`, `min_level_w`, `max_level_w`, `level_w`, `level_index`,
+  `setpoint_w`, `observed_max_w`, `level_capped`. Bei schaltbaren Verbrauchern fehlen sie ganz, damit
+  eine Anzeige an ihrem Vorhandensein erkennt, dass es etwas zu regeln gibt.
+
+  `observed_max_w` und `level_capped` sind die Antwort auf „warum geht sie nicht höher": Nicht der
+  Überschuss fehlt, das Gerät nimmt nicht mehr.
+
+### Geändert
+
+- `required_w` ist bei einem regelbaren Verbraucher die **kleinste Stufe** — was nötig ist, um ihn
+  überhaupt anlaufen zu lassen. `required_source` weist das als `ladder` aus.
+
+- Beim Verdrängen zählt bei einem regelbaren Verbraucher die **gestellte Stufe** statt `required_w`:
+  Eine Wallbox auf 11 kW gäbe sonst scheinbar nur 4,1 kW frei, und die Verdrängung fiele aus,
+  obwohl sie gereicht hätte.
+
+### Unterbau
+
+- **Verhaltenstyp je Verbraucher** (`consumer_type`), als Attribut am Status-Sensor ausgewiesen.
+  Bestehende Verbraucher lesen sich als `switch` und verhalten sich unverändert; eine Migration ist
+  nicht nötig. Der Wert `modulating` ist vorgesehen, aber noch ohne Wirkung und deshalb noch nicht im
+  Formular — eine Auswahl, die stillschweigend nichts tut, wäre dieselbe Art Fehler wie eine Zahl
+  ohne Messwert.
+
+- **Erkennung von Schaltvorgängen, die nicht von dieser Integration kamen**, über den Context der
+  eigenen Serviceaufrufe. Ausgewiesen als `last_foreign_change` und `last_foreign_to` am
+  Status-Sensor. Reine Diagnose: die Automatik richtet sich nicht danach und schaltet unverändert.
+
+  Der Zweck ist die Messung. Ob eine befristete Übersteuerung nach einem Eingriff von Hand sinnvoll
+  ist, hängt an der Geräteklasse und nicht am Nutzer: Ein Warmwasserspeicher, der seine Temperatur
+  erreicht, meldet „aus" und ist von einem Eingriff nicht zu unterscheiden. Diese Werte machen
+  ablesbar, wie oft der Fall bei einem bestimmten Gerät auftritt, bevor daraus eine Vorgabe wird.
+
+  Drei Filter halten die eigene Schaltung heraus: der eigene Context, das laufende
+  Beruhigungsfenster und — zeitlich begrenzt — eine Zustandsmeldung in derselben Richtung, in die
+  zuletzt geschaltet wurde. Der letzte deckt Integrationen ab, die den Context nicht durchreichen
+  und die eigene Schaltung erst per Abfrage bestätigen.
+
 ## [0.4.0] — 2026-08-11
 
 Reguläre Fassung der Batterie-Reihe: Alles aus `0.4.0b1` bis `0.4.0b4` erreicht damit auch die
