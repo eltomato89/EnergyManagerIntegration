@@ -25,12 +25,12 @@ this work are unchanged and still pass.
   for a configurable time. Default 0, meaning off: whether this makes sense depends on the
   device. A hot water tank that cycles on its own would trigger it constantly.
 
-## Please read before you enable anything
+## Before you arm anything
 
-This is a pre-release, and **it has never run on real hardware.** Everything is covered by
-automated tests, but no test writes a setpoint into an actual wallbox. The main switch is
-off after setup and every load has its own automation switch — use both, and watch before
-arming.
+This is a pre-release. The new features are covered by automated tests, but they have not
+yet been observed over a longer period on a real installation. The main switch is off after
+setup and every load has its own automation switch: add a load, watch it, and arm it once
+the surplus figure and the load states match what your installation is actually doing.
 
 **Known limitation:** the forecast is not divided among several daily targets. Each load
 compares what it is missing against the whole remaining forecast, so two targets of 3 kWh
