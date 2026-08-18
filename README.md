@@ -125,6 +125,31 @@ switching a device off too early, and a throttled device keeps running. What doe
 throttling is the hold time between two levels — a displacement is no reason to move the ladder
 faster than that.
 
+### Daily targets
+
+A load can be given a **daily target**: what it has to achieve per day regardless of the weather. A
+pool pump has to complete its circulation whether the sun cooperates or not.
+
+The rule is a comparison, not a control loop: once the **remaining forecast** no longer covers the
+**energy still missing**, the load keeps running without surplus. Not before — as long as it works
+out with sun, there is no reason to take grid power.
+
+The unit follows from the control method: hours for a switchable load, kilowatt-hours for a
+modulating one. Hours are not a statement for a modulating load — six hours at the lowest level and
+six at the highest differ by a multiple and satisfy an hours target equally well. Internally
+everything is kilowatt-hours; hours are only an input and display form.
+
+Two prerequisites: an **energy meter** on the load, and a **forecast sensor** with the PV energy
+still expected today (set in the integration options). Without the forecast the rule never applies —
+a missing value is a configuration error, not a reason to run a device on grid power.
+
+The day starts at **sunrise**, not at midnight. For an installation whose yield depends on the sun,
+that is the cut that fits: a counter reset at midnight lies hours before the first yield and
+separates nothing.
+
+This is the only place where the automation deliberately accepts grid power, and the `must_run`
+attribute says when it does — the answer to "why is that drawing from the grid".
+
 ### The battery as a shiftable load
 
 Enter a **maximum charge power** for the battery (in its settings) and it joins the priority order

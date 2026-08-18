@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from .const import BATTERY_FULL_SOC, CLOSE_THRESHOLD_RATIO, DEFAULT_REQUIRED_W, STANDBY_W
+from .daily import DailyProgress, done_kwh, read_energy_kwh, rebaseline, solar_day_start, target_kwh
 from .ladder import build_ladder, read_level
 from .models import (
     BatteryLoad,
@@ -373,6 +374,9 @@ def build_views(
             required_w = resolve_required_w(consumer, power_w, estimated_w)
             source = required_source(consumer, power_w, estimated_w)
 
+        fortschritt = _daily_progress(hass, coordinator, consumer, required_w, now)
+        muss_laufen = fortschritt.must_run and managed
+
         if not entity_available or budget is None:
             status = DeviceStatus.UNAVAILABLE
         elif consumer.modulating and ladder is None:
@@ -408,6 +412,14 @@ def build_views(
         else:
             status = DeviceStatus.OFF_INSUFFICIENT
 
+        if muss_laufen and status is not DeviceStatus.UNAVAILABLE:
+            status, budget = _rate_must_run(status, budget, required_w, currently_on)
+            if target is None and ladder is not None:
+                # Ohne Überschuss trägt keine Stufe. Gelaufen werden muss
+                # trotzdem, also auf der kleinsten — mehr Netzstrom als nötig
+                # wäre keine Erfüllung des Ziels, sondern nur teurer.
+                target = ladder.levels[0]
+
         locked_until, lock_kind = compute_lock(
             consumer, coordinator.runtime_for(consumer.subentry_id), currently_on, now
         )
@@ -431,6 +443,10 @@ def build_views(
                 target=target,
                 observed_max_w=observed_max,
                 level_capped=capped,
+                daily_target_kwh=fortschritt.target_kwh,
+                daily_done_kwh=fortschritt.done_kwh,
+                daily_forecast_kwh=fortschritt.forecast_kwh,
+                must_run=muss_laufen,
             )
         )
         rank += 1
@@ -442,6 +458,55 @@ def build_views(
 
     assign_displaceable(views, coordinator, now)
     return views, battery_view
+
+
+def _daily_progress(
+    hass: HomeAssistant,
+    coordinator: EnergyManagerCoordinator,
+    consumer: ConsumerConfig,
+    required_w: float,
+    now: float,
+) -> DailyProgress:
+    """Wie weit dieser Verbraucher heute gekommen ist.
+
+    Ohne eingetragenes Ziel wird nichts gelesen und nichts gerechnet: Der
+    Regelfall ist ein Verbraucher ohne Tagesziel, und der soll die Kaskade nicht
+    verteuern.
+    """
+    ziel = target_kwh(consumer, required_w)
+    if ziel <= 0:
+        return DailyProgress(target_kwh=0.0, done_kwh=0.0, forecast_kwh=None)
+
+    runtime = coordinator.runtime_for(consumer.subentry_id)
+    zaehler = read_energy_kwh(hass, consumer.energy_entity)
+    rebaseline(runtime, solar_day_start(hass, now), zaehler)
+
+    return DailyProgress(
+        target_kwh=ziel,
+        done_kwh=done_kwh(runtime, zaehler),
+        forecast_kwh=coordinator.forecast_kwh(),
+    )
+
+
+def _rate_must_run(
+    status: DeviceStatus,
+    budget: float,
+    required_w: float,
+    currently_on: bool,
+) -> tuple[DeviceStatus, float]:
+    """Überstimmt die Ampel, wenn das Tagesziel sonst nicht mehr zu schaffen ist.
+
+    Ein laufender Verbraucher bleibt an, ein ausgeschalteter gilt als bereit —
+    unabhängig davon, was der Überschuss hergibt.
+
+    Vom Budget geht sein Bedarf trotzdem ab, und zwar auch dann, wenn es dadurch
+    negativ wird. Das ist kein Schönheitsfehler, sondern die Wahrheit: Das Gerät
+    **wird** diese Leistung ziehen, und die Verbraucher darunter sollen das
+    Defizit sehen, statt Überschuss zugeteilt zu bekommen, den es nicht gibt.
+    """
+    if currently_on:
+        return DeviceStatus.ON_OK, budget
+    return DeviceStatus.OFF_READY, budget - required_w
 
 
 def _rate_modulating(
@@ -594,6 +659,10 @@ def may_be_touched(view: ConsumerView, runtime: ConsumerRuntime, now: float) -> 
     # Wer ausdrücklich in Ruhe gelassen werden soll, wird auch nicht verdrängt
     # oder gedrosselt: Sonst wäre die Übersteuerung nur halb wirksam.
     if is_forced(runtime, now) or is_manual(runtime, now):
+        return False
+    # Wer sein Tagesziel sonst nicht mehr schafft, ebenso wenig: Ihn für einen
+    # wichtigeren abzuschalten hieße, die Zeit zu verbrauchen, die ihm fehlt.
+    if view.must_run:
         return False
     return not (runtime.settle_until is not None and now < runtime.settle_until)
 

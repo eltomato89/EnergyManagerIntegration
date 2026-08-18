@@ -10,6 +10,34 @@ bestehende Testsuite unverändert grün bleibt.
 
 ### Hinzugefügt
 
+- **Tagesziel je Verbraucher.** Was ein Gerät je Tag mindestens schaffen soll, unabhängig vom Wetter
+  (`daily_target`). Reicht die verbleibende **Prognose** nicht mehr für die noch **fehlende
+  Energie**, läuft es auch ohne Überschuss. Vorher nicht: Solange es sich mit Sonne ausgeht, gibt es
+  keinen Grund für Netzstrom.
+
+  Die Einheit **folgt aus der Ansteuerung** — Stunden bei einem schaltbaren, Kilowattstunden bei
+  einem regelbaren Verbraucher. Ein Stundenziel ist bei einer modulierenden Last keine Aussage:
+  Sechs Stunden auf der kleinsten Stufe und sechs auf der größten erfüllen es gleich gut und
+  unterscheiden sich um ein Vielfaches. Gerechnet wird durchgehend in kWh.
+
+  Zwei Voraussetzungen: ein **Zählerstand** am Verbraucher (`energy_entity`) und ein
+  **Prognosesensor** mit der heute noch erwarteten PV-Energie (`forecast_entity`, in den Optionen).
+  Ohne Prognose greift die Regel **nie** — ein fehlender Wert ist ein Konfigurationsfehler und kein
+  Anlass, ein Gerät auf Netzstrom laufen zu lassen. Ein Ziel ohne Zählerstand wird im Formular
+  abgewiesen.
+
+  Der Tag beginnt mit dem **Sonnenaufgang**. Bei einer Anlage, deren Ertrag an der Sonne hängt, ist
+  das der Schnitt, der die Sache trifft; ein Zähler, der um Mitternacht zurückgesetzt wird, liegt
+  Stunden vor dem ersten Ertrag. Der Tagesstand übersteht Neustarts, und ein zurückgesetzter Zähler
+  wird erkannt — sonst ergäbe die Differenz einen negativen Verbrauch und das Ziel wäre für den Rest
+  des Tages unerreichbar.
+
+  Wer sein Tagesziel sonst nicht mehr schafft, wird außerdem **nicht verdrängt und nicht gedrosselt**:
+  Ihn für einen wichtigeren abzuschalten hieße, ihm die Zeit zu nehmen, die ihm ohnehin fehlt.
+
+  Dies ist die einzige Stelle, an der die Automatik bewusst Netzstrom in Kauf nimmt. Das Attribut
+  `must_run` weist sie aus.
+
 - **Manuelle Übersteuerung.** Hat jemand anders einen Verbraucher geschaltet, hält sich die Automatik
   für die eingetragene Dauer von ihm fern (`manual_override_time`, neuer Grund `manual`, neuer Dienst
   `energy_manager.clear_manual`). Das behebt einen Defekt: Ein von Hand ausgeschaltetes Gerät wurde

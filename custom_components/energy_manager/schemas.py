@@ -28,6 +28,9 @@ from .const import (
     CONF_CONSUMPTION_ENTITY,
     CONF_CONSUMPTION_INCLUDES_BATTERY,
     CONF_CONTROL_ENTITY,
+    CONF_DAILY_TARGET,
+    CONF_ENERGY_ENTITY,
+    CONF_FORECAST_ENTITY,
     CONF_GRID_ENTITY,
     CONF_HYSTERESIS,
     CONF_INVERT_GRID,
@@ -65,6 +68,10 @@ POWER_SENSOR = selector.EntitySelector(
 
 BATTERY_SENSOR = selector.EntitySelector(
     selector.EntitySelectorConfig(domain="sensor", device_class="battery")
+)
+
+ENERGY_SENSOR = selector.EntitySelector(
+    selector.EntitySelectorConfig(domain="sensor", device_class="energy")
 )
 
 SWITCHABLE = selector.EntitySelector(selector.EntitySelectorConfig(domain=list(SWITCHABLE_DOMAINS)))
@@ -168,6 +175,11 @@ OPTIONS_SCHEMA = vol.Schema(
             )
         ),
         vol.Optional(CONF_SETTLE_TIME, default=DEFAULT_SETTLE_TIME): seconds(600, 10),
+        # In den Optionen und nicht in den Eintragsdaten, wo die übrigen
+        # Sensoren stehen: Die Prognose wird gebraucht, sobald ein Verbraucher
+        # ein Tagesziel bekommt, und das geschieht lange nach der Einrichtung.
+        # Hier ist sie nachzutragen, ohne den ganzen Ablauf zu wiederholen.
+        vol.Optional(CONF_FORECAST_ENTITY): ENERGY_SENSOR,
     }
 )
 
@@ -201,6 +213,15 @@ CONSUMER_SCHEMA = vol.Schema(
         # 0 bedeutet hier "aus" und gehört gespeichert — wie bei den vier
         # Zeitfeldern und anders als bei der Nennleistung.
         vol.Optional(CONF_MANUAL_OVERRIDE_TIME, default=0): seconds(86400, 60),
+        # Die Einheit des Ziels folgt aus dem Verhaltenstyp; das Formular führt
+        # deshalb nur die Zahl. Ohne Zählerstand bleibt sie wirkungslos, und der
+        # Ablauf weist das ab.
+        vol.Optional(CONF_DAILY_TARGET, default=0): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0, max=1000, step=0.1, mode=selector.NumberSelectorMode.BOX
+            )
+        ),
+        vol.Optional(CONF_ENERGY_ENTITY): ENERGY_SENSOR,
     }
 )
 
@@ -251,6 +272,7 @@ def levels_schema(options: list[str], current: dict[str, float] | None = None) -
 # bei `hysteresis` oder den Zeitfeldern, wo 0 "aus" bedeutet und gespeichert
 # gehört.
 _NULL_IST_LEER = (
+    CONF_DAILY_TARGET,
     CONF_MIN_POWER,
     CONF_MAX_POWER,
     CONF_BATTERY_MAX_CHARGE_W,

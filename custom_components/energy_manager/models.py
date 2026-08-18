@@ -17,6 +17,8 @@ from .const import (
     CONF_BATTERY_SOC_ENTITY,
     CONF_CONSUMER_TYPE,
     CONF_CONTROL_ENTITY,
+    CONF_DAILY_TARGET,
+    CONF_ENERGY_ENTITY,
     CONF_HYSTERESIS,
     CONF_LEVEL_HOLD,
     CONF_LEVEL_MAP,
@@ -245,6 +247,13 @@ class ConsumerConfig:
     level_hold: int = 0
     manual_override_time: int = 0
 
+    daily_target: float = 0.0
+    """Tagesziel. Stunden bei einem schaltbaren, kWh bei einem regelbaren
+    Verbraucher — siehe ``CONF_DAILY_TARGET``. 0 schaltet es ab."""
+
+    energy_entity: str | None = None
+    """Zählerstand in kWh. Voraussetzung für ein Tagesziel."""
+
     min_power: float | None = None
     max_power: float | None = None
     hysteresis: float = 0.0
@@ -279,6 +288,8 @@ class ConsumerConfig:
             min_level_w=data.get(CONF_MIN_LEVEL_W),
             level_hold=data.get(CONF_LEVEL_HOLD, 0),
             manual_override_time=data.get(CONF_MANUAL_OVERRIDE_TIME, 0),
+            daily_target=data.get(CONF_DAILY_TARGET, 0.0),
+            energy_entity=data.get(CONF_ENERGY_ENTITY),
             min_power=data.get(CONF_MIN_POWER),
             max_power=data.get(CONF_MAX_POWER),
             hysteresis=data.get(CONF_HYSTERESIS, 0.0),
@@ -356,6 +367,16 @@ class ConsumerRuntime:
     last_foreign_to: bool | None = None
     """Wohin dabei geschaltet wurde."""
 
+    day_start_ts: float | None = None
+    """Beginn des Solartags, auf den sich ``day_start_kwh`` bezieht."""
+
+    day_start_kwh: float | None = None
+    """Zählerstand bei Tagesbeginn. Der Tagesverbrauch ist die Differenz dazu.
+
+    Persistiert, weil ein Neustart mitten am Tag den Fortschritt sonst löschte —
+    und die Automatik dann annähme, das Gerät habe heute noch nichts geschafft.
+    """
+
     manual_until: float | None = None
     """Bis dahin hält sich die Automatik nach einem Eingriff von außen fern.
 
@@ -401,6 +422,8 @@ class ConsumerRuntime:
             "last_foreign_change": self.last_foreign_change,
             "last_foreign_to": self.last_foreign_to,
             "manual_until": self.manual_until,
+            "day_start_ts": self.day_start_ts,
+            "day_start_kwh": self.day_start_kwh,
             "last_level_ts": self.last_level_ts,
             "last_level_w": self.last_level_w,
         }
@@ -420,6 +443,8 @@ class ConsumerRuntime:
             last_foreign_change=data.get("last_foreign_change"),
             last_foreign_to=data.get("last_foreign_to"),
             manual_until=data.get("manual_until"),
+            day_start_ts=data.get("day_start_ts"),
+            day_start_kwh=data.get("day_start_kwh"),
             last_level_ts=data.get("last_level_ts"),
             last_level_w=data.get("last_level_w"),
         )
@@ -462,6 +487,23 @@ class ConsumerView:
     Nicht dasselbe wie der Sollwert: Ein Fahrzeug lädt mit 10 A, obwohl 16 A
     angeboten sind. ``None``, solange nichts beobachtet wurde oder kein
     Leistungssensor vorliegt.
+    """
+
+    daily_target_kwh: float = 0.0
+    """Tagesziel in kWh. 0 heißt: kein Ziel eingetragen."""
+
+    daily_done_kwh: float = 0.0
+    """Heute seit Sonnenaufgang verbraucht."""
+
+    daily_forecast_kwh: float | None = None
+    """Verbleibende Prognose, oder None ohne brauchbaren Sensor."""
+
+    must_run: bool = False
+    """Die Prognose reicht nicht mehr für das Tagesziel.
+
+    Dann läuft der Verbraucher auch ohne Überschuss. Das ist die einzige Stelle,
+    an der diese Integration bewusst Netzstrom in Kauf nimmt — und sie tut es
+    erst, wenn feststeht, dass es sich mit Sonne nicht mehr ausgeht.
     """
 
     level_capped: bool = False

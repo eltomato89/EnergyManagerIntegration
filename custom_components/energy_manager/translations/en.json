@@ -75,11 +75,13 @@
         "title": "Control",
         "data": {
           "smoothing_window": "Averaging window",
-          "settle_time": "Settling time"
+          "settle_time": "Settling time",
+          "forecast_entity": "Forecast, remaining today"
         },
         "data_description": {
           "smoothing_window": "Smooths the surplus and prevents changing cloud cover from causing frequent switching. 0 disables smoothing.",
-          "settle_time": "For this long after a switching action the same load is left alone; meanwhile the automation deducts the switched power itself. The value should be at least as large as the delay of the power sensor, which can be several minutes with sluggish smart plugs."
+          "settle_time": "For this long after a switching action the same load is left alone; meanwhile the automation deducts the switched power itself. The value should be at least as large as the delay of the power sensor, which can be several minutes with sluggish smart plugs.",
+          "forecast_entity": "Sensor with the PV energy still expected today, in kWh. Without it daily targets have no effect: whether the remainder can still be covered by sun cannot be answered."
         }
       }
     }
@@ -107,7 +109,9 @@
             "turn_off_delay": "Switch-off delay",
             "min_runtime": "Minimum runtime",
             "min_off_time": "Minimum pause",
-            "manual_override_time": "Manual override"
+            "manual_override_time": "Manual override",
+            "daily_target": "Daily target",
+            "energy_entity": "Energy meter"
           },
           "data_description": {
             "consumer_type": "Modulating means the power is set in steps through an entity of its own, such as a wallbox charging current. A further step follows.",
@@ -119,7 +123,9 @@
             "turn_off_delay": "The deficit must persist for this long before switching off. Bridges brief dips. Also applies to a level change downwards.",
             "min_runtime": "The device stays on at least this long after switching on. Lowering the level remains possible.",
             "min_off_time": "The device stays off at least this long after switching off. Protects compressors from restarting too early.",
-            "manual_override_time": "How long the automation keeps away after someone else switched the device -- at the device, in the interface, or from another automation. 0 disables it. For devices that cycle on their own, a hot water tank for instance, 0 is the right value: a detected intervention there is usually none."
+            "manual_override_time": "How long the automation keeps away after someone else switched the device -- at the device, in the interface, or from another automation. 0 disables it. For devices that cycle on their own, a hot water tank for instance, 0 is the right value: a detected intervention there is usually none.",
+            "daily_target": "What this load should achieve per day at least. The unit follows from the control method: hours for a switchable load, kilowatt-hours for a modulating one. Once the forecast no longer covers the rest of the day, it runs without surplus as well. 0 disables it.",
+            "energy_entity": "Meter reading of the load in kWh. The daily consumption is derived from it, measured from sunrise."
           }
         },
         "reconfigure": {
@@ -136,7 +142,9 @@
             "turn_off_delay": "Switch-off delay",
             "min_runtime": "Minimum runtime",
             "min_off_time": "Minimum pause",
-            "manual_override_time": "Manual override"
+            "manual_override_time": "Manual override",
+            "daily_target": "Daily target",
+            "energy_entity": "Energy meter"
           }
         },
         "control": {
@@ -169,7 +177,8 @@
         "control_entity_unavailable": "This entity currently reports no state. The grid is read from its attributes and therefore cannot be determined.",
         "no_levels": "This entity yields no usable level. Check minimum, maximum and step size; for a select, at least one option with a power above 0 W.",
         "min_level_too_high": "The minimum level exceeds everything this device can deliver. No level would be left.",
-        "select_not_ready": "This select reports no options. Without them no field per level can be offered."
+        "select_not_ready": "This select reports no options. Without them no field per level can be offered.",
+        "energy_entity_required": "A daily target needs an energy meter. Without it there is no way to tell how far the load has come today, and the number would have no effect."
       }
     }
   },

@@ -128,6 +128,42 @@ Nicht auslesbar und deshalb ein Feld: ``min`` der Steuerentität ist die Grenze
 der **Box**, nicht die des Verbrauchers. Manche Fahrzeuge laden unter 8 A nicht.
 """
 
+CONF_DAILY_TARGET: Final = "daily_target"
+"""Tagesziel je Verbraucher. Die Einheit **folgt aus dem Verhaltenstyp**.
+
+Bei einem schaltbaren Verbraucher Stunden, bei einem regelbaren Kilowattstunden.
+Nicht abgefragt, sondern abgeleitet: Ein Stundenziel ist bei einer modulierenden
+Last keine Aussage. Sechs Stunden auf der kleinsten Stufe und sechs auf der
+größten unterscheiden sich um ein Vielfaches, erfüllen das Ziel aber gleich gut.
+
+Gerechnet wird durchgehend in kWh; Stunden sind nur Eingabe- und Anzeigeform.
+0 schaltet das Merkmal ab und ist der Rückfallwert.
+"""
+
+CONF_ENERGY_ENTITY: Final = "energy_entity"
+"""Zählerstand des Verbrauchers in kWh, für den Tageszähler.
+
+Voraussetzung für ein Tagesziel, und bewusst der einzige Weg: Die Alternative
+wäre, die Leistung über die Zeit aufzusummieren — das hieße einen weiteren
+persistierten Zustand, der über Neustarts stimmen muss und nur so genau ist wie
+der Auswertungstakt. Ein Zählerstand liegt bereits vor und ist auszulesen.
+"""
+
+CONF_FORECAST_ENTITY: Final = "forecast_entity"
+"""Sensor mit der **verbleibenden** PV-Energie des heutigen Tages, in kWh.
+
+Am Eintrag und nicht am Verbraucher: Es gibt eine Anlage und damit eine Prognose.
+Als konfigurierte Entität und nicht als Abhängigkeit im Manifest — woher der Wert
+kommt, ob Forecast.Solar, Solcast oder ein eigenes Template, geht die Integration
+nichts an. Dieselbe Disziplin wie bei den Zählersensoren.
+"""
+
+# Ab diesem Anteil der noch fehlenden Energie gilt die Prognose als
+# ausreichend. Etwas Luft, weil eine Prognose keine Zusage ist: Bei exakt
+# gleichen Werten anzunehmen, es gehe sich aus, verschöbe die Nachladung bis zur
+# letzten Minute.
+FORECAST_MARGIN: Final = 1.1
+
 CONF_MANUAL_OVERRIDE_TIME: Final = "manual_override_time"
 """s, so lange hält sich die Automatik nach einem Eingriff von außen fern.
 

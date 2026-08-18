@@ -29,6 +29,8 @@ from .const import (
     CONF_BATTERY_SOC_ENTITY,
     CONF_CONSUMER_TYPE,
     CONF_CONTROL_ENTITY,
+    CONF_DAILY_TARGET,
+    CONF_ENERGY_ENTITY,
     CONF_LEVEL_MAP,
     CONF_METER_MODE,
     CONF_MIN_LEVEL_W,
@@ -283,6 +285,11 @@ class ConsumerSubentryFlowHandler(ConfigSubentryFlow):
             cleaned = clean(user_input)
             if self._switch_belegt(cleaned[CONF_SWITCH_ENTITY], eigener):
                 errors[CONF_SWITCH_ENTITY] = "switch_in_use"
+            elif cleaned.get(CONF_DAILY_TARGET) and not cleaned.get(CONF_ENERGY_ENTITY):
+                # Ohne Zählerstand ist nicht zu ermitteln, wie weit der
+                # Verbraucher heute gekommen ist. Die Zahl stünde im Formular und
+                # täte stillschweigend nichts.
+                errors[CONF_ENERGY_ENTITY] = "energy_entity_required"
             else:
                 self._data = cleaned
                 if cleaned.get(CONF_CONSUMER_TYPE) == CONSUMER_TYPE_MODULATING:

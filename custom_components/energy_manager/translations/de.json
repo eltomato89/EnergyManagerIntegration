@@ -75,11 +75,13 @@
         "title": "Regelung",
         "data": {
           "smoothing_window": "Mittelungsfenster",
-          "settle_time": "Beruhigungszeit"
+          "settle_time": "Beruhigungszeit",
+          "forecast_entity": "Prognose, verbleibend heute"
         },
         "data_description": {
           "smoothing_window": "Glättet den Überschuss und verhindert, dass wechselnde Bewölkung häufige Schaltvorgänge auslöst. 0 deaktiviert die Glättung.",
-          "settle_time": "In dieser Zeit nach einer Schaltung wird derselbe Verbraucher nicht erneut geschaltet; die Automatik rechnet die geschaltete Last währenddessen selbst heraus. Der Wert sollte mindestens so groß sein wie die Verzögerung des Leistungssensors, die bei trägen Zwischensteckern mehrere Minuten betragen kann."
+          "settle_time": "In dieser Zeit nach einer Schaltung wird derselbe Verbraucher nicht erneut geschaltet; die Automatik rechnet die geschaltete Last währenddessen selbst heraus. Der Wert sollte mindestens so groß sein wie die Verzögerung des Leistungssensors, die bei trägen Zwischensteckern mehrere Minuten betragen kann.",
+          "forecast_entity": "Sensor mit der noch zu erwartenden PV-Energie des heutigen Tages, in kWh. Ohne ihn bleiben Tagesziele wirkungslos: Ob sich das Fehlende noch mit Sonne ausgeht, ist dann nicht zu beantworten."
         }
       }
     }
@@ -107,7 +109,9 @@
             "turn_off_delay": "Ausschaltverzögerung",
             "min_runtime": "Mindestlaufzeit",
             "min_off_time": "Mindestpause",
-            "manual_override_time": "Manuelle Übersteuerung"
+            "manual_override_time": "Manuelle Übersteuerung",
+            "daily_target": "Tagesziel",
+            "energy_entity": "Zählerstand"
           },
           "data_description": {
             "consumer_type": "Regelbar bedeutet: Die Leistung wird über eine eigene Entität in Stufen gestellt, etwa der Ladestrom einer Wallbox. Dazu folgt ein weiterer Schritt.",
@@ -119,7 +123,9 @@
             "turn_off_delay": "Das Defizit muss so lange anhalten, bevor ausgeschaltet wird. Überbrückt kurzzeitige Einbrüche. Gilt auch für einen Stufenwechsel nach unten.",
             "min_runtime": "So lange bleibt das Gerät nach dem Einschalten mindestens an. Ein Absenken der Stufe bleibt möglich.",
             "min_off_time": "So lange bleibt das Gerät nach dem Ausschalten mindestens aus. Schützt Kompressoren vor zu frühem Wiederanlauf.",
-            "manual_override_time": "So lange hält sich die Automatik fern, nachdem jemand anders das Gerät geschaltet hat: am Gerät, in der Oberfläche oder aus einer fremden Automation. 0 schaltet das ab. Bei Geräten, die selbst takten, etwa einem Warmwasserspeicher, ist 0 richtig; dort ist ein erkannter Eingriff meist keiner."
+            "manual_override_time": "So lange hält sich die Automatik fern, nachdem jemand anders das Gerät geschaltet hat: am Gerät, in der Oberfläche oder aus einer fremden Automation. 0 schaltet das ab. Bei Geräten, die selbst takten, etwa einem Warmwasserspeicher, ist 0 richtig; dort ist ein erkannter Eingriff meist keiner.",
+            "daily_target": "Was dieser Verbraucher je Tag mindestens schaffen soll. Die Einheit folgt aus der Ansteuerung: Stunden bei einem schaltbaren, Kilowattstunden bei einem regelbaren Verbraucher. Reicht die Prognose für den Rest des Tages nicht mehr, läuft er auch ohne Überschuss. 0 schaltet das ab.",
+            "energy_entity": "Zählerstand des Verbrauchers in kWh. Daraus wird der Tagesverbrauch gebildet, gemessen ab Sonnenaufgang."
           }
         },
         "reconfigure": {
@@ -136,7 +142,9 @@
             "turn_off_delay": "Ausschaltverzögerung",
             "min_runtime": "Mindestlaufzeit",
             "min_off_time": "Mindestpause",
-            "manual_override_time": "Manuelle Übersteuerung"
+            "manual_override_time": "Manuelle Übersteuerung",
+            "daily_target": "Tagesziel",
+            "energy_entity": "Zählerstand"
           }
         },
         "control": {
@@ -169,7 +177,8 @@
         "control_entity_unavailable": "Diese Entität liefert gerade keinen Zustand. Das Raster wird aus ihren Attributen gelesen und ist deshalb nicht ermittelbar.",
         "no_levels": "Aus dieser Entität ergibt sich keine verwertbare Stufe. Zu prüfen sind Minimum, Maximum und Schrittweite; bei einer Auswahlliste mindestens eine Option mit einer Leistung über 0 W.",
         "min_level_too_high": "Die Mindeststufe liegt über allem, was dieses Gerät leisten kann. Damit bliebe keine Stufe übrig.",
-        "select_not_ready": "Diese Auswahlliste meldet keine Optionen. Ohne sie lässt sich kein Feld je Stufe anbieten."
+        "select_not_ready": "Diese Auswahlliste meldet keine Optionen. Ohne sie lässt sich kein Feld je Stufe anbieten.",
+        "energy_entity_required": "Ein Tagesziel braucht einen Zählerstand. Ohne ihn ist nicht zu ermitteln, wie weit der Verbraucher heute gekommen ist, und die Zahl bliebe wirkungslos."
       }
     }
   },

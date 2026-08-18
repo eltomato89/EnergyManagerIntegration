@@ -55,6 +55,7 @@ from .const import (
     CONF_BATTERY_SOC_ENTITY,
     CONF_CONSUMPTION_ENTITY,
     CONF_CONSUMPTION_INCLUDES_BATTERY,
+    CONF_FORECAST_ENTITY,
     CONF_GRID_ENTITY,
     CONF_INVERT_GRID,
     CONF_METER_MODE,
@@ -78,6 +79,7 @@ from .const import (
     SUBENTRY_TYPE_CONSUMER,
     TICK_INTERVAL,
 )
+from .daily import read_energy_kwh
 from .engine import Decision, Evaluation, anticipated_w, build_views, decide
 from .estimate import async_estimate_power
 from .models import (
@@ -315,6 +317,17 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             # Grenze meldet.
             if consumer.control_entity:
                 ids.add(consumer.control_entity)
+            # Der Zählerstand treibt den Tagesfortschritt.
+            if consumer.energy_entity:
+                ids.add(consumer.energy_entity)
+
+        # Die Prognose entscheidet, ob ein Tagesziel noch mit Sonne zu schaffen
+        # ist. Sinkt sie unter das Fehlende, muss neu bewertet werden. Sie steht
+        # in den Optionen, nicht in den Eintragsdaten: Sie ist nachträglich
+        # ergänzbar, ohne den Einrichtungsablauf erneut zu durchlaufen.
+        options = dict(self.config_entry.options) if self.config_entry else {}
+        if forecast := options.get(CONF_FORECAST_ENTITY):
+            ids.add(forecast)
 
         return ids
 
@@ -477,6 +490,19 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
     def estimated_power(self, subentry_id: str) -> float | None:
         """Geschätzte Nennleistung, oder None."""
         return self._estimated.get(subentry_id)
+
+    def forecast_kwh(self) -> float | None:
+        """Verbleibende PV-Energie des heutigen Tages, in kWh.
+
+        ``None`` ohne konfigurierten oder brauchbaren Sensor. Bewusst kein
+        Rückfall auf 0: Das hieße „es kommt nichts mehr" und ließe jedes
+        Tagesziel sofort auf Netzstrom laufen. Ohne Prognose wird nicht geraten,
+        sondern das Merkmal greift nicht.
+        """
+        entry = self.config_entry
+        if entry is None:
+            return None
+        return read_energy_kwh(self.hass, entry.options.get(CONF_FORECAST_ENTITY))
 
     def observed_max(self, subentry_id: str) -> float | None:
         """Höchste erreichte Leistung seit dem Einschalten, oder None."""

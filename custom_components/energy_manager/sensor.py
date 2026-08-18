@@ -267,6 +267,7 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
             # Damit kann eine Anzeige einen Countdown führen, ohne die
             # eingetragene Dauer zu kennen.
             "manual_until": _as_iso(runtime.manual_until),
+            **self._daily_attributes(view),
         }
 
     def _blocked_by(self) -> str | None:
@@ -274,6 +275,28 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
         if data is None:
             return None
         return data.blockers.get(self._subentry_id)
+
+    @staticmethod
+    def _daily_attributes(view: ConsumerView) -> dict[str, object]:
+        """Der Tagesfortschritt — nur bei eingetragenem Ziel.
+
+        Weggelassen statt mit Nullen befüllt, wie bei den Stufenangaben: An ihrem
+        Vorhandensein erkennt eine Anzeige, dass es ein Ziel zu zeigen gibt.
+        """
+        if view.daily_target_kwh <= 0:
+            return {}
+        return {
+            "daily_target_kwh": round(view.daily_target_kwh, 2),
+            "daily_done_kwh": round(view.daily_done_kwh, 2),
+            # Verbleibende Prognose. None heißt: kein brauchbarer Sensor, und
+            # dann greift die Regel gar nicht.
+            "daily_forecast_kwh": (
+                None if view.daily_forecast_kwh is None else round(view.daily_forecast_kwh, 2)
+            ),
+            # Läuft der Verbraucher gerade unabhängig vom Überschuss? Die
+            # Antwort auf „warum zieht der Netzstrom".
+            "must_run": view.must_run,
+        }
 
     @staticmethod
     def _level_attributes(view: ConsumerView) -> dict[str, object]:
