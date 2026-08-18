@@ -95,6 +95,88 @@ The automation switch is **never** written by the integration. It stays user con
 because the override is time-limited, a false detection expires by itself instead of leaving a load
 out of the automation until someone notices.
 
+## Modulating loads
+
+A load can be **modulating**: instead of only being switched on and off, its power is set in steps
+through a **control entity** — a `number` in W, kW or A, or a `select`.
+
+The step grid is **read from that entity** on every evaluation, not configured: `min`, `max`, `step`
+and the unit for a number, `options` for a select. Only what Home Assistant cannot know is
+configured — the number of phases for a control entity in amperes, and the watt value of each option
+for a select. Reading it fresh each time is deliberate: some wallbox integrations narrow their
+maximum while charging, and a cached grid would throw that away.
+
+A **missing unit is refused**, and that is stricter than for a power sensor, where watts are assumed.
+An ampere entity read as watts would yield a ladder from 6 to 16 W that fits into any surplus — and
+the automation would write 16 while the device draws 16 A.
+
+Three more fields per load: a **minimum level** below which the load is switched off rather than
+throttled (the minimum of the control entity is the limit of the charging station, not that of the
+vehicle), a **hold time** between two level changes, and the existing hysteresis, which also acts as
+the deadband below which no level change happens.
+
+If a device does not reach the level it is asked for, its ladder is capped at what it actually
+draws, one step above the observed maximum. Without that the priority cascade would permanently
+reserve the difference for a load that never claims it.
+
+### When the device has no switch entity
+
+The switch entity stays **mandatory and separate** — for a wallbox, 0 is not on the ladder at all,
+since the charging current starts at 6 A and charging cannot be stopped through it.
+
+Not every device offers a plain switch. A `select` for the charge release, or a control entity whose
+0 means off, are both common. Wrap them in a template switch rather than expecting the integration to
+learn every device's dialect:
+
+```yaml
+# Charge release is a select (go-e: 2 = charge, 1 = off)
+switch:
+  - platform: template
+    switches:
+      wallbox_release:
+        value_template: "{{ states('select.goe_XXXXXX_frc') == '2' }}"
+        turn_on:
+          action: select.select_option
+          target: { entity_id: select.goe_XXXXXX_frc }
+          data: { option: "2" }
+        turn_off:
+          action: select.select_option
+          target: { entity_id: select.goe_XXXXXX_frc }
+          data: { option: "1" }
+```
+
+Where **0 on the control entity means off**, the template switch needs a guard. The integration sets
+the level *before* switching on, so that the device does not start at the previous, possibly highest
+step — a `turn_on` that writes a fixed value would overwrite exactly that:
+
+```yaml
+      heater_release:
+        value_template: "{{ states('number.heater_set_output') | float(0) > 0 }}"
+        turn_on:
+          # Only if nothing is set yet. Otherwise this would discard the level
+          # the automation has just written.
+          - if: "{{ states('number.heater_set_output') | float(0) <= 0 }}"
+            then:
+              - action: number.set_value
+                target: { entity_id: number.heater_set_output }
+                data: { value: 500 }
+        turn_off:
+          - action: number.set_value
+            target: { entity_id: number.heater_set_output }
+            data: { value: 0 }
+```
+
+### One controller per device
+
+A device that regulates on surplus **by itself** must not also be managed here. Two control loops on
+the same load work against each other, and the safety nets above are built for a slow allocator, not
+for a fast controller: 60 s of smoothing and a 60 s settling window are exactly what a controller
+must not have.
+
+This applies to wallboxes with a built-in PV mode, to zero-export controllers driving a heating
+element, and to a second energy manager. Either switch off the other side's regulation, or leave that
+load out of this integration.
+
 ## What priority means
 
 It determines two things:
