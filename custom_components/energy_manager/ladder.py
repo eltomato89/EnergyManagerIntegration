@@ -92,19 +92,47 @@ def _from_number(state: State, consumer: ConsumerConfig) -> Ladder | None:
     if kind is None:
         return None
 
-    values = _grid(
-        _number_attr(state, "min"),
-        _number_attr(state, "max"),
-        _number_attr(state, "step"),
-    )
-    if not values:
-        return None
-
     # Dreiphasig zieht dieselbe Stromstufe die dreifache Leistung.
     per_unit = consumer.phases * NOMINAL_VOLTAGE if kind == CONTROL_NUMBER_A else factor
 
+    minimum = _number_attr(state, "min")
+    maximum = _number_attr(state, "max")
+    step = _number_attr(state, "step")
+
+    if consumer.max_level_w and consumer.max_level_w > 0:
+        grenze = _cap_to_grid(consumer.max_level_w / per_unit, minimum, step)
+        if minimum is not None and grenze < minimum:
+            # Die Grenze liegt unter dem, was die Entität überhaupt annimmt.
+            # Ein Konfigurationsfehler, und kein Anlass, sie zu übergehen.
+            return None
+        maximum = grenze if maximum is None else min(maximum, grenze)
+
+    # Die Obergrenze wirkt **vor** dem Ausdünnen: Sonst lägen die Stufen über
+    # einen Bereich verteilt, den das Gerät gar nicht bedient, und im nutzbaren
+    # Teil bliebe nur ein Bruchteil der Auflösung übrig.
+    values = _grid(minimum, maximum, step)
+    if not values:
+        return None
+
     levels = tuple(Level(w=round_w(value * per_unit), command=value) for value in values)
     return Ladder(levels=levels, source=kind)
+
+
+def _cap_to_grid(grenze: float, minimum: float | None, step: float | None) -> float:
+    """Rundet eine Obergrenze auf den nächsttieferen Rasterpunkt der Entität ab.
+
+    Die Grenze ist in Watt eingetragen und trifft das Raster der Stellgröße
+    selten genau. Ein Wert dazwischen wäre keine Stellgröße, die das Gerät
+    annimmt — bei 1-A-Schritten stünden sonst 10,14 A auf der Leiter.
+
+    Abgerundet und nicht auf: Die Grenze ist eine Obergrenze.
+    """
+    if not step or step <= 0:
+        return grenze
+    basis = minimum if minimum is not None else 0.0
+    if grenze <= basis:
+        return grenze
+    return basis + math.floor((grenze - basis) / step) * step
 
 
 def _from_select(state: State, consumer: ConsumerConfig) -> Ladder | None:
@@ -117,10 +145,13 @@ def _from_select(state: State, consumer: ConsumerConfig) -> Ladder | None:
     options = state.attributes.get("options") or []
     mapping = consumer.level_map or {}
 
+    obergrenze = consumer.max_level_w if consumer.max_level_w and consumer.max_level_w > 0 else None
     levels = [
         Level(w=round_w(float(mapping[option])), command=option)
         for option in options
-        if option in mapping and float(mapping[option]) > 0
+        if option in mapping
+        and float(mapping[option]) > 0
+        and (obergrenze is None or float(mapping[option]) <= obergrenze)
     ]
     if not levels:
         return None

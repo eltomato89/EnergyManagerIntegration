@@ -154,13 +154,15 @@
             "control_entity": "Control entity",
             "phases": "Phases",
             "min_level_w": "Minimum level",
+            "max_level_w": "Maximum level",
             "level_hold": "Hold time"
           },
           "data_description": {
             "control_entity": "A number or a select. A number needs a unit: W, kW or A. Without a unit there is no way to tell whether 16 means sixteen watts or sixteen amperes.",
             "phases": "Only for a control entity in amperes. Determines the conversion to watts, calculated with 230 V per phase.",
             "min_level_w": "Below this power the load is switched off rather than throttled. Needed where the device will not accept less: the minimum of the control entity is the limit of the charging station, not that of the vehicle.",
-            "level_hold": "Minimum time between two level changes. Without it the level follows every fluctuation of the surplus."
+            "level_hold": "Minimum time between two level changes. Without it the level follows every fluctuation of the surplus.",
+            "max_level_w": "Above this power no level is offered. Needed where the control entity accepts more than the device can deliver: an adjustable power supply for 50 to 600 W often reports 0 to 3000 as a number. Without this limit the steps spread across a range the device does not serve."
           }
         },
         "levels": {

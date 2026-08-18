@@ -36,6 +36,7 @@ from .const import (
     CONF_INVERT_GRID,
     CONF_LEVEL_HOLD,
     CONF_MANUAL_OVERRIDE_TIME,
+    CONF_MAX_LEVEL_W,
     CONF_MAX_POWER,
     CONF_METER_MODE,
     CONF_MIN_LEVEL_W,
@@ -243,6 +244,7 @@ CONTROL_SCHEMA = vol.Schema(
             )
         ),
         vol.Optional(CONF_MIN_LEVEL_W): watts(),
+        vol.Optional(CONF_MAX_LEVEL_W): watts(),
         vol.Optional(CONF_LEVEL_HOLD, default=0): seconds(3600, 10),
     }
 )
@@ -273,6 +275,7 @@ def levels_schema(options: list[str], current: dict[str, float] | None = None) -
 # gehört.
 _NULL_IST_LEER = (
     CONF_DAILY_TARGET,
+    CONF_MAX_LEVEL_W,
     CONF_MIN_POWER,
     CONF_MAX_POWER,
     CONF_BATTERY_MAX_CHARGE_W,

@@ -128,6 +128,19 @@ Nicht auslesbar und deshalb ein Feld: ``min`` der Steuerentität ist die Grenze
 der **Box**, nicht die des Verbrauchers. Manche Fahrzeuge laden unter 8 A nicht.
 """
 
+CONF_MAX_LEVEL_W: Final = "max_level_w"
+"""Obergrenze, jenseits derer keine Stufe angeboten wird.
+
+Gegenstück zu ``min_level_w`` und aus demselben Grund nötig: ``max`` der
+Steuerentität ist die Grenze dessen, was sie **entgegennimmt**, nicht dessen, was
+das Gerät leistet. Ein regelbares Netzteil, das 50 bis 600 W kann, meldet als
+number gern 0 bis 3000.
+
+Wirkt **vor** dem Ausdünnen, nicht erst danach: Über 3000 W liegen 24 Stufen
+126 W auseinander und nur vier davon sind erreichbar. Über 600 W sind es 25 W —
+dieselbe Stufenzahl, nur dort, wo sie etwas nützt.
+"""
+
 CONF_DAILY_TARGET: Final = "daily_target"
 """Tagesziel je Verbraucher. Die Einheit **folgt aus dem Verhaltenstyp**.
 

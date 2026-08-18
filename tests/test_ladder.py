@@ -279,3 +279,77 @@ class TestAuswahl:
 
         assert leiter.nearest(5000).w == 4830
         assert leiter.nearest(5400).w == 5520
+
+
+class TestHoechststufe:
+    """Die Steuerentität nimmt mehr entgegen, als das Gerät leisten kann.
+
+    Ein regelbares Netzteil für 50 bis 600 W meldet als ``number`` gern 0 bis
+    3000. Ohne Obergrenze verteilen sich die Stufen über den ganzen gemeldeten
+    Bereich, und im nutzbaren Teil bleibt ein Bruchteil der Auflösung.
+    """
+
+    def _netzteil(self, hass: HomeAssistant) -> None:
+        hass.states.async_set(
+            "number.ladestrom",
+            "0",
+            {"min": 0, "max": 3000, "step": 1, "unit_of_measurement": "W"},
+        )
+
+    async def test_ohne_grenze_liegen_die_stufen_zu_weit(self, hass: HomeAssistant) -> None:
+        self._netzteil(hass)
+        leiter = build_ladder(hass, consumer())
+
+        assert leiter is not None
+        assert leiter.max_w == 3000
+        # Über 3000 W verteilt: die Schritte sind grob.
+        assert leiter.levels[1].w - leiter.levels[0].w > 100
+
+    async def test_mit_grenze_liegt_die_aufloesung_im_nutzbaren_bereich(
+        self, hass: HomeAssistant
+    ) -> None:
+        self._netzteil(hass)
+        leiter = build_ladder(hass, consumer(max_level_w=600))
+
+        assert leiter is not None
+        assert leiter.max_w == 600
+        # Dieselbe Stufenzahl, aber über 600 W statt über 3000.
+        assert leiter.count <= MAX_LEVELS
+        assert leiter.levels[1].w - leiter.levels[0].w <= 30
+
+    async def test_zusammen_mit_der_mindeststufe(self, hass: HomeAssistant) -> None:
+        self._netzteil(hass)
+        leiter = build_ladder(hass, consumer(min_level_w=50, max_level_w=600))
+
+        assert leiter is not None
+        assert leiter.min_w >= 50
+        assert leiter.max_w == 600
+
+    async def test_in_ampere_wird_umgerechnet(self, hass: HomeAssistant) -> None:
+        """Die Grenze steht in Watt, die Stellgröße ist Ampere."""
+        set_number(hass)
+        leiter = build_ladder(hass, consumer(phases=3, max_level_w=7000))
+
+        assert leiter is not None
+        # 10 A · 690 = 6900 W passt noch, 11 A wären 7590.
+        assert leiter.max_w == 6900
+
+    async def test_bei_einer_auswahlliste(self, hass: HomeAssistant) -> None:
+        hass.states.async_set(
+            "select.heizstab", "aus", {"options": ["aus", "niedrig", "mittel", "hoch"]}
+        )
+        leiter = build_ladder(
+            hass,
+            consumer(
+                control_entity="select.heizstab",
+                level_map={"aus": 0, "niedrig": 1400, "mittel": 2400, "hoch": 3600},
+                max_level_w=2500,
+            ),
+        )
+
+        assert leiter is not None
+        assert [level.w for level in leiter.levels] == [1400, 2400]
+
+    async def test_eine_zu_niedrige_grenze_ergibt_keine_leiter(self, hass: HomeAssistant) -> None:
+        set_number(hass)
+        assert build_ladder(hass, consumer(phases=3, max_level_w=100)) is None

@@ -154,13 +154,15 @@
             "control_entity": "Steuerentität",
             "phases": "Phasen",
             "min_level_w": "Mindeststufe",
+            "max_level_w": "Höchststufe",
             "level_hold": "Haltezeit"
           },
           "data_description": {
             "control_entity": "Eine Zahl oder eine Auswahlliste. Eine Zahl braucht eine Einheit: W, kW oder A. Ohne Einheit lässt sich nicht entscheiden, ob 16 sechzehn Watt oder sechzehn Ampere bedeutet.",
             "phases": "Nur bei einer Steuerentität in Ampere. Bestimmt die Umrechnung in Watt, gerechnet mit 230 V je Phase.",
             "min_level_w": "Unterhalb dieser Leistung wird abgeschaltet statt gedrosselt. Nötig, wenn das Gerät weniger nicht annimmt: Das Minimum der Steuerentität ist die Grenze der Ladestation, nicht die des Fahrzeugs.",
-            "level_hold": "Mindestzeit zwischen zwei Stufenwechseln. Ohne sie folgt die Stufe jeder Schwankung des Überschusses."
+            "level_hold": "Mindestzeit zwischen zwei Stufenwechseln. Ohne sie folgt die Stufe jeder Schwankung des Überschusses.",
+            "max_level_w": "Oberhalb dieser Leistung wird keine Stufe angeboten. Nötig, wenn die Steuerentität mehr entgegennimmt, als das Gerät leisten kann: Ein regelbares Netzteil von 50 bis 600 W meldet als Zahl gern 0 bis 3000. Ohne diese Grenze verteilen sich die Stufen über einen Bereich, den das Gerät nicht bedient."
           }
         },
         "levels": {

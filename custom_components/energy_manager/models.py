@@ -23,6 +23,7 @@ from .const import (
     CONF_LEVEL_HOLD,
     CONF_LEVEL_MAP,
     CONF_MANUAL_OVERRIDE_TIME,
+    CONF_MAX_LEVEL_W,
     CONF_MAX_POWER,
     CONF_MIN_LEVEL_W,
     CONF_MIN_OFF_TIME,
@@ -244,6 +245,7 @@ class ConsumerConfig:
     phases: int = 1
     level_map: dict[str, float] | None = None
     min_level_w: float | None = None
+    max_level_w: float | None = None
     level_hold: int = 0
     manual_override_time: int = 0
 
@@ -286,6 +288,7 @@ class ConsumerConfig:
             phases=int(data.get(CONF_PHASES, 1) or 1),
             level_map=data.get(CONF_LEVEL_MAP),
             min_level_w=data.get(CONF_MIN_LEVEL_W),
+            max_level_w=data.get(CONF_MAX_LEVEL_W),
             level_hold=data.get(CONF_LEVEL_HOLD, 0),
             manual_override_time=data.get(CONF_MANUAL_OVERRIDE_TIME, 0),
             daily_target=data.get(CONF_DAILY_TARGET, 0.0),
