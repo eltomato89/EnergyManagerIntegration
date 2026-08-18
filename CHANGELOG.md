@@ -2,11 +2,19 @@
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
-## [Unveröffentlicht]
+## [0.5.0b1] — 2026-08-18
 
 Regelbare Verbraucher: Die Automatik kann Lasten jetzt in **Stufen** fahren statt nur ein- und
 auszuschalten. Für rein schaltbare Verbraucher ändert sich nichts — nachgewiesen dadurch, dass die
 bestehende Testsuite unverändert grün bleibt.
+
+### Bekannte Einschränkung
+
+- **Die Prognose wird nicht unter mehreren Tageszielen aufgeteilt.** Jeder Verbraucher vergleicht sein
+  Fehlendes gegen die ganze verbleibende Prognose. Bei zwei Zielen à 3 kWh und 4 kWh Prognose kommen
+  beide unabhängig zu „geht sich aus", obwohl zusammen 6 kWh nötig wären. Sie lösen dann später aus
+  als richtig und laufen anschließend gleichzeitig auf Netzstrom. Mit **einem** Verbraucher mit
+  Tagesziel tritt das nicht auf. Sauber wäre eine Kaskade wie beim Budget; das steht aus.
 
 ### Hinzugefügt
 

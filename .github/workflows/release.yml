@@ -53,7 +53,18 @@ jobs:
       # HACS installiert den Ordner custom_components/energy_manager direkt aus
       # dem Tag (zip_release: false). Es braucht deshalb kein Asset, nur einen
       # Release-Eintrag, an dem HACS die Version erkennt.
+      # Die Release-Notiz ist von Hand geschrieben und auf Englisch: Sie ist das,
+      # was HACS beim Update anzeigt. Der CHANGELOG ist deutsch und ausfuehrlich
+      # und taugt dafuer nicht. Geprueft wird, dass sie die Fassung nennt --
+      # sonst stuende beim naechsten Release die Notiz des vorigen dort.
+      - name: Release-Notiz nennt die veroeffentlichte Fassung
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          grep -q -- "$VERSION" RELEASE_NOTES.md \
+            || { echo "RELEASE_NOTES.md nennt $VERSION nicht"; exit 1; }
+
       - uses: softprops/action-gh-release@v2
         with:
+          body_path: RELEASE_NOTES.md
           generate_release_notes: true
           prerelease: ${{ steps.art.outputs.prerelease }}
