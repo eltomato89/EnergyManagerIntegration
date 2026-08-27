@@ -1,38 +1,39 @@
-# 0.5.0b1 — pre-release
+# 0.5.0b2 — pre-release
 
-**If you change nothing, nothing changes.** Every new setting defaults to off, so an
-existing installation behaves exactly as it did before. The 417 tests that existed before
-this work are unchanged and still pass.
+Two fixes and one addition, all found by running `0.5.0b1` on a real installation. Nothing
+here changes behaviour for switchable loads.
 
-## New
+## Fixed
 
-- **Modulating loads.** A load can now be run in steps through a control entity — a
-  `number` in W, kW or A, or a `select` — instead of only being switched on and off. The
-  step grid is read from that entity (min, max, step and unit; options for a select), so
-  only the translation into watts is configured. Wallboxes, adjustable power supplies,
-  heating elements with step relays.
+- **A load that could not reach its smallest level was silently holding power back.** The
+  ladder is capped at what a device actually draws, but that cap cannot go below the first
+  step — so the priority cascade kept reserving the minimum level while the device drew a
+  fraction of it. Seen on a wallbox configured as three-phase while charging single-phase:
+  smallest level 4140 W, actual draw 1779 W, and 2361 W withheld from the loads below it
+  with nothing anywhere reporting a fault. Below the smallest level the claim is now what
+  the device actually draws.
 
-- **Turning down comes before turning off.** When a more important load needs room, a
-  modulating one below it first gives up only the difference down to its smallest level and
-  keeps running.
+- Such a load was also shown as a **one-step ladder** — a single segment across the full
+  width labelled "Level 1/1", which reads like a device with one step rather than like a
+  misconfiguration. Needs card `0.7.0-beta.2` for the improved display.
 
-- **Daily targets.** A load can be told what it has to achieve per day. Once the remaining
-  PV forecast no longer covers what is still missing, it runs without surplus. Needs an
-  energy meter on the load and a forecast sensor with the energy still expected today. The
-  day starts at sunrise.
+## Added
 
-- **Manual override.** If someone switches a load by hand, the automation keeps away from it
-  for a configurable time. Default 0, meaning off: whether this makes sense depends on the
-  device. A hot water tank that cycles on its own would trigger it constantly.
+- **`phases_entity`.** The number of phases is not a constant: a wallbox switched between
+  single- and three-phase changes the power of every current step by a factor of three, and
+  a fixed setting is wrong from that moment until someone notices. Point this at an entity
+  reporting the phase count and the ladder follows the device; the fixed field stays as a
+  fallback.
+
+  A plain number is expected (1, 2 or 3). Devices with their own dialect — go-e reports the
+  phase *mode* as 0, 1, 2, where 2 means three phases — need a template sensor in front, by
+  the same rule that already applies to the switch entity.
 
 ## Before you arm anything
 
-This is a pre-release. The new features are covered by automated tests, but they have not
-yet been observed over a longer period on a real installation. The main switch is off after
-setup and every load has its own automation switch: add a load, watch it, and arm it once
-the surplus figure and the load states match what your installation is actually doing.
+This is a pre-release. The main switch is off after setup and every load has its own
+automation switch: add a load, watch it, and arm it once the numbers match what your
+installation is actually doing.
 
-**Known limitation:** the forecast is not divided among several daily targets. Each load
-compares what it is missing against the whole remaining forecast, so two targets of 3 kWh
-each with 4 kWh forecast both conclude it works out. With a single daily target this does
-not occur.
+**Known limitation:** the forecast is still not divided among several daily targets. With a
+single daily target this does not occur.
