@@ -13,7 +13,7 @@ force_on:
       selector:
         device:
           integration: energy_manager
-          model: Verbraucher
+          model: Load
     duration:
       required: true
       example: "01:00:00"
@@ -28,7 +28,7 @@ clear_force:
       selector:
         device:
           integration: energy_manager
-          model: Verbraucher
+          model: Load
 
 clear_manual:
   fields:
@@ -37,7 +37,7 @@ clear_manual:
       selector:
         device:
           integration: energy_manager
-          model: Verbraucher
+          model: Load
 pause:
   fields:
     duration:

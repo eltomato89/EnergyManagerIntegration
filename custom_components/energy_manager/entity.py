@@ -5,7 +5,7 @@ from __future__ import annotations
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DEVICE_MODEL_CONSUMER, DEVICE_MODEL_HUB, DOMAIN
 from .coordinator import EnergyManagerCoordinator
 from .models import ConsumerConfig, ConsumerView
 
@@ -27,7 +27,7 @@ class EnergyManagerEntity(CoordinatorEntity[EnergyManagerCoordinator]):
             identifiers={(DOMAIN, entry_id)},
             name="Energy Manager",
             manufacturer="Energy Manager",
-            model="Überschusssteuerung",
+            model=DEVICE_MODEL_HUB,
             entry_type=DeviceEntryType.SERVICE,
         )
 
@@ -51,7 +51,7 @@ class ConsumerEntity(CoordinatorEntity[EnergyManagerCoordinator]):
             identifiers={(DOMAIN, consumer.subentry_id)},
             name=consumer.name,
             manufacturer="Energy Manager",
-            model="Verbraucher",
+            model=DEVICE_MODEL_CONSUMER,
             entry_type=DeviceEntryType.SERVICE,
             # Hängt das Verbraucher-Gerät unter den Hub.
             via_device=(DOMAIN, coordinator.config_entry.entry_id),

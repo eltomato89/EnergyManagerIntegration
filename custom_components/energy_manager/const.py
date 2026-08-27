@@ -15,6 +15,19 @@ DOMAIN: Final = "energy_manager"
 # Subentry-Typ für einen Verbraucher.
 SUBENTRY_TYPE_CONSUMER: Final = "consumer"
 
+# Modellbezeichnungen der angelegten Geräte. **Englisch**, und das ist keine
+# Nachlässigkeit: Ein Gerätemodell lässt sich in Home Assistant nicht
+# übersetzen — anders als Entitäts- und Feldnamen gibt es dafür keinen
+# `translation_key`. Der Text steht also in jeder Instanz gleich da, und die
+# Grundsprache dieser Integration ist Englisch.
+#
+# ``DEVICE_MODEL_CONSUMER`` ist zugleich der Filter, mit dem ``services.yaml``
+# die Geräteauswahl der Dienste auf Verbraucher einschränkt. Beide Stellen
+# müssen zusammenpassen, sonst steht dort eine leere Liste; ``test_services``
+# hält sie zusammen.
+DEVICE_MODEL_HUB: Final = "Surplus control"
+DEVICE_MODEL_CONSUMER: Final = "Load"
+
 # --- Zählerquellen ----------------------------------------------------------
 
 CONF_METER_MODE: Final = "meter_mode"

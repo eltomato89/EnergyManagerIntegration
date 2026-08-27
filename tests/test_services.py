@@ -7,6 +7,8 @@ allem, was nach Ablauf der Frist geschieht.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, STATE_OFF, STATE_ON
@@ -24,6 +26,7 @@ from custom_components.energy_manager.const import (
     CONF_NAME,
     CONF_SMOOTHING_WINDOW,
     CONF_SWITCH_ENTITY,
+    DEVICE_MODEL_CONSUMER,
     DOMAIN,
     METER_MODE_GRID,
     SUBENTRY_TYPE_CONSUMER,
@@ -104,6 +107,31 @@ class TestRegistrierung:
         await hass.async_block_till_done()
 
         assert not hass.services.has_service(DOMAIN, SERVICE_FORCE_ON)
+
+    def test_geraetefilter_passt_zum_modell(self) -> None:
+        """Der Filter in ``services.yaml`` und das angelegte Gerät müssen
+        dieselbe Modellbezeichnung tragen.
+
+        Sonst steht in der Geräteauswahl der Dienste eine leere Liste — kein
+        Fehler, keine Meldung, nur nichts zum Anklicken. Die beiden Stellen
+        liegen weit auseinander und sind über nichts als diesen Text verbunden.
+        """
+        yaml = Path("custom_components/energy_manager/services.yaml").read_text()
+        filter_zeilen = [z.strip() for z in yaml.splitlines() if z.strip().startswith("model:")]
+
+        assert filter_zeilen, "kein Gerätefilter in services.yaml"
+        assert set(filter_zeilen) == {f"model: {DEVICE_MODEL_CONSUMER}"}
+
+    async def test_das_geraet_traegt_dieses_modell(
+        self, hass: HomeAssistant, entry: MockConfigEntry
+    ) -> None:
+        await setup(hass, entry)
+        registry = dr.async_get(hass)
+
+        geraet = registry.async_get(geraet_id(hass, entry, "Heizstab"))
+
+        assert geraet is not None
+        assert geraet.model == DEVICE_MODEL_CONSUMER
 
 
 class TestForceOn:
