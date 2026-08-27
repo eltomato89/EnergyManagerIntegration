@@ -8,7 +8,15 @@ dieselben Eingaben dieselben Zahlen liefert.
 Weicht hier etwas ab, zeigt die Karte etwas anderes an, als die Automatik tut —
 und das ist der Fehler, der einem Nutzer am schwersten zu erklären wäre.
 
-Die Datei wird erzeugt von ``test/_gen/gen-cases.test.ts`` im Kartenprojekt.
+Die Datei stammt aus dem Kartenprojekt und wird dort von Hand gepflegt.
+
+**Nicht mehr enthalten sind die Fälle zur Ladevorranggrenze.** Sie steckte
+früher in der Formel und deckelte den Überschuss auf 0; seit sie in der
+Reihenfolge sitzt — ein Speicher unter seiner Grenze rückt nach vorn und
+fordert —, rechnet die Formel sie nicht mehr mit. Ein Gleichstand mit der
+Karte, die im eigenständigen Betrieb bei der alten Regel bleibt, ist dort also
+nicht mehr zu erwarten und wäre auch kein Fehler. Alle übrigen Fälle gelten
+unverändert.
 """
 
 from __future__ import annotations
@@ -57,9 +65,7 @@ def _to_input(raw: dict) -> SurplusInput:
             if raw["batteryConfigured"]
             else ()
         ),
-        battery_soc=raw.get("batterySoc"),
         consumption_includes_battery=raw["consumptionIncludesBattery"],
-        battery_min_soc=raw.get("batteryMinSoc"),
         battery_reserve_w=raw["batteryReserveW"],
     )
 

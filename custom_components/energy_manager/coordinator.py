@@ -662,7 +662,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         self,
         surplus: SurplusResult,
         views: list[ConsumerView],
-        battery: BatteryView | None,
+        batteries: list[BatteryView],
         evaluation: Evaluation,
         now: float,
         may_switch: bool,
@@ -671,7 +671,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             ManagerState(
                 surplus=surplus,
                 consumers=views,
-                battery=battery,
+                batteries=batteries,
                 coverage=self._window.coverage(now),
                 started=self._started,
                 may_switch=may_switch,
@@ -882,15 +882,9 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         if smoothed is None:
             return instant
 
-        # Geglättet wird der Rohwert; Reserve und Ladestandsregel greifen
-        # danach, sonst laufen sie dem Mittelungsfenster hinterher.
-        battery = self.battery()
-        available = apply_reserve(
-            smoothed,
-            self.battery_soc(),
-            self.battery_min_soc,
-            0.0 if battery is None else battery.reserve_w,
-        )
+        # Geglättet wird der Rohwert; die Reserve greift danach, sonst liefe
+        # sie dem Mittelungsfenster hinterher.
+        available = apply_reserve(smoothed, self._reserve_w())
 
         return SurplusResult(
             raw=round(smoothed),
@@ -927,7 +921,6 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         """Momentanwert ohne Glättung."""
         data = dict(self.config_entry.data) if self.config_entry else {}
 
-        battery = self.battery()
         return compute_surplus(
             SurplusInput(
                 mode=data.get(CONF_METER_MODE, METER_MODE_GRID),
@@ -938,14 +931,21 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
                 production=read_power_w(self.hass, data.get(CONF_PRODUCTION_ENTITY)),
                 consumption=read_power_w(self.hass, data.get(CONF_CONSUMPTION_ENTITY)),
                 batteries=self._battery_readings(),
-                battery_soc=self.battery_soc(),
                 # Am Eintrag und nicht am Speicher: Das beschreibt, was der
                 # Zähler mitmisst, nicht was die Batterie tut.
                 consumption_includes_battery=data.get(CONF_CONSUMPTION_INCLUDES_BATTERY, False),
-                battery_min_soc=self.battery_min_soc,
-                battery_reserve_w=0.0 if battery is None else battery.reserve_w,
+                battery_reserve_w=self._reserve_w(),
             )
         )
+
+    def _reserve_w(self) -> float:
+        """Die Reserve aller Speicher zusammen.
+
+        Sie greift vor dem ersten Verbraucher, also auch bevor die Reihenfolge
+        beginnt — und was zwei Speicher zurücklegen, legen sie gemeinsam
+        zurück.
+        """
+        return sum(battery.reserve_w for battery in self.batteries.values())
 
     def _battery_readings(self) -> tuple[BatteryReading, ...]:
         """Alle eingerichteten Speicher, wie die Bilanz sie sieht.
@@ -970,7 +970,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             )
         return invert(read_power_w(self.hass, battery.power_entity), battery.invert)
 
-    def _build_views(self, surplus: SurplusResult) -> tuple[list[ConsumerView], BatteryView | None]:
+    def _build_views(self, surplus: SurplusResult) -> tuple[list[ConsumerView], list[BatteryView]]:
         """Bewertet die Verbraucher in Prioritätsreihenfolge."""
         return build_views(self.hass, self, surplus.available)
 
@@ -982,17 +982,29 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         Batterie wie bisher ein reiner Korrekturterm im Überschuss und taucht in
         der Reihenfolge nicht auf.
         """
-        battery = self.battery()
-        if battery is None or not battery.shiftable:
-            return None
+        return next(iter(self.battery_loads()), None)
 
-        return BatteryLoad(
-            priority=self.battery_priority,
-            max_charge_w=battery.max_charge_w,
-            reserve_w=battery.reserve_w,
-            soc=read_percent(self.hass, battery.soc_entity),
-            charging_w=self._battery_reading(battery).w,
-        )
+    def battery_loads(self) -> list[BatteryLoad]:
+        """Alle Speicher, wie die Reihenfolge sie sieht.
+
+        Auch die ohne eingetragene Ladeleistung: Liegt so einer unter seiner
+        Vorranggrenze, fordert er trotzdem — und zwar alles. Ob er in der
+        Reihenfolge auftaucht, entscheidet ``in_cascade``, nicht diese Liste.
+        """
+        return [
+            BatteryLoad(
+                subentry_id=battery.subentry_id,
+                name=battery.name,
+                priority=self.battery_runtime_for(battery.subentry_id).priority,
+                max_charge_w=battery.max_charge_w,
+                min_soc=self.battery_runtime_for(battery.subentry_id).min_soc,
+                reserve_w=battery.reserve_w,
+                soc=read_percent(self.hass, battery.soc_entity),
+                charging_w=self._battery_reading(battery).w,
+            )
+            for battery in self.batteries.values()
+            if battery.has_reading
+        ]
 
     # -- Hilfen für Entitäten ------------------------------------------------
 

@@ -57,9 +57,7 @@ class SurplusInput:
     batteries: tuple[BatteryReading, ...] = ()
     """Alle eingerichteten Speicher. Leer heißt: keiner."""
 
-    battery_soc: float | None = None
     consumption_includes_battery: bool = False
-    battery_min_soc: float | None = None
     battery_reserve_w: float = 0.0
 
 
@@ -127,7 +125,7 @@ def compute_surplus(data: SurplusInput) -> SurplusResult:
             errors=tuple(errors),
         )
 
-    available = apply_reserve(raw, data.battery_soc, data.battery_min_soc, data.battery_reserve_w)
+    available = apply_reserve(raw, data.battery_reserve_w)
 
     return SurplusResult(
         raw=round_w(raw),
@@ -150,17 +148,19 @@ def _battery_sum(batteries: tuple[BatteryReading, ...]) -> float | None:
     return round_w(sum(werte)) if werte else None
 
 
-def apply_reserve(
-    raw_w: float | None,
-    battery_soc: float | None,
-    battery_min_soc: float | None,
-    battery_reserve_w: float,
-) -> float | None:
-    """Zieht die der Batterie vorbehaltene Leistung ab.
+def apply_reserve(raw_w: float | None, battery_reserve_w: float) -> float | None:
+    """Zieht die den Speichern vorbehaltene Leistung ab.
 
     Bewusst getrennt von :func:`compute_surplus`, damit die Reserve **nach** der
-    Glättung greifen kann: geglättet wird der Rohwert, sonst liefe die
-    Ladevorrangregel um das Mittelungsfenster verzögert nach.
+    Glättung greift: geglättet wird der Rohwert.
+
+    Die Ladevorranggrenze stand früher ebenfalls hier und deckelte den
+    ausgewiesenen Überschuss auf 0. Sie ist in die Reihenfolge gewandert, wo ein
+    Speicher unter seiner Grenze nach vorn rückt und fordert. Zwei Gründe: Bei
+    mehreren Speichern wüsste eine globale Sperre nicht, was sie tun soll — ist
+    einer darunter und der andere darüber, sperrt sie dann alles? Und sie log
+    der Anzeige einen Überschuss von 0 vor, während die Sonne schien; jetzt
+    steht dort, was wirklich da ist, und wer es bekommt.
 
     Kein Clamping auf ≥ 0 — negative Werte bedeuten ein Defizit und werden für
     die Ampel gebraucht.
@@ -168,14 +168,7 @@ def apply_reserve(
     if raw_w is None:
         return None
 
-    available = raw_w - (battery_reserve_w or 0.0)
-
-    # Unterhalb der Ladestandsgrenze hat das Laden der Batterie Vorrang: es wird
-    # kein Überschuss mehr an Verbraucher ausgewiesen.
-    if battery_soc is not None and battery_min_soc is not None and battery_soc < battery_min_soc:
-        available = min(available, 0.0)
-
-    return available
+    return raw_w - (battery_reserve_w or 0.0)
 
 
 def _reason_to_error(reason: ReadingReason | None, source: str) -> SurplusError:

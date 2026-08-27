@@ -44,9 +44,7 @@ def make_input(**overrides) -> SurplusInput:
         "production": NONE,
         "consumption": NONE,
         "batteries": (BatteryReading(battery, modus),) if konfiguriert else (),
-        "battery_soc": None,
         "consumption_includes_battery": False,
-        "battery_min_soc": None,
         "battery_reserve_w": 0.0,
     }
     return SurplusInput(**{**defaults, **overrides})
@@ -107,7 +105,6 @@ class TestGridMode:
             "grid": Reading(w=7),
             "battery": Reading(w=-386),
             "battery_configured": True,
-            "battery_soc": 84.0,
         }
 
         charge_only = compute_surplus(make_input(**messwerte))
@@ -199,43 +196,35 @@ class TestSplitMode:
 
 
 class TestApplyReserve:
+    """Nur noch die Reserve.
+
+    Die Ladevorranggrenze stand hier und deckelte den Überschuss auf 0. Sie ist
+    in die Reihenfolge gewandert, wo ein Speicher unter seiner Grenze nach vorn
+    rückt und fordert — nachzulesen in ``test_engine`` und ``test_battery_min_soc``.
+    """
+
     def test_zieht_die_reserve_ab(self) -> None:
-        assert apply_reserve(2000, None, None, 500) == 1500
-
-    def test_sperrt_unterhalb_der_ladestandsgrenze(self) -> None:
-        assert apply_reserve(2000, 15, 20, 0) == 0
-
-    def test_gibt_ab_der_grenze_wieder_frei(self) -> None:
-        assert apply_reserve(2000, 20, 20, 0) == 2000
-        assert apply_reserve(2000, 55, 20, 0) == 2000
-
-    def test_verschlechtert_ein_defizit_nicht(self) -> None:
-        # min(-800, 0) = -800: der Netzbezug bleibt sichtbar.
-        assert apply_reserve(-800, 10, 20, 0) == -800
+        assert apply_reserve(2000, 500) == 1500
 
     def test_klemmt_negative_werte_nicht_weg(self) -> None:
-        assert apply_reserve(200, None, None, 500) == -300
+        # Ein Defizit bleibt sichtbar; die Ampel braucht es.
+        assert apply_reserve(200, 500) == -300
 
     def test_reicht_none_durch(self) -> None:
-        assert apply_reserve(None, 50, 20, 100) is None
-
-    def test_ohne_grenze_keine_sperre(self) -> None:
-        assert apply_reserve(2000, 5, None, 0) == 2000
+        assert apply_reserve(None, 100) is None
 
 
-def test_reserve_und_ladestandsregel_greifen_am_ende() -> None:
+def test_die_reserve_greift_nach_der_glaettung() -> None:
     result = compute_surplus(
         make_input(
             grid=Reading(w=-3000),
             battery=Reading(w=0),
             battery_configured=True,
-            battery_soc=10.0,
-            battery_min_soc=30.0,
             battery_reserve_w=500.0,
         )
     )
     assert result.raw == 3000
-    assert result.available == 0
+    assert result.available == 2500
 
 
 class TestMehrereSpeicher:

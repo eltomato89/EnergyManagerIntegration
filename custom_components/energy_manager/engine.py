@@ -260,25 +260,30 @@ def battery_claim(
     aufnimmt, gehört wieder den tieferen Verbrauchern.
     """
     full = battery.soc is not None and battery.soc >= BATTERY_FULL_SOC
+    grenze = battery.claim_limit_w
     # Was über die Ladeleistung hinausgeht, ist keine Reserve für die Batterie
     # mehr, sondern schlicht zu viel; als Anrechnung zählt höchstens die
     # Ladeleistung selbst.
-    gesichert = min(battery.reserve_w, battery.max_charge_w)
+    gesichert = battery.reserve_w if grenze is None else min(battery.reserve_w, grenze)
 
     if budget is None:
         return 0.0, gesichert, DeviceStatus.UNAVAILABLE, full
     if full:
         return 0.0, gesichert, DeviceStatus.ON_OK, True
 
-    offen = max(battery.max_charge_w - gesichert, 0.0)
-    aus_budget = min(offen, max(budget, 0.0))
+    verfuegbar = max(budget, 0.0)
+    # ``None`` heißt: keine Obergrenze bekannt und der Ladestand unter der
+    # Vorranggrenze — dann nimmt der Speicher, was da ist. Genau das tat früher
+    # die globale Sperre, nur ohne zu zeigen, wohin die Leistung geht.
+    offen = verfuegbar if grenze is None else max(grenze - gesichert, 0.0)
+    aus_budget = min(offen, verfuegbar)
     gesamt = gesichert + aus_budget
 
     if gesamt <= 0:
         # Höher priorisierte Verbraucher haben alles belegt (oder es herrscht
         # Defizit): die Batterie wartet.
         status = DeviceStatus.OFF_INSUFFICIENT
-    elif gesamt >= battery.max_charge_w:
+    elif grenze is None or gesamt >= grenze:
         # Volle Ladeleistung zurückgelegt.
         status = DeviceStatus.ON_OK
     else:
@@ -290,33 +295,63 @@ def battery_claim(
 def _battery_insert_index(
     ordered: list[ConsumerConfig],
     priorities: dict[str, float],
-    battery_priority: float,
+    battery: BatteryLoad,
 ) -> int:
-    """Position der Batterie in der nach Priorität sortierten Verbraucherliste.
+    """Position eines Speichers in der nach Priorität sortierten Liste.
 
-    Bei Gleichstand steht die Batterie **hinter** den Verbrauchern desselben
-    Rangs — sie wird erst eingefügt, sobald ein Verbraucher echt niedriger
+    Unter seiner Vorranggrenze steht er **vor allen** Verbrauchern, unabhängig
+    von seinem Rang: Dann hat das Laden Vorrang, und genau das drückt eine
+    Position an der Spitze aus.
+
+    Sonst nach Rang, und bei Gleichstand **hinter** den Verbrauchern desselben
+    Rangs — er wird erst eingefügt, sobald ein Verbraucher echt niedriger
     priorisiert ist.
     """
+    if battery.below_threshold:
+        return 0
+
     for index, consumer in enumerate(ordered):
-        if priorities.get(consumer.subentry_id, 999.0) > battery_priority:
+        if priorities.get(consumer.subentry_id, 999.0) > battery.priority:
             return index
     return len(ordered)
+
+
+def order_batteries(
+    batteries: list[BatteryLoad],
+    ordered: list[ConsumerConfig],
+    priorities: dict[str, float],
+) -> list[tuple[int, BatteryLoad]]:
+    """Die Speicher mit ihrer Einfügeposition, in der Reihenfolge der Kaskade.
+
+    Zwei Speicher unter ihrer Grenze stehen beide vorn und werden dort nach
+    ihrem Rang untereinander sortiert — sonst hinge die Aufteilung an der
+    Reihenfolge im Speicher, und die ist zufällig.
+    """
+    mit_position = [
+        (_battery_insert_index(ordered, priorities, battery), battery)
+        for battery in batteries
+        if battery.in_cascade
+    ]
+    return sorted(mit_position, key=lambda paar: (paar[0], paar[1].priority, paar[1].name))
 
 
 def build_views(
     hass: HomeAssistant,
     coordinator: EnergyManagerCoordinator,
     available_w: float | None,
-) -> tuple[list[ConsumerView], BatteryView | None]:
+) -> tuple[list[ConsumerView], list[BatteryView]]:
     """Bewertet alle Verbraucher in Prioritätsreihenfolge.
 
-    Nimmt die Batterie als verschiebbare Last teil (siehe
-    :class:`~.models.BatteryLoad`), wird sie an ihrem Rang in dieselbe
-    Budget-Kaskade eingehängt: Verbraucher **über** ihr bekommen den Überschuss
-    zuerst und bleiben eingeschaltet, die Batterie reserviert danach ihre
+    Nimmt ein Speicher als verschiebbare Last teil (siehe
+    :class:`~.models.BatteryLoad`), wird er an seinem Rang in dieselbe
+    Budget-Kaskade eingehängt: Verbraucher **über** ihm bekommen den Überschuss
+    zuerst und bleiben eingeschaltet, der Speicher reserviert danach seine
     Ladeleistung, und nur was dann noch übrig ist, steht Verbrauchern **unter**
-    ihr zur Verfügung. Geschaltet wird die Batterie dabei nicht.
+    ihm zur Verfügung. Geschaltet wird er dabei nicht.
+
+    Liegt sein Ladestand unter der Vorranggrenze, steht er ganz vorn. Das ist
+    die frühere globale Sperre, nur in der Kaskade ausgedrückt statt in der
+    Formel — und damit auch dann eindeutig, wenn es zwei Speicher gibt.
 
     **Abweichung von der Karte:** Dort reserviert jeder Verbraucher mit Status
     ``off_ready`` Budget, auch wenn er nicht an der Automatik teilnimmt. Für die
@@ -327,20 +362,19 @@ def build_views(
     """
     now = dt_util.utcnow().timestamp()
     priorities = coordinator.priorities()
-    battery = coordinator.battery_load()
     budget = available_w
     views: list[ConsumerView] = []
-    battery_view: BatteryView | None = None
+    battery_views: list[BatteryView] = []
 
     ordered = order_consumers(coordinator.consumers, priorities)
-    battery_at = (
-        _battery_insert_index(ordered, priorities, battery.priority) if battery is not None else -1
-    )
+    offene_speicher = order_batteries(coordinator.battery_loads(), ordered, priorities)
 
     rank = 0
     for position, consumer in enumerate(ordered):
-        if battery is not None and position == battery_at:
-            battery_view, budget = _build_battery_view(battery, budget, rank)
+        while offene_speicher and offene_speicher[0][0] == position:
+            _, speicher = offene_speicher.pop(0)
+            view, budget = _build_battery_view(speicher, budget, rank)
+            battery_views.append(view)
             rank += 1
 
         state = hass.states.get(consumer.switch_entity)
@@ -451,13 +485,15 @@ def build_views(
         )
         rank += 1
 
-    # Steht die Batterie ganz hinten (niedrigste Priorität), fällt sie durch die
-    # Schleife nicht ab — hier nachholen.
-    if battery is not None and battery_at >= len(ordered):
-        battery_view, budget = _build_battery_view(battery, budget, rank)
+    # Speicher ganz hinten (niedrigste Priorität) fallen durch die Schleife
+    # nicht ab — hier nachholen.
+    for _, speicher in offene_speicher:
+        view, budget = _build_battery_view(speicher, budget, rank)
+        battery_views.append(view)
+        rank += 1
 
     assign_displaceable(views, coordinator, now)
-    return views, battery_view
+    return views, battery_views
 
 
 def _daily_progress(
@@ -604,6 +640,8 @@ def _build_battery_view(
     aus_budget, gesamt, status, full = battery_claim(battery, budget)
     remaining = None if budget is None else budget - aus_budget
     view = BatteryView(
+        subentry_id=battery.subentry_id,
+        name=battery.name,
         rank=rank,
         priority=battery.priority,
         max_charge_w=battery.max_charge_w,
@@ -612,6 +650,7 @@ def _build_battery_view(
         status=status,
         headroom_w=remaining,
         full=full,
+        below_threshold=battery.below_threshold,
     )
     return view, remaining
 

@@ -103,12 +103,6 @@ class SurplusSensor(EnergyManagerEntity, SensorEntity):
         attrs: dict[str, object] = {
             "grid_w": surplus.grid_w,
             "battery_w": surplus.battery_w,
-            "battery_soc": self.coordinator.battery_soc(),
-            # Die Ladevorranggrenze steht hier und nicht im Block der
-            # Batterielast weiter unten: Sie wirkt in der Überschussformel und
-            # damit auch dann, wenn die Batterie nicht als verschiebbare Last
-            # teilnimmt. 0 heißt, dass die Regel nicht greift.
-            "battery_min_soc": self.coordinator.battery_min_soc,
             "battery_correction_w": surplus.battery_correction,
             "degraded": surplus.degraded,
             "coverage": round(data.coverage, 2),
@@ -122,32 +116,16 @@ class SurplusSensor(EnergyManagerEntity, SensorEntity):
             "errors": [e.value for e in surplus.errors],
         }
 
-        # Nimmt die Batterie als verschiebbare Last teil, bekommt die Karte hier
-        # alles, um sie als eigene Zeile darzustellen — Rang, Ampelzustand und
-        # reservierte Ladeleistung. Ohne diese Felder gibt es keine Batteriezeile
-        # und das Verhalten bleibt wie zuvor.
-        battery = data.battery
-        if battery is not None:
-            attrs.update(
-                {
-                    "battery_load": True,
-                    "battery_rank": battery.rank + 1,
-                    "battery_priority": battery.priority,
-                    "battery_status": battery.status.value,
-                    "battery_max_charge_w": battery.max_charge_w,
-                    "battery_claim_w": round(battery.claim_w),
-                    # Was nach der Batterie noch für tiefer priorisierte
-                    # Verbraucher bleibt. Ohne diese Angabe ließe sich in der
-                    # Anzeige nicht nachvollziehen, warum ein Verbraucher unter
-                    # der Batterie leer ausgeht.
-                    "battery_headroom_w": (
-                        None if battery.headroom_w is None else round(battery.headroom_w)
-                    ),
-                    "battery_charging_w": battery.charging_w,
-                    "battery_full": battery.full,
-                    "battery_soc_entity": self.coordinator.battery_soc_entity,
-                }
-            )
+        # Die Angaben zu einem einzelnen Speicher stehen an dessen eigenem
+        # Sensor, nicht hier: Bei zweien hätte hier nur einer Platz, und welcher
+        # das wäre, ließe sich nicht sagen. Was bleibt, sind Anlagensummen.
+        if len(self.coordinator.batteries) == 1:
+            # Ein Gesamtladestand über mehrere Speicher bräuchte ihre
+            # Kapazitäten — 5 kWh bei 20 % und 10 kWh bei 80 % sind nicht 50 %.
+            # Solange es genau einen gibt, ist die Angabe eindeutig; sonst
+            # entfällt sie, statt geraten zu werden.
+            attrs["battery_soc"] = self.coordinator.battery_soc()
+            attrs["battery_soc_entity"] = self.coordinator.battery_soc_entity
 
         return attrs
 

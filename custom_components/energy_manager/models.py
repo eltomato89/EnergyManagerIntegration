@@ -676,11 +676,17 @@ class BatteryLoad:
     Prioritätsreihenfolge nicht teil.
     """
 
+    subentry_id: str
+    name: str
+
     priority: float
-    """Rang, 1 = höchste. Wird über die ``battery_priority``-number bedient."""
+    """Rang, 1 = höchste. Wird über die ``priority``-number bedient."""
 
     max_charge_w: float
     """Obergrenze dessen, was die Batterie insgesamt aus dem Überschuss zieht."""
+
+    min_soc: float = 0.0
+    """Ladestand, unterhalb dessen das Laden Vorrang hat. 0 schaltet das ab."""
 
     reserve_w: float = 0.0
     """Bereits vor der Reihenfolge abgezogene Leistung (``battery_reserve_w``).
@@ -698,6 +704,41 @@ class BatteryLoad:
     charging_w: float | None = None
     """Gemessene Ladeleistung (>0 lädt), oder None."""
 
+    @property
+    def below_threshold(self) -> bool:
+        """Liegt der Ladestand unter der Vorranggrenze?
+
+        Dann rückt der Speicher in der Reihenfolge vor alle Verbraucher. Das
+        löst die frühere globale Sperre ab, die den ausgewiesenen Überschuss auf
+        0 deckelte: Bei mehreren Speichern wüsste eine solche Sperre nicht, was
+        sie tun soll, und sie verschwieg der Anzeige, wohin die Leistung geht.
+        """
+        return self.min_soc > 0 and self.soc is not None and self.soc < self.min_soc
+
+    @property
+    def claim_limit_w(self) -> float | None:
+        """Wie viel dieser Speicher höchstens fordert. ``None`` heißt: alles.
+
+        Unbegrenzt fordert nur, wer unter seiner Grenze liegt **und** keine
+        Ladeleistung eingetragen hat — und genau das ist die alte Sperre: Wenn
+        niemand weiß, wie viel der Speicher aufnehmen kann, bekommt er alles,
+        und für die Verbraucher bleibt nichts. Wer seine Ladeleistung angibt,
+        bekommt sie und gibt den Rest weiter.
+        """
+        if self.below_threshold and self.max_charge_w <= 0:
+            return None
+        return self.max_charge_w
+
+    @property
+    def in_cascade(self) -> bool:
+        """Steht dieser Speicher in der Reihenfolge?
+
+        Mit eingetragener Ladeleistung immer; ohne sie nur, solange er unter
+        seiner Vorranggrenze liegt. Sonst bleibt er ein reiner Korrekturterm in
+        der Bilanz, wie eh und je.
+        """
+        return self.max_charge_w > 0 or self.below_threshold
+
 
 @dataclass(slots=True)
 class BatteryView:
@@ -709,11 +750,15 @@ class BatteryView:
     Verbraucher werden vor ihr bedient und bleiben eingeschaltet.
     """
 
+    subentry_id: str
+    name: str
+
     rank: int
     """Position in der gemeinsamen Reihenfolge, 0 = höchste."""
 
     priority: float
     max_charge_w: float
+
     claim_w: float
     """Insgesamt für die Batterie zurückgelegte Leistung, höchstens ``max_charge_w``.
 
@@ -730,6 +775,12 @@ class BatteryView:
     full: bool
     """Ladestand am oberen Anschlag — die Batterie reserviert dann nichts."""
 
+    below_threshold: bool = False
+    """Läuft dieser Speicher gerade mit Vorrang, weil sein Ladestand zu tief ist?
+
+    Die Antwort auf „warum bekommt gerade kein Verbraucher etwas".
+    """
+
 
 @dataclass(slots=True)
 class ManagerState:
@@ -737,8 +788,14 @@ class ManagerState:
 
     surplus: SurplusResult
     consumers: list[ConsumerView] = field(default_factory=list)
-    battery: BatteryView | None = None
-    """Die Batterie als verschiebbare Last, sofern sie mitspielt."""
+    batteries: list[BatteryView] = field(default_factory=list)
+    """Die Speicher, die an der Reihenfolge teilnehmen — in ihrer Reihenfolge."""
+
+    @property
+    def battery(self) -> BatteryView | None:
+        """Der erste Speicher, für Anzeigen, die nur einen kennen."""
+        return self.batteries[0] if self.batteries else None
+
     coverage: float = 0.0
     """Anteil des Mittelungsfensters mit gültigen Daten, 0..1."""
 

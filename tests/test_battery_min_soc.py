@@ -20,6 +20,7 @@ from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.energy_manager.const import (
+    CONF_BATTERY_MAX_CHARGE_W,
     CONF_BATTERY_MIN_SOC,
     CONF_BATTERY_POWER_ENTITY,
     CONF_BATTERY_SOC_ENTITY,
@@ -137,21 +138,18 @@ class TestUebernahme:
 
 
 class TestWirkung:
-    async def test_unter_der_grenze_gibt_es_keinen_ueberschuss(self, hass: HomeAssistant) -> None:
-        entry = make_entry()
-        await setup(hass, entry, soc=30)
-        await hass.services.async_call(
-            "number", "set_value", {"entity_id": REGLER, "value": 50}, blocking=True
-        )
-        await hass.async_block_till_done()
+    """Unter der Grenze rückt der Speicher in der Reihenfolge nach vorn.
 
-        assert verfuegbar(entry) == 0
+    Bis 0.5.0b3 deckelte die Grenze den ausgewiesenen Überschuss auf 0 — dann
+    bekam niemand etwas, und in der Karte stand „kein Überschuss", während die
+    Sonne schien. Jetzt steht dort, was wirklich da ist, und wer es bekommt.
+    """
 
-    async def test_ueber_der_grenze_steht_er_wieder_bereit(self, hass: HomeAssistant) -> None:
-        """Der Kern des Wunsches: heruntergestellt, und die Verbraucher dürfen.
+    async def test_unter_der_grenze_fordert_der_speicher_alles(self, hass: HomeAssistant) -> None:
+        """Ohne eingetragene Ladeleistung ist das genau die alte Sperre.
 
-        Sofort und nicht erst beim nächsten Durchlauf — wer die Grenze wegen
-        einer guten Vorhersage senkt, erwartet keine Wartezeit.
+        Nur dass der Überschuss jetzt ausgewiesen wird und die Zeile des
+        Speichers zeigt, wohin er geht.
         """
         entry = make_entry()
         await setup(hass, entry, soc=30)
@@ -159,17 +157,64 @@ class TestWirkung:
             "number", "set_value", {"entity_id": REGLER, "value": 50}, blocking=True
         )
         await hass.async_block_till_done()
-        assert verfuegbar(entry) == 0
 
+        speicher = entry.runtime_data.data.batteries[0]
+        assert speicher.below_threshold is True
+        assert speicher.headroom_w == 0
+        # Der Überschuss selbst bleibt sichtbar — das ist der Unterschied.
+        assert verfuegbar(entry) == pytest.approx(2000)
+
+    async def test_ueber_der_grenze_bleibt_alles_uebrig(self, hass: HomeAssistant) -> None:
+        entry = make_entry()
+        await setup(hass, entry, soc=30)
         await hass.services.async_call(
             "number", "set_value", {"entity_id": REGLER, "value": 20}, blocking=True
         )
         await hass.async_block_till_done()
 
+        # Ohne Ladeleistung und über der Grenze steht der Speicher gar nicht in
+        # der Reihenfolge: Er ist ein Korrekturterm, mehr nicht.
+        assert entry.runtime_data.data.batteries == []
         assert verfuegbar(entry) == pytest.approx(2000)
 
+    async def test_mit_ladeleistung_bleibt_der_ueberhang(self, hass: HomeAssistant) -> None:
+        """Die eigentliche Verhaltensänderung.
+
+        Früher bekam bei 2000 W Überschuss und 800 W Ladeleistung trotzdem
+        niemand etwas. Jetzt nimmt der Speicher seine 800 W, und die restlichen
+        1200 W stehen den Verbrauchern zur Verfügung — er kann sie ohnehin nicht
+        aufnehmen.
+        """
+        entry = make_entry(**{CONF_BATTERY_MAX_CHARGE_W: 800})
+        await setup(hass, entry, soc=30)
+        await hass.services.async_call(
+            "number", "set_value", {"entity_id": REGLER, "value": 50}, blocking=True
+        )
+        await hass.async_block_till_done()
+
+        speicher = entry.runtime_data.data.batteries[0]
+        assert speicher.below_threshold is True
+        assert speicher.claim_w == 800
+        assert speicher.headroom_w == pytest.approx(1200)
+
+    async def test_der_vorrang_ueberholt_den_rang(self, hass: HomeAssistant) -> None:
+        """Unter der Grenze steht der Speicher vor allen Verbrauchern.
+
+        Sein eingetragener Rang gilt erst wieder, sobald er darüber liegt.
+        """
+        entry = make_entry(**{CONF_BATTERY_MAX_CHARGE_W: 800})
+        await setup(hass, entry, soc=30)
+        coordinator = entry.runtime_data
+        await coordinator.async_set_battery_priority(99)
+        await hass.services.async_call(
+            "number", "set_value", {"entity_id": REGLER, "value": 50}, blocking=True
+        )
+        await hass.async_block_till_done()
+
+        assert coordinator.data.batteries[0].rank == 0
+
     async def test_ohne_ladestand_bleibt_die_grenze_wirkungslos(self, hass: HomeAssistant) -> None:
-        """Ein unlesbarer Ladestand ist kein Grund, den Überschuss zu sperren.
+        """Ein unlesbarer Ladestand ist kein Grund, den Überschuss zu binden.
 
         Er ist ein Fehler und wird als solcher gemeldet; eine Grenze gegen einen
         unbekannten Wert zu prüfen hieße raten.
@@ -183,4 +228,5 @@ class TestWirkung:
         await entry.runtime_data.async_request_refresh_now()
         await hass.async_block_till_done()
 
+        assert entry.runtime_data.data.batteries == []
         assert verfuegbar(entry) == pytest.approx(2000)

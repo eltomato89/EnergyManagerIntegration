@@ -256,7 +256,10 @@ async def test_attribute_genuegen_der_karte(
 
     hub = hass.states.get("sensor.energy_manager_surplus")
     assert hub is not None
-    for key in ("grid_w", "battery_w", "battery_soc", "coverage", "smoothing_window"):
+    # battery_soc steht nur bei genau einem Speicher dabei — bei mehreren
+    # bräuchte ein Gesamtladestand ihre Kapazitäten, und ohne Speicher gibt es
+    # nichts zu melden. Hier ist keiner eingerichtet.
+    for key in ("grid_w", "battery_w", "coverage", "smoothing_window"):
         assert key in hub.attributes, f"{key} fehlt am Hub-Sensor"
 
 

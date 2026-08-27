@@ -194,28 +194,31 @@ class TestEntitaeten:
         await setup_battery(hass, netz=-2500, soc=60, max_charge=0)
         assert hass.states.get("number.hausbatterie_priority") is None
 
-    async def test_hub_sensor_traegt_die_batterie_attribute(self, hass: HomeAssistant) -> None:
-        """Die Karte baut ihre Batteriezeile allein aus diesen Attributen."""
-        await setup_battery(hass, netz=-2500, soc=60)
+    async def test_der_hub_sensor_traegt_nur_noch_anlagensummen(self, hass: HomeAssistant) -> None:
+        """Angaben zu einem einzelnen Speicher stehen an dessen eigenem Sensor.
 
+        Bei zweien hätte hier nur einer Platz, und welcher das wäre, ließe sich
+        nicht sagen.
+        """
+        await setup_battery(hass, netz=-3000, soc=50, max_charge=2000, battery_prio=2)
         hub = hass.states.get("sensor.energy_manager_surplus")
-        assert hub is not None
-        attrs = hub.attributes
-        assert attrs["battery_load"] is True
-        assert attrs["battery_rank"] == 2
-        assert attrs["battery_max_charge_w"] == 2000
-        assert attrs["battery_claim_w"] == 1500
-        assert attrs["battery_status"] == "on_deficit"
-        assert attrs["battery_soc_entity"] == "sensor.akku_soc"
-        # Was nach der Batterie noch übrig ist: hier nichts, deshalb geht Egal
-        # leer aus. Ohne diese Angabe wäre das in der Anzeige nicht erklärbar.
-        assert attrs["battery_headroom_w"] == 0
 
-    async def test_batterie_rang_ueberlebt_neuladen(self, hass: HomeAssistant) -> None:
-        """Der Rang liegt im Speicher, nicht nur in der Entität."""
-        entry = await setup_battery(hass, netz=-2500, soc=60, battery_prio=3)
-        coordinator = entry.runtime_data
-        assert coordinator.battery_priority == 3
+        assert hub is not None
+        for feld in (
+            "battery_load",
+            "battery_rank",
+            "battery_status",
+            "battery_claim_w",
+            "battery_headroom_w",
+            "battery_max_charge_w",
+        ):
+            assert feld not in hub.attributes, feld
+
+        # Was bleibt: die Bilanzgrößen der Anlage.
+        assert hub.attributes["battery_w"] is not None
+        assert hub.attributes["battery_correction_w"] is not None
+        # Und der Ladestand, solange er eindeutig ist.
+        assert hub.attributes["battery_soc"] == 50
 
 
 class TestSpeicherSensor:

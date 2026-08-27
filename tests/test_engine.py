@@ -329,6 +329,8 @@ class TestBatteryClaim:
         reserve: float = 0.0,
     ) -> BatteryLoad:
         return BatteryLoad(
+            subentry_id="akku",
+            name="Hausbatterie",
             priority=5.0,
             max_charge_w=2000.0,
             reserve_w=reserve,
@@ -384,7 +386,13 @@ class TestBatteryReserveWirdAngerechnet:
 
     def _bat(self, reserve: float) -> BatteryLoad:
         return BatteryLoad(
-            priority=5.0, max_charge_w=2000.0, reserve_w=reserve, soc=60.0, charging_w=None
+            subentry_id="akku",
+            name="Hausbatterie",
+            priority=5.0,
+            max_charge_w=2000.0,
+            reserve_w=reserve,
+            soc=60.0,
+            charging_w=None,
         )
 
     def test_nur_die_differenz_kommt_aus_dem_budget(self) -> None:
@@ -422,21 +430,49 @@ class TestBatteryInsertIndex:
         ordered = [a, b, c]
         prios = {"a": 1.0, "b": 2.0, "c": 3.0}
         # Batterie mit Rang 2.5 landet zwischen B (2) und C (3).
-        assert _battery_insert_index(ordered, prios, 2.5) == 2
+        assert (
+            _battery_insert_index(
+                ordered,
+                prios,
+                BatteryLoad(subentry_id="akku", name="Akku", priority=2.5, max_charge_w=2000.0),
+            )
+            == 2
+        )
 
     def test_gleichstand_batterie_dahinter(self) -> None:
         a, b = consumer("A", subentry_id="a"), consumer("B", subentry_id="b")
         prios = {"a": 2.0, "b": 2.0}
         # Bei Gleichstand steht die Batterie hinter den Verbrauchern desselben Rangs.
-        assert _battery_insert_index([a, b], prios, 2.0) == 2
+        assert (
+            _battery_insert_index(
+                [a, b],
+                prios,
+                BatteryLoad(subentry_id="akku", name="Akku", priority=2.0, max_charge_w=2000.0),
+            )
+            == 2
+        )
 
     def test_hoechste_prioritaet_ganz_vorn(self) -> None:
         a = consumer("A", subentry_id="a")
-        assert _battery_insert_index([a], {"a": 5.0}, 1.0) == 0
+        assert (
+            _battery_insert_index(
+                [a],
+                {"a": 5.0},
+                BatteryLoad(subentry_id="akku", name="Akku", priority=1.0, max_charge_w=2000.0),
+            )
+            == 0
+        )
 
     def test_niedrigste_prioritaet_ganz_hinten(self) -> None:
         a = consumer("A", subentry_id="a")
-        assert _battery_insert_index([a], {"a": 1.0}, 99.0) == 1
+        assert (
+            _battery_insert_index(
+                [a],
+                {"a": 1.0},
+                BatteryLoad(subentry_id="akku", name="Akku", priority=99.0, max_charge_w=2000.0),
+            )
+            == 1
+        )
 
 
 class TestAnticipation:
