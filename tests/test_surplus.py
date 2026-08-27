@@ -17,6 +17,7 @@ from custom_components.energy_manager.const import (
 )
 from custom_components.energy_manager.models import Reading, ReadingReason, SurplusError
 from custom_components.energy_manager.surplus import (
+    BatteryReading,
     SurplusInput,
     apply_reserve,
     compute_surplus,
@@ -26,14 +27,23 @@ NONE = Reading(w=None, reason=ReadingReason.MISSING)
 
 
 def make_input(**overrides) -> SurplusInput:
+    """Eingangsgrößen für einen Fall.
+
+    ``battery``, ``battery_configured`` und ``battery_mode`` beschreiben **eine**
+    Batterie und werden in die Liste übersetzt. Die Fälle sind älter als die
+    Liste und bleiben absichtlich stehen: Sie halten fest, dass ein einzelner
+    Speicher exakt dieselben Zahlen ergibt wie vor der Umstellung.
+    """
+    battery = overrides.pop("battery", NONE)
+    konfiguriert = overrides.pop("battery_configured", False)
+    modus = overrides.pop("battery_mode", BATTERY_MODE_CHARGE_ONLY)
+
     defaults = {
         "mode": METER_MODE_GRID,
         "grid": NONE,
         "production": NONE,
         "consumption": NONE,
-        "battery": NONE,
-        "battery_configured": False,
-        "battery_mode": BATTERY_MODE_CHARGE_ONLY,
+        "batteries": (BatteryReading(battery, modus),) if konfiguriert else (),
         "battery_soc": None,
         "consumption_includes_battery": False,
         "battery_min_soc": None,
@@ -226,3 +236,73 @@ def test_reserve_und_ladestandsregel_greifen_am_ende() -> None:
     )
     assert result.raw == 3000
     assert result.available == 0
+
+
+class TestMehrereSpeicher:
+    """Zwei Speicher — die Bilanz nimmt ihre Summe.
+
+    Die Formel verträgt genau eine Zahl, nicht genau eine Batterie: Was in die
+    Speicher fließt, ist umlenkbare Leistung, und ob sie in einen oder in zwei
+    fließt, ändert daran nichts.
+    """
+
+    def _zwei(self, *speicher: BatteryReading, **rest) -> SurplusInput:
+        return make_input(grid=Reading(w=0), batteries=speicher, **rest)
+
+    def test_die_ladeleistungen_werden_addiert(self) -> None:
+        result = compute_surplus(
+            self._zwei(
+                BatteryReading(Reading(w=1500), BATTERY_MODE_CHARGE_ONLY),
+                BatteryReading(Reading(w=800), BATTERY_MODE_CHARGE_ONLY),
+            )
+        )
+
+        assert result.raw == 2300
+        assert result.battery_correction == 2300
+
+    def test_jeder_speicher_bringt_seine_eigene_regel_mit(self) -> None:
+        """Einer am Hausanschluss, einer hinter eigenem Zähler.
+
+        Der eine zählt seine Entladung gegen den Überschuss, der andere nicht —
+        das ist keine Eigenschaft der Anlage, sondern seines Anschlusses.
+        """
+        result = compute_surplus(
+            self._zwei(
+                BatteryReading(Reading(w=-1000), BATTERY_MODE_FULL),
+                BatteryReading(Reading(w=-1000), BATTERY_MODE_CHARGE_ONLY),
+            )
+        )
+
+        # Nur der erste zieht ab; der zweite wird ignoriert.
+        assert result.battery_correction == -1000
+
+    def test_ein_ausgefallener_sensor_genuegt_fuer_unsicher(self) -> None:
+        """Was fehlt, fehlt in der Summe — der Rest wird dadurch nicht besser."""
+        result = compute_surplus(
+            self._zwei(
+                BatteryReading(Reading(w=1500), BATTERY_MODE_CHARGE_ONLY),
+                BatteryReading(Reading(w=None, reason=ReadingReason.UNAVAILABLE), "charge_only"),
+            )
+        )
+
+        assert result.degraded is True
+        # Der lesbare Teil wird trotzdem verrechnet: 0 wäre schlechter geraten.
+        assert result.battery_correction == 1500
+
+    def test_die_angezeigte_leistung_ist_die_summe(self) -> None:
+        result = compute_surplus(
+            self._zwei(
+                BatteryReading(Reading(w=1500), BATTERY_MODE_CHARGE_ONLY),
+                BatteryReading(Reading(w=-400), BATTERY_MODE_CHARGE_ONLY),
+            )
+        )
+
+        assert result.battery_w == 1100
+
+    def test_ohne_jeden_wert_bleibt_die_leistung_unbekannt(self) -> None:
+        """Eine 0 sähe aus, als stünde die Batterie still."""
+        result = compute_surplus(
+            self._zwei(BatteryReading(Reading(w=None, reason=ReadingReason.MISSING), "charge_only"))
+        )
+
+        assert result.battery_w is None

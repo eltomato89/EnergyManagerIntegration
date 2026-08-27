@@ -19,6 +19,33 @@ from .units import round_w
 
 
 @dataclass(frozen=True, slots=True)
+class BatteryReading:
+    """Ein Speicher, wie ihn die Bilanz sieht: ein Messwert und seine Regel."""
+
+    reading: Reading
+    mode: str
+    """``charge_only`` oder ``full`` — je Speicher, nicht je Anlage.
+
+    Zwei Speicher können verschieden angeschlossen sein: einer am
+    Hausanschluss, einer hinter einem eigenen Zähler. Dann geht ihre
+    Entladeleistung auch verschieden in die Bilanz ein.
+    """
+
+    @property
+    def correction_w(self) -> float | None:
+        """Was dieser Speicher zum Überschuss beiträgt.
+
+        ``None``, wenn er gerade keinen Wert liefert — das ist etwas anderes
+        als 0 und macht das Ergebnis unsicher, statt es zu verfälschen.
+        """
+        if self.reading.w is None:
+            return None
+        if self.mode == BATTERY_MODE_FULL:
+            return self.reading.w
+        return max(self.reading.w, 0.0)
+
+
+@dataclass(frozen=True, slots=True)
 class SurplusInput:
     """Eingangsgrößen, bereits invertiert und zusammengesetzt."""
 
@@ -26,13 +53,14 @@ class SurplusInput:
     grid: Reading
     production: Reading
     consumption: Reading
-    battery: Reading
-    battery_configured: bool
-    battery_mode: str
-    battery_soc: float | None
-    consumption_includes_battery: bool
-    battery_min_soc: float | None
-    battery_reserve_w: float
+
+    batteries: tuple[BatteryReading, ...] = ()
+    """Alle eingerichteten Speicher. Leer heißt: keiner."""
+
+    battery_soc: float | None = None
+    consumption_includes_battery: bool = False
+    battery_min_soc: float | None = None
+    battery_reserve_w: float = 0.0
 
 
 def compute_surplus(data: SurplusInput) -> SurplusResult:
@@ -55,13 +83,14 @@ def compute_surplus(data: SurplusInput) -> SurplusResult:
     # ausweisen.
     battery_correction = 0.0
     degraded = False
-    if data.battery_configured:
-        if data.battery.w is None:
+    for speicher in data.batteries:
+        beitrag = speicher.correction_w
+        if beitrag is None:
+            # Ein einziger ausgefallener Sensor genügt: Was fehlt, fehlt in der
+            # Summe, und der Rest ist dadurch nicht verlässlicher geworden.
             degraded = True
-        elif data.battery_mode == BATTERY_MODE_FULL:
-            battery_correction = data.battery.w
         else:
-            battery_correction = max(data.battery.w, 0.0)
+            battery_correction += beitrag
 
     raw: float | None = None
 
@@ -85,7 +114,7 @@ def compute_surplus(data: SurplusInput) -> SurplusResult:
     # neben den berechneten Überschuss stellen kann. Ohne das liest sich ein
     # Defizit wie Netzbezug in gleicher Höhe.
     grid_w = None if data.grid.w is None else round_w(data.grid.w)
-    battery_w = None if data.battery.w is None else round_w(data.battery.w)
+    battery_w = _battery_sum(data.batteries)
 
     if raw is None:
         return SurplusResult(
@@ -109,6 +138,16 @@ def compute_surplus(data: SurplusInput) -> SurplusResult:
         degraded=degraded,
         errors=tuple(errors),
     )
+
+
+def _battery_sum(batteries: tuple[BatteryReading, ...]) -> float | None:
+    """Die gemessene Leistung aller Speicher zusammen, für die Anzeige.
+
+    ``None``, solange keiner einen Wert liefert: Eine 0 sähe aus, als stünde
+    die Batterie still.
+    """
+    werte = [b.reading.w for b in batteries if b.reading.w is not None]
+    return round_w(sum(werte)) if werte else None
 
 
 def apply_reserve(

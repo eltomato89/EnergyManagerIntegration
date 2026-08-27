@@ -31,7 +31,8 @@ Assistant.
 ## Setup
 
 1. **Choose the meter source**: a bidirectional grid sensor (>0 import, <0 export) or separate
-   sensors for production and house consumption. A home battery is optional.
+   sensors for production and house consumption. That is all the main setup asks for — everything
+   else is added afterwards, one subentry at a time.
 2. **Add loads** — one at a time via "Add subentry" on the integration entry. Only the switch
    entity is mandatory; a power sensor, the rated power and the timing fields make the decision more
    precise.
@@ -44,9 +45,12 @@ Assistant.
 
    The `required_source` attribute on the status sensor tells you where the value comes from:
    `min_power`, `max_power`, `measured`, `estimated` or `default`.
-3. **Observe.** The surplus sensor should match the installation and the load states should be
+3. **Add a battery** if there is one — likewise via "Add subentry", subentry type "Battery". It is
+   optional, and there may be more than one. See ["The battery"](#the-battery) below for what it
+   does and what it deliberately does not do.
+4. **Observe.** The surplus sensor should match the installation and the load states should be
    plausible. If something is off, the configuration is wrong — not the calculation.
-4. Only then turn on the **main switch**.
+5. Only then turn on the **main switch**.
 
 The [Energy Manager Card](https://github.com/eltomato89/EnergyManagerCard) from v0.4.0 finds the
 integration on its own and displays everything. Loads are maintained **here only**.
@@ -239,15 +243,42 @@ separates nothing.
 This is the only place where the automation deliberately accepts grid power, and the `must_run`
 attribute says when it does — the answer to "why is that drawing from the grid".
 
+### The battery
+
+A battery is a **subentry of its own**, added through "Add subentry" like a load and shown as its
+own device. There may be more than one.
+
+It is **never switched**. The integration sends a battery no command at all — it reads it and takes
+it into account in the order. That is why its form asks for no switch entity and no control entity:
+every field there describes a measurement or a limit, none of them an intervention.
+
+A battery therefore needs at least one entity that says something about it: a state of charge, a
+bidirectional battery power, or separate charge and discharge power. Without one the form refuses
+it — from numbers alone there is no telling whether the battery is charging or whether it is full,
+and the order needs both.
+
+Several batteries are added up in the surplus calculation: what flows into them is divertible power,
+and whether it goes into one or into two changes nothing about that. Each brings its own rule for
+how discharging counts — one battery may sit at the house connection and another behind a meter of
+its own, and that is a property of the connection, not of the installation.
+
+Two things still work with the first battery only: the charging-priority threshold and the state of
+charge reported at the surplus sensor. Both are being reworked; per battery the reliable figure is
+on its own status sensor.
+
+Whether the house consumption sensor already contains the battery charging stays with the **meter**,
+in the main setup, not with the battery: it describes what that sensor measures, and it would be the
+same statement no matter how many batteries are behind it.
+
 ### The battery as a shiftable load
 
-Enter a **maximum charge power** for the battery (in its settings) and it joins the priority order
-as a load of its own. Loads ranked above the battery are served first and stay on; the battery then
-reserves up to its charge power at its rank; only what is left goes to loads ranked below it. When
-the battery is full it reserves nothing. This is pure scheduling — the battery is **not** commanded,
-so no control entity is needed; a `number.…_battery_priority` holds its rank, draggable in the card
-like any load. Leave the charge power empty (the default) and the battery stays what it was: a
-correction term in the surplus, with every load ranked ahead of it.
+Enter a **maximum charge power** for a battery and it joins the priority order as a load of its own.
+Loads ranked above it are served first and stay on; the battery then reserves up to its charge power
+at its rank; only what is left goes to loads ranked below it. When the battery is full it reserves
+nothing. This is pure scheduling — nothing is switched, only withheld; a `number.<name>_priority`
+holds its rank, draggable in the card like any load. Leave the charge power empty (the default) and
+the battery stays what it was: a correction term in the surplus, with every load ranked ahead of it.
+That entity is then not created at all, since a rank nothing reads would look like a setting.
 
 ### Charging priority, adjustable
 
@@ -256,25 +287,39 @@ loads at all. That threshold is not a property of your system — it changes wit
 very good forecast you may want the loads to start in the late morning at a low state of charge; on
 an overcast day you may not.
 
-It is therefore a `number.…_battery_min_soc` entity rather than a form field, and an automation can
+It is therefore a `number.<name>_min_soc` entity rather than a form field, and an automation can
 set it like any other number:
 
 ```yaml
 # Lower the threshold when a lot of yield is still expected today
 action: number.set_value
 target:
-  entity_id: number.energy_manager_battery_min_soc
+  entity_id: number.hausbatterie_min_soc
 data:
   value: 20
 ```
+
+The actual entity ID follows the **name of the battery**, since Home Assistant derives it from the
+device name: a battery called "Hausbatterie" gives `number.hausbatterie_min_soc`.
 
 `0` switches the rule off — every state of charge is then above the threshold, which is the
 behaviour of an installation that never set one. Without a state-of-charge sensor the entity is not
 created: the threshold would have nothing to compare against, and a control that does nothing is
 worse than no control at all.
 
-Upgrading from a version that had this as a form field? The value is carried over once, on first
-start, and the field is gone from the form.
+### Upgrading from an earlier version
+
+Nothing has to be entered again. A battery that was configured in the main entry moves into a
+subentry named "Hausbatterie" on the first start after the update — its fields and any threshold
+already set are carried over — and its two controls move to the new device with it.
+
+Their **entity IDs are kept** through that move: a threshold that was
+`number.energy_manager_battery_min_soc` still answers to that ID at its new device. Home Assistant
+derives an entity ID from the name only when the entity is first created; afterwards it is a value
+of its own and survives both the change of device and the new internal key. Dashboards, automations
+and history therefore keep working, even though the ID no longer matches the name of the device it
+now hangs on. Renaming it is a decision for you — taken here, it would break every reference to the
+old ID without asking.
 
 ## Why is nothing happening?
 
@@ -307,7 +352,7 @@ If nothing is listed there, the surplus is simply not sufficient — which the l
 
 ## What the integration provides
 
-One hub device plus one device per load:
+One hub device, one device per load, one device per battery:
 
 **Hub**
 
@@ -317,8 +362,6 @@ One hub device plus one device per load:
 | `sensor.…_surplus` | Available surplus after reserve and state-of-charge rule |
 | `sensor.…_surplus_unsmoothed` | Unsmoothed raw value, for diagnosis |
 | `sensor.…_status` | State of the automation |
-| `number.…_battery_priority` | Rank of the battery as a shiftable load — only when a maximum charge power is set |
-| `number.…_battery_min_soc` | Charging-priority threshold — only when a state-of-charge sensor is set |
 
 **Per load**
 
@@ -328,6 +371,17 @@ One hub device plus one device per load:
 | `number.<name>_priority` | Rank, 1 = highest |
 | `sensor.<name>_status` | Load state, same values as in the card |
 | `sensor.<name>_locked_until` | When the lockout ends — exact, not estimated |
+
+**Per battery**
+
+| Entity | Purpose |
+| --- | --- |
+| `sensor.<name>_status` | Battery state, same values as for a load, plus state of charge, rank, reserved power and whether it is full |
+| `number.<name>_priority` | Rank as a shiftable load — only when a maximum charge power is set |
+| `number.<name>_min_soc` | Charging-priority threshold — only when a state-of-charge sensor is set |
+
+A battery has no automation switch and no lockout sensor. Neither would have anything to act on: it
+is never switched, so there is nothing to leave alone afterwards.
 
 No helper variables are required. The card reads and operates these entities directly.
 

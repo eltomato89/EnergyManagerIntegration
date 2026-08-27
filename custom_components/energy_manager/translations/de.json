@@ -35,31 +35,7 @@
         "data_description": {
           "consumption_includes_battery": "Erforderlich, wenn der Verbrauchssensor die Batterieladung mitzählt."
         }
-      },
-      "battery": {
-        "title": "Hausbatterie",
-        "description": "Optional. Ohne Hausbatterie die Felder leer lassen und bestätigen.",
-        "data": {
-          "battery_soc_entity": "Ladestand",
-          "battery_power_entity": "Batterieleistung",
-          "battery_invert": "Vorzeichen umkehren",
-          "battery_charge_entity": "Ladeleistung",
-          "battery_discharge_entity": "Entladeleistung",
-          "battery_mode": "Entladung im Überschuss",
-          "battery_reserve_w": "Batteriereserve",
-          "battery_max_charge_w": "Maximale Ladeleistung"
-        },
-        "data_description": {
-          "battery_power_entity": "Ein bidirektionaler Sensor: positiv beim Laden, negativ beim Entladen.",
-          "battery_charge_entity": "Alternative zum bidirektionalen Sensor: zwei stets positive Sensoren.",
-          "battery_mode": "Ladeleistung gilt stets als verfügbar. Diese Einstellung bestimmt, ob eine Entladung den Überschuss verringert.",
-          "battery_reserve_w": "Leistung, die immer der Batterie vorbehalten bleibt. Sie wird auf die maximale Ladeleistung angerechnet, nicht zu ihr addiert.",
-          "battery_max_charge_w": "Lässt die Batterie als verschiebbare Last an der Prioritätsreihenfolge teilnehmen und begrenzt zugleich, wie viel Überschuss sie insgesamt bekommt. Höher priorisierte Verbraucher werden zuerst versorgt und bleiben eingeschaltet; die Batterie legt an ihrem Rang bis zu dieser Leistung zurück, abzüglich einer bereits eingetragenen Reserve; nur der Rest steht tiefer priorisierten Verbrauchern zur Verfügung. 0 schaltet die Teilnahme ab."
-        }
       }
-    },
-    "error": {
-      "battery_entity_required": "Die maximale Ladeleistung wirkt nur mit einem Messwert der Batterie. Ohne Lade-, Entlade- oder Ladestandssensor lässt sich weder erkennen, ob geladen wird, noch ob die Batterie voll ist. Erforderlich ist eine der Batterie-Entitäten in diesem Formular."
     },
     "abort": {
       "single_instance_allowed": "Energy Manager ist bereits eingerichtet.",
@@ -239,7 +215,7 @@
         "battery_entity_required": "Ein Speicher braucht mindestens eine Entität, die etwas über ihn sagt: Ladestand, Batterieleistung oder Lade- und Entladeleistung. Ohne Messwert lässt sich weder erkennen, ob er lädt, noch ob er voll ist."
       },
       "abort": {
-        "reconfigure_successful": "Der Verbraucher wurde geändert."
+        "reconfigure_successful": "Der Speicher wurde geändert."
       }
     }
   },

@@ -273,3 +273,57 @@ class TestEntitaetenWandern:
         # Kein Abbruch, und der alte Eintrag ist unverändert.
         assert entry.state is ConfigEntryState.LOADED
         assert registry.async_get(alt).unique_id == f"{entry.entry_id}_battery_min_soc"
+
+
+class TestZweiSpeicher:
+    """Mehrere Speicher in der Bilanz — der Zweck des ganzen Umbaus."""
+
+    def _speicher(self, name: str, sensor: str) -> ConfigSubentryData:
+        return ConfigSubentryData(
+            subentry_type=SUBENTRY_TYPE_BATTERY,
+            title=name,
+            unique_id=None,
+            data={CONF_NAME: name, CONF_BATTERY_POWER_ENTITY: sensor},
+        )
+
+    async def test_beide_zaehlen_in_die_bilanz(self, hass: HomeAssistant) -> None:
+        entry = alteintrag(
+            self._speicher("Keller", "sensor.keller_leistung"),
+            self._speicher("Garage", "sensor.garage_leistung"),
+        )
+        hass.states.async_set("sensor.keller_leistung", "1500", {"unit_of_measurement": "W"})
+        hass.states.async_set("sensor.garage_leistung", "800", {"unit_of_measurement": "W"})
+        await setup(hass, entry)
+
+        # 2000 W Einspeisung plus 2300 W, die gerade in die Speicher fließen.
+        assert entry.runtime_data.data.surplus.raw == pytest.approx(4300)
+
+    async def test_jeder_bekommt_sein_eigenes_geraet(self, hass: HomeAssistant) -> None:
+        entry = alteintrag(
+            self._speicher("Keller", "sensor.keller_leistung"),
+            self._speicher("Garage", "sensor.garage_leistung"),
+        )
+        await setup(hass, entry)
+
+        namen = {
+            state.attributes["consumer_name"]
+            for state in hass.states.async_all("sensor")
+            if state.attributes.get("kind") == "battery"
+        }
+        assert namen == {"Keller", "Garage"}
+
+    async def test_die_stellgroessen_sind_getrennt(self, hass: HomeAssistant) -> None:
+        """Zwei Speicher teilen sich keine Ladevorranggrenze."""
+        entry = alteintrag(
+            self._speicher("Keller", "sensor.keller_leistung"),
+            self._speicher("Garage", "sensor.garage_leistung"),
+        )
+        await setup(hass, entry)
+
+        keller, garage = (s.subentry_id for s in speicher(entry))
+        coordinator = entry.runtime_data
+        await coordinator.async_set_battery_min_soc(40, keller)
+        await hass.async_block_till_done()
+
+        assert coordinator.battery_runtime_for(keller).min_soc == 40
+        assert coordinator.battery_runtime_for(garage).min_soc == 0

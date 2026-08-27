@@ -20,7 +20,11 @@ import pytest
 
 from custom_components.energy_manager.models import Reading, ReadingReason
 from custom_components.energy_manager.smoothing import TimeWeightedWindow
-from custom_components.energy_manager.surplus import SurplusInput, compute_surplus
+from custom_components.energy_manager.surplus import (
+    BatteryReading,
+    SurplusInput,
+    compute_surplus,
+)
 
 FIXTURE = Path(__file__).parent / "fixtures" / "parity_cases.json"
 
@@ -45,9 +49,14 @@ def _to_input(raw: dict) -> SurplusInput:
         grid=_reading(raw["grid"]),
         production=_reading(raw["production"]),
         consumption=_reading(raw["consumption"]),
-        battery=_reading(raw["battery"]),
-        battery_configured=raw["batteryConfigured"],
-        battery_mode=raw["batteryMode"],
+        # Die Referenzfälle stammen aus der Karte, die mit einer Batterie
+        # rechnet. Übersetzt in die Liste müssen sie dieselben Zahlen ergeben —
+        # sonst zeigt die Karte etwas anderes an, als die Automatik tut.
+        batteries=(
+            (BatteryReading(_reading(raw["battery"]), raw["batteryMode"]),)
+            if raw["batteryConfigured"]
+            else ()
+        ),
         battery_soc=raw.get("batterySoc"),
         consumption_includes_battery=raw["consumptionIncludesBattery"],
         battery_min_soc=raw.get("batteryMinSoc"),

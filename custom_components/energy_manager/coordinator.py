@@ -44,7 +44,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    BATTERY_MODE_CHARGE_ONLY,
     CONF_BATTERY_MIN_SOC,
     CONF_CONSUMPTION_ENTITY,
     CONF_CONSUMPTION_INCLUDES_BATTERY,
@@ -92,7 +91,7 @@ from .models import (
     SurplusResult,
 )
 from .smoothing import TimeWeightedWindow
-from .surplus import SurplusInput, apply_reserve, compute_surplus
+from .surplus import BatteryReading, SurplusInput, apply_reserve, compute_surplus
 from .units import (
     combine_battery,
     invert,
@@ -938,9 +937,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
                 ),
                 production=read_power_w(self.hass, data.get(CONF_PRODUCTION_ENTITY)),
                 consumption=read_power_w(self.hass, data.get(CONF_CONSUMPTION_ENTITY)),
-                battery=self._battery_reading(battery),
-                battery_configured=battery is not None and battery.has_reading,
-                battery_mode=BATTERY_MODE_CHARGE_ONLY if battery is None else battery.mode,
+                batteries=self._battery_readings(),
                 battery_soc=self.battery_soc(),
                 # Am Eintrag und nicht am Speicher: Das beschreibt, was der
                 # Zähler mitmisst, nicht was die Batterie tut.
@@ -948,6 +945,18 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
                 battery_min_soc=self.battery_min_soc,
                 battery_reserve_w=0.0 if battery is None else battery.reserve_w,
             )
+        )
+
+    def _battery_readings(self) -> tuple[BatteryReading, ...]:
+        """Alle eingerichteten Speicher, wie die Bilanz sie sieht.
+
+        Nur die mit Messwert: Ein Eintrag ohne jede Entität sagt nichts und
+        machte das Ergebnis sonst dauerhaft unsicher.
+        """
+        return tuple(
+            BatteryReading(reading=self._battery_reading(battery), mode=battery.mode)
+            for battery in self.batteries.values()
+            if battery.has_reading
         )
 
     def _battery_reading(self, battery: BatteryConfig | None) -> Reading:
