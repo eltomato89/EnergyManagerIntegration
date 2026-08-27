@@ -2,6 +2,52 @@
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.5.0b3] — 2026-08-27
+
+### Geändert
+
+- **Der Mindestladestand der Batterie ist jetzt eine Entität**, `number.…_battery_min_soc`, statt
+  eines Felds im Einrichtungsformular ([#4]). Er ist keine Beschreibung der Anlage, sondern eine
+  Vorgabe, die sich mit dem Tag ändert: Bei sehr guter Vorhersage darf ein Verbraucher schon am
+  Vormittag bei niedrigem Ladestand anlaufen, an einem trüben Tag nicht. Als Formularfeld ließ sich
+  das nicht automatisieren; als Entität genügt `number.set_value`.
+
+  Ein eingetragener Wert wird beim ersten Start einmalig übernommen — wer die Grenze gesetzt hat,
+  findet sie unverändert wieder. Danach gilt nur noch der Wert der Entität. Ohne
+  Ladestandssensor entsteht sie gar nicht: Die Grenze hätte nichts zu vergleichen, und ein
+  wirkungsloser Regler ist schlimmer als keiner. Die bisherige Fehlermeldung im Formular entfällt
+  damit.
+
+  Der Wert steht zusätzlich als `battery_min_soc` am Überschuss-Sensor — außerhalb des Blocks für
+  die Batterielast, denn die Grenze wirkt auch dann, wenn die Batterie nicht als verschiebbare Last
+  teilnimmt.
+
+  [#4]: https://github.com/eltomato89/EnergyManagerIntegration/issues/4
+
+### Behoben
+
+- **Die Modellbezeichnungen der angelegten Geräte standen auf Deutsch** — „Überschusssteuerung" am
+  Hub, „Verbraucher" an jedem Verbraucher — und damit auch in einer englischen Oberfläche. Ein
+  Gerätemodell lässt sich in Home Assistant nicht übersetzen; es gibt dafür keinen
+  `translation_key`. Es heißt jetzt `Surplus control` und `Load`, passend zur Grundsprache der
+  Integration.
+
+  Der Name ist zugleich der Filter, mit dem `services.yaml` die Geräteauswahl der Dienste auf
+  Verbraucher einschränkt. Ein Auseinanderlaufen der beiden Stellen wäre nicht als Fehler
+  aufgefallen, sondern als leere Auswahlliste — ein Test hält sie jetzt zusammen.
+
+### Hinzugefügt
+
+- **`daily_target_h` und `daily_done_h` am Ampel-Sensor**, bei einem schaltbaren Verbraucher: das
+  Tagesziel und der Fortschritt in der Einheit, in der das Ziel eingetragen wurde. Ohne sie müsste
+  eine Anzeige durch die Nennleistung teilen, um dem Nutzer sein eigenes Ziel wiederzuerkennen zu
+  geben — und dazu die Nennleistung kennen.
+
+  Es sind Vollaststunden, nicht die Uhr am Schalter, und die Basis ist dieselbe, aus der das Ziel in
+  kWh entstanden ist. Eine andere hieße, den Fortschritt gegen eine Marke laufen zu lassen, die die
+  Automatik gar nicht verfolgt. Bei einer modulierenden Last fehlen die beiden: Dort ist das Ziel
+  eine Energie, und Stunden wären keine Aussage.
+
 ## [0.5.0b2] — 2026-08-27
 
 ### Behoben

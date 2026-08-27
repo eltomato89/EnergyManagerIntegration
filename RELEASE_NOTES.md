@@ -1,33 +1,42 @@
-# 0.5.0b2 — pre-release
+# 0.5.0b3 — pre-release
 
-Two fixes and one addition, all found by running `0.5.0b1` on a real installation. Nothing
-here changes behaviour for switchable loads.
+One request from the issue tracker, one correction to the interface language, and a display
+that finally speaks the unit you typed.
+
+## Changed
+
+- **The battery's minimum state of charge is now an entity**, `number.…_battery_min_soc`,
+  instead of a field in the setup form ([#4]). It is not a property of your installation —
+  it changes with the day: with a very good forecast you may want the loads to start in the
+  late morning at a low state of charge, on an overcast day you may not. A form field cannot
+  be automated; `number.set_value` can.
+
+  A change takes effect immediately, not on the next cycle. Your current value is carried
+  over once on first start, so nothing changes silently, and from then on only the entity
+  counts. `0` switches the rule off. Without a state-of-charge sensor the entity is not
+  created — the threshold would have nothing to compare against, and a control that does
+  nothing is worse than no control at all. The former form error about this is gone with the
+  field.
+
+  The value is also exposed as a `battery_min_soc` attribute on the surplus sensor.
+
+- **A daily target is now reported in the unit it was entered in.** For a switchable load
+  that is hours: the status sensor carries `daily_target_h` and `daily_done_h` alongside the
+  kWh the automation actually computes with. Reading "0.8 of 4.0 kWh" forced you to divide by
+  the rated power to recognise a target you typed as "4 h". Needs card `0.7.0-beta.3` for the
+  display; on an older card nothing changes.
+
+  These are full-load hours, not the clock at the switch — running below the rated power, they
+  advance more slowly than time does. The automation compares energy against forecast, and the
+  display should show what the automation does.
 
 ## Fixed
 
-- **A load that could not reach its smallest level was silently holding power back.** The
-  ladder is capped at what a device actually draws, but that cap cannot go below the first
-  step — so the priority cascade kept reserving the minimum level while the device drew a
-  fraction of it. Seen on a wallbox configured as three-phase while charging single-phase:
-  smallest level 4140 W, actual draw 1779 W, and 2361 W withheld from the loads below it
-  with nothing anywhere reporting a fault. Below the smallest level the claim is now what
-  the device actually draws.
-
-- Such a load was also shown as a **one-step ladder** — a single segment across the full
-  width labelled "Level 1/1", which reads like a device with one step rather than like a
-  misconfiguration. Needs card `0.7.0-beta.2` for the improved display.
-
-## Added
-
-- **`phases_entity`.** The number of phases is not a constant: a wallbox switched between
-  single- and three-phase changes the power of every current step by a factor of three, and
-  a fixed setting is wrong from that moment until someone notices. Point this at an entity
-  reporting the phase count and the ladder follows the device; the fixed field stays as a
-  fallback.
-
-  A plain number is expected (1, 2 or 3). Devices with their own dialect — go-e reports the
-  phase *mode* as 0, 1, 2, where 2 means three phases — need a template sensor in front, by
-  the same rule that already applies to the switch entity.
+- **The device models were German** — "Überschusssteuerung" on the hub, "Verbraucher" on every
+  load — and stood that way in an English interface too. A device model cannot be translated
+  in Home Assistant; there is no `translation_key` for it. They are now `Surplus control` and
+  `Load`. Existing devices pick up the new name when the integration reloads; automations are
+  unaffected, as the model is only a filter in the device picker.
 
 ## Before you arm anything
 
@@ -37,3 +46,5 @@ installation is actually doing.
 
 **Known limitation:** the forecast is still not divided among several daily targets. With a
 single daily target this does not occur.
+
+[#4]: https://github.com/eltomato89/EnergyManagerIntegration/issues/4
