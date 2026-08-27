@@ -115,6 +115,27 @@ def target_kwh(consumer: ConsumerConfig, required_w: float) -> float:
     return float(consumer.daily_target) * required_w / 1000.0
 
 
+def as_hours(kwh: float, required_w: float) -> float | None:
+    """Rechnet eine Energie in Betriebsstunden zurück — die Umkehrung von ``target_kwh``.
+
+    Mit **derselben** Basis wie das Ziel selbst. Eine andere Basis für den
+    Fortschritt als für das Ziel hieße, den Ring gegen eine Marke laufen zu
+    lassen, die die Regelung gar nicht verfolgt.
+
+    Das Ergebnis sind Vollaststunden und nicht die Uhr am Schalter: Läuft das
+    Gerät unterhalb seiner Nennleistung, kommen die Stunden langsamer voran als
+    die Zeit. Die tatsächliche Einschaltdauer wäre die anschaulichere Zahl, aber
+    sie stünde neben der Entscheidung statt davor — die Automatik vergleicht
+    Energie mit Prognose, und die Anzeige soll zeigen, was die Automatik tut.
+
+    ``None`` ohne brauchbare Basis: Ohne angenommene Leistung gibt es keine
+    Stunden, und eine 0 sähe aus wie "noch nichts geschafft".
+    """
+    if required_w <= 0:
+        return None
+    return kwh * 1000.0 / required_w
+
+
 @dataclass(frozen=True, slots=True)
 class DailyProgress:
     """Wie weit ein Verbraucher heute gekommen ist."""

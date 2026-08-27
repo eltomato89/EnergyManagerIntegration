@@ -19,6 +19,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import SUBENTRY_TYPE_CONSUMER
 from .coordinator import EnergyManagerCoordinator
+from .daily import as_hours
 from .entity import ConsumerEntity, EnergyManagerEntity
 from .models import ConsumerConfig, ConsumerView, DeviceStatus
 
@@ -285,7 +286,7 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
         """
         if view.daily_target_kwh <= 0:
             return {}
-        return {
+        attributes: dict[str, object] = {
             "daily_target_kwh": round(view.daily_target_kwh, 2),
             "daily_done_kwh": round(view.daily_done_kwh, 2),
             # Verbleibende Prognose. None heißt: kein brauchbarer Sensor, und
@@ -297,6 +298,24 @@ class ConsumerStatusSensor(ConsumerEntity, SensorEntity):
             # Antwort auf „warum zieht der Netzstrom".
             "must_run": view.must_run,
         }
+
+        # Bei einem schaltbaren Verbraucher ist das Ziel in Stunden eingetragen,
+        # und in Stunden gehört es auch zurückgemeldet: Eine Anzeige in kWh
+        # zwänge den Nutzer, im Kopf durch die Nennleistung zu teilen, um sein
+        # eigenes Ziel wiederzuerkennen. Die kWh bleiben daneben stehen — sie
+        # sind die Größe, mit der die Automatik rechnet.
+        #
+        # Weggelassen statt genullt, sobald keine Basis vorliegt: An ihrem
+        # Vorhandensein erkennt eine Anzeige, dass Stunden die gemeinte Einheit
+        # sind. Dieselbe Regel wie beim Tagesziel selbst.
+        if not view.config.modulating:
+            ziel_h = as_hours(view.daily_target_kwh, view.required_w)
+            erreicht_h = as_hours(view.daily_done_kwh, view.required_w)
+            if ziel_h is not None and erreicht_h is not None:
+                attributes["daily_target_h"] = round(ziel_h, 2)
+                attributes["daily_done_h"] = round(erreicht_h, 2)
+
+        return attributes
 
     @staticmethod
     def _level_attributes(view: ConsumerView) -> dict[str, object]:

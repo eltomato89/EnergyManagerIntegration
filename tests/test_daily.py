@@ -39,7 +39,7 @@ from custom_components.energy_manager.const import (
     METER_MODE_GRID,
     SUBENTRY_TYPE_CONSUMER,
 )
-from custom_components.energy_manager.daily import DailyProgress, solar_day_start
+from custom_components.energy_manager.daily import DailyProgress, as_hours, solar_day_start
 
 PUMPE = "switch.poolpumpe"
 ZAEHLER = "sensor.poolpumpe_energie"
@@ -84,6 +84,25 @@ class TestDailyProgress:
     def test_ohne_prognose_nie(self) -> None:
         """Ein fehlender Wert ist ein Konfigurationsfehler, keine Entscheidung."""
         assert self._p(3.0, 0.0, None).must_run is False
+
+
+class TestStunden:
+    """Die Rueckrechnung fuer die Anzeige.
+
+    Eingetragen werden bei einem schaltbaren Verbraucher Stunden; gerechnet wird
+    in kWh. Damit die Anzeige das eingetragene Ziel wiedergibt, muss der Weg
+    zurueck ueber **dieselbe** Basis laufen wie der Weg hin.
+    """
+
+    def test_ist_die_umkehrung_des_ziels(self) -> None:
+        # 6 h bei 500 W sind 3 kWh — und 3 kWh sind wieder 6 h.
+        assert as_hours(3.0, 500) == pytest.approx(6.0)
+
+    def test_ohne_basis_keine_stunden(self) -> None:
+        """Eine 0 saehe aus wie "noch nichts geschafft" und waere etwas anderes
+        als "laesst sich nicht sagen"."""
+        assert as_hours(3.0, 0) is None
+        assert as_hours(3.0, -1) is None
 
 
 class TestSolartag:
@@ -369,6 +388,15 @@ class TestSchutz:
         assert pumpe.throttleable == ()
 
 
+def _status(hass: HomeAssistant):
+    """Der Ampel-Sensor der Poolpumpe."""
+    return next(
+        state
+        for state in hass.states.async_all("sensor")
+        if state.attributes.get("consumer_name") == "Poolpumpe"
+    )
+
+
 class TestAttribute:
     async def test_am_status_sensor(self, hass: HomeAssistant, schaltungen: dict) -> None:
         entry = make_entry(poolpumpe(**{CONF_DAILY_TARGET: 6}))
@@ -376,11 +404,7 @@ class TestAttribute:
         await entry.runtime_data.async_request_refresh_now()
         await hass.async_block_till_done()
 
-        status = next(
-            state
-            for state in hass.states.async_all("sensor")
-            if state.attributes.get("consumer_name") == "Poolpumpe"
-        )
+        status = _status(hass)
 
         assert status.attributes["daily_target_kwh"] == pytest.approx(3.0)
         assert status.attributes["daily_done_kwh"] == 0
@@ -393,11 +417,51 @@ class TestAttribute:
         await entry.runtime_data.async_request_refresh_now()
         await hass.async_block_till_done()
 
-        status = next(
-            state
-            for state in hass.states.async_all("sensor")
-            if state.attributes.get("consumer_name") == "Poolpumpe"
-        )
+        status = _status(hass)
 
         assert "daily_target_kwh" not in status.attributes
         assert "must_run" not in status.attributes
+
+    async def test_stunden_bei_einem_schaltbaren_verbraucher(
+        self, hass: HomeAssistant, schaltungen: dict
+    ) -> None:
+        """Eingetragen sind Stunden, also stehen auch Stunden am Sensor.
+
+        Ohne sie muesste eine Anzeige durch die Nennleistung teilen, um das
+        eingetragene Ziel wiederzuerkennen — und dazu die Nennleistung kennen.
+        """
+        entry = make_entry(poolpumpe(**{CONF_DAILY_TARGET: 6}))
+        await setup(hass, entry, zaehler="10")
+        hass.states.async_set(ZAEHLER, "10.5", {"unit_of_measurement": "kWh"})
+        await entry.runtime_data.async_request_refresh_now()
+        await hass.async_block_till_done()
+
+        status = _status(hass)
+
+        assert status.attributes["daily_target_h"] == pytest.approx(6.0)
+        # 0,5 kWh bei 500 W sind eine Stunde.
+        assert status.attributes["daily_done_h"] == pytest.approx(1.0)
+        # Die kWh bleiben daneben stehen: damit rechnet die Automatik.
+        assert status.attributes["daily_target_kwh"] == pytest.approx(3.0)
+
+    async def test_keine_stunden_bei_einer_modulierenden_last(
+        self, hass: HomeAssistant, schaltungen: dict
+    ) -> None:
+        """Dort ist das Ziel eine Energie, und Stunden waeren keine Aussage."""
+        entry = make_entry(
+            poolpumpe(
+                **{
+                    CONF_CONSUMER_TYPE: CONSUMER_TYPE_MODULATING,
+                    CONF_DAILY_TARGET: 12,
+                }
+            )
+        )
+        await setup(hass, entry)
+        await entry.runtime_data.async_request_refresh_now()
+        await hass.async_block_till_done()
+
+        status = _status(hass)
+
+        assert status.attributes["daily_target_kwh"] == pytest.approx(12.0)
+        assert "daily_target_h" not in status.attributes
+        assert "daily_done_h" not in status.attributes
