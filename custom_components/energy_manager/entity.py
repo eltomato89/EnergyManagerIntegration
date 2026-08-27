@@ -5,9 +5,9 @@ from __future__ import annotations
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DEVICE_MODEL_CONSUMER, DEVICE_MODEL_HUB, DOMAIN
+from .const import DEVICE_MODEL_BATTERY, DEVICE_MODEL_CONSUMER, DEVICE_MODEL_HUB, DOMAIN
 from .coordinator import EnergyManagerCoordinator
-from .models import ConsumerConfig, ConsumerView
+from .models import BatteryConfig, ConsumerConfig, ConsumerView
 
 
 class EnergyManagerEntity(CoordinatorEntity[EnergyManagerCoordinator]):
@@ -71,3 +71,43 @@ class ConsumerEntity(CoordinatorEntity[EnergyManagerCoordinator]):
     def available(self) -> bool:
         """Verschwindet der Verbraucher aus der Konfiguration, ist er weg."""
         return super().available and self.consumer is not None
+
+
+class BatteryEntity(CoordinatorEntity[EnergyManagerCoordinator]):
+    """Entität am Gerät eines Speichers.
+
+    Wie die Verbraucher-Entität aufgebaut, und aus demselben Grund an einem
+    eigenen Gerät statt am Hub: Sobald es zwei Speicher gibt, gäbe es sonst
+    zwei Entitäten mit demselben Schlüssel.
+    """
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: EnergyManagerCoordinator,
+        battery: BatteryConfig,
+        key: str,
+    ) -> None:
+        super().__init__(coordinator)
+        self._subentry_id = battery.subentry_id
+        self._attr_unique_id = f"{battery.subentry_id}_{key}"
+        self._attr_translation_key = key
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, battery.subentry_id)},
+            name=battery.name,
+            manufacturer="Energy Manager",
+            model=DEVICE_MODEL_BATTERY,
+            entry_type=DeviceEntryType.SERVICE,
+            via_device=(DOMAIN, coordinator.config_entry.entry_id),
+        )
+
+    @property
+    def battery(self) -> BatteryConfig | None:
+        """Aktuelle Konfiguration dieses Speichers."""
+        return self.coordinator.batteries.get(self._subentry_id)
+
+    @property
+    def available(self) -> bool:
+        """Verschwindet der Speicher aus der Konfiguration, ist er weg."""
+        return super().available and self.battery is not None

@@ -274,11 +274,8 @@
       "priority": {
         "name": "Priorität"
       },
-      "battery_priority": {
-        "name": "Priorität Batterie"
-      },
-      "battery_min_soc": {
-        "name": "Mindestladestand Batterie"
+      "min_soc": {
+        "name": "Mindestladestand"
       }
     },
     "switch": {

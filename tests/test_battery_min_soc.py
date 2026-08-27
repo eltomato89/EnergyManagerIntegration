@@ -31,7 +31,8 @@ from custom_components.energy_manager.const import (
 )
 
 # Die Prüfinstanz läuft auf Englisch; der Name kommt aus den Übersetzungen.
-REGLER = "number.energy_manager_battery_minimum_state_of_charge"
+# „Hausbatterie" ist der Name, den die Wanderung dem gewanderten Speicher gibt.
+REGLER = "number.hausbatterie_minimum_state_of_charge"
 
 
 def make_entry(*, soc_sensor: bool = True, **extra) -> MockConfigEntry:

@@ -11,8 +11,8 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import SUBENTRY_TYPE_CONSUMER
 from .coordinator import EnergyManagerCoordinator
-from .entity import ConsumerEntity, EnergyManagerEntity
-from .models import ConsumerConfig
+from .entity import BatteryEntity, ConsumerEntity
+from .models import BatteryConfig, ConsumerConfig
 
 
 async def async_setup_entry(
@@ -23,21 +23,28 @@ async def async_setup_entry(
     """Legt je Verbraucher eine Prioritäts-Entität an."""
     coordinator: EnergyManagerCoordinator = entry.runtime_data
 
-    # Die Batterie nimmt als verschiebbare Last teil, sobald eine maximale
-    # Ladeleistung konfiguriert ist. Nur dann bekommt sie einen Rang, den man
-    # im Dashboard verschieben kann.
-    if coordinator.battery_load() is not None:
-        async_add_entities([BatteryPriorityNumber(coordinator)])
+    for subentry_id, battery in coordinator.batteries.items():
+        entitaeten: list[NumberEntity] = []
 
-    # Die Ladevorranggrenze hängt an einer anderen Bedingung als der Rang: Sie
-    # wirkt in der Überschussformel und braucht dafür nur einen Ladestand — die
-    # maximale Ladeleistung, an der die Teilnahme als verschiebbare Last hängt,
-    # ist hier ohne Belang. Ohne Ladestandssensor gibt es die Entität nicht,
-    # denn dann bliebe sie ohne Wirkung, und ein wirkungsloser Regler ist
-    # schlimmer als keiner.
-    battery = coordinator.battery()
-    if battery is not None and battery.soc_entity:
-        async_add_entities([BatteryMinSocNumber(coordinator)])
+        # Den Rang gibt es nur mit eingetragener Ladeleistung: Ohne sie nimmt
+        # der Speicher an der Reihenfolge nicht teil, und ein Rang, den niemand
+        # liest, sähe aus wie eine Einstellung.
+        if battery.shiftable:
+            entitaeten.append(BatteryPriorityNumber(coordinator, battery))
+
+        # Die Ladevorranggrenze hängt an einer anderen Bedingung: Sie wirkt in
+        # der Überschussformel und braucht dafür nur einen Ladestand — die
+        # Ladeleistung ist hier ohne Belang. Ohne Ladestandssensor gibt es sie
+        # nicht, denn dann bliebe sie ohne Wirkung, und ein wirkungsloser
+        # Regler ist schlimmer als keiner.
+        if battery.soc_entity:
+            entitaeten.append(BatteryMinSocNumber(coordinator, battery))
+
+        if entitaeten:
+            # Ohne config_subentry_id schriebe Home Assistant die Zuordnung des
+            # Registry-Eintrags wieder auf None zurück — der Vorgabewert dort
+            # ist None und kein "unverändert".
+            async_add_entities(entitaeten, config_subentry_id=subentry_id)
 
     for subentry_id, subentry in entry.subentries.items():
         if subentry.subentry_type != SUBENTRY_TYPE_CONSUMER:
@@ -75,12 +82,11 @@ class ConsumerPriorityNumber(ConsumerEntity, NumberEntity):
         await self.coordinator.async_set_priority(self._subentry_id, value)
 
 
-class BatteryPriorityNumber(EnergyManagerEntity, NumberEntity):
-    """Rang der Batterie als verschiebbare Last. 1 bedeutet: zuerst laden.
+class BatteryPriorityNumber(BatteryEntity, NumberEntity):
+    """Rang eines Speichers als verschiebbare Last. 1 bedeutet: zuerst laden.
 
-    Am Hub statt an einem Verbraucher, denn die Batterie ist kein Subentry. Über
-    denselben Weg wie die Verbraucher-Prioritäten bedienbar, damit das Sortieren
-    im Dashboard die Batterie einschließen kann.
+    Über denselben Weg wie die Verbraucher-Prioritäten bedienbar, damit das
+    Sortieren im Dashboard die Speicher einschließen kann.
     """
 
     _attr_entity_category = EntityCategory.CONFIG
@@ -90,8 +96,8 @@ class BatteryPriorityNumber(EnergyManagerEntity, NumberEntity):
     _attr_mode = NumberMode.BOX
     _attr_icon = "mdi:sort-numeric-variant"
 
-    def __init__(self, coordinator: EnergyManagerCoordinator) -> None:
-        super().__init__(coordinator, "battery_priority")
+    def __init__(self, coordinator: EnergyManagerCoordinator, battery: BatteryConfig) -> None:
+        super().__init__(coordinator, battery, "priority")
 
     @property
     def native_value(self) -> float:
@@ -101,7 +107,7 @@ class BatteryPriorityNumber(EnergyManagerEntity, NumberEntity):
         await self.coordinator.async_set_battery_priority(value)
 
 
-class BatteryMinSocNumber(EnergyManagerEntity, NumberEntity):
+class BatteryMinSocNumber(BatteryEntity, NumberEntity):
     """Ladestand, unterhalb dessen das Laden der Batterie Vorrang hat.
 
     Als Entität und nicht als Formularfeld, weil die Grenze keine Beschreibung
@@ -121,8 +127,8 @@ class BatteryMinSocNumber(EnergyManagerEntity, NumberEntity):
     _attr_native_step = 1
     _attr_mode = NumberMode.SLIDER
 
-    def __init__(self, coordinator: EnergyManagerCoordinator) -> None:
-        super().__init__(coordinator, "battery_min_soc")
+    def __init__(self, coordinator: EnergyManagerCoordinator, battery: BatteryConfig) -> None:
+        super().__init__(coordinator, battery, "min_soc")
 
     @property
     def native_value(self) -> float:

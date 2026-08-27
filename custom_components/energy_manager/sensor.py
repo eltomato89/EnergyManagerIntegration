@@ -20,8 +20,8 @@ from homeassistant.util import dt as dt_util
 from .const import SUBENTRY_TYPE_CONSUMER
 from .coordinator import EnergyManagerCoordinator
 from .daily import as_hours
-from .entity import ConsumerEntity, EnergyManagerEntity
-from .models import ConsumerConfig, ConsumerView, DeviceStatus
+from .entity import BatteryEntity, ConsumerEntity, EnergyManagerEntity
+from .models import BatteryConfig, ConsumerConfig, ConsumerView, DeviceStatus
 
 
 def _as_iso(timestamp: float | None) -> str | None:
@@ -60,6 +60,11 @@ async def async_setup_entry(
                 ConsumerLockedUntilSensor(coordinator, consumer),
             ],
             config_subentry_id=subentry_id,
+        )
+
+    for subentry_id, battery in coordinator.batteries.items():
+        async_add_entities(
+            [BatteryStatusSensor(coordinator, battery)], config_subentry_id=subentry_id
         )
 
 
@@ -384,3 +389,64 @@ class ConsumerLockedUntilSensor(ConsumerEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, object]:
         view = self.view
         return {"lock_kind": view.lock_kind} if view else {}
+
+
+class BatteryStatusSensor(BatteryEntity, SensorEntity):
+    """Ampelzustand eines Speichers, mit denselben Werten wie ein Verbraucher.
+
+    Damit baut eine Anzeige die Zeile eines Speichers genauso wie die eines
+    Verbrauchers — aus einem Sensor und seinen Attributen. Vorher lagen die
+    Angaben am Überschuss-Sensor des Hubs, wo genau einer Platz hatte.
+
+    ``kind`` unterscheidet die beiden. An ihm und nicht am fehlenden
+    ``switch_entity``: Eine Anzeige soll die Art einer Zeile ablesen können,
+    ohne aus einer Lücke zu schließen.
+    """
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options: ClassVar[list[str]] = [status.value for status in DeviceStatus]
+
+    def __init__(self, coordinator: EnergyManagerCoordinator, battery: BatteryConfig) -> None:
+        super().__init__(coordinator, battery, "status")
+
+    @property
+    def native_value(self) -> str | None:
+        view = self.coordinator.data.battery if self.coordinator.data else None
+        return view.status.value if view else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object]:
+        battery = self.battery
+        if battery is None:
+            return {}
+
+        attributes: dict[str, object] = {
+            "kind": "battery",
+            "consumer_id": battery.subentry_id,
+            "consumer_name": battery.name,
+            "soc_entity": battery.soc_entity,
+            "soc": self.coordinator.battery_soc(),
+            "min_soc": self.coordinator.battery_runtime_for(battery.subentry_id).min_soc,
+            "mode": battery.mode,
+            "reserve_w": battery.reserve_w,
+            "max_charge_w": battery.max_charge_w,
+            # Nimmt der Speicher an der Reihenfolge teil? Ohne eingetragene
+            # Ladeleistung ist er nur ein Korrekturterm in der Bilanz und hat
+            # weder Rang noch Anspruch.
+            "shiftable": battery.shiftable,
+        }
+
+        view = self.coordinator.data.battery if self.coordinator.data else None
+        if view is not None:
+            attributes.update(
+                {
+                    "rank": view.rank + 1,
+                    "priority": view.priority,
+                    "claim_w": round(view.claim_w),
+                    "charging_w": view.charging_w,
+                    "headroom_w": None if view.headroom_w is None else round(view.headroom_w),
+                    "full": view.full,
+                }
+            )
+
+        return attributes

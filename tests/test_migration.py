@@ -13,8 +13,9 @@ auch, dass nichts zurückbleibt und dass ein zweiter Start nichts wiederholt.
 from __future__ import annotations
 
 import pytest
-from homeassistant.config_entries import ConfigSubentryData
+from homeassistant.config_entries import ConfigEntryState, ConfigSubentryData
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.energy_manager.const import (
@@ -181,3 +182,94 @@ class TestBestehenderSubentry:
         # Die toten Felder verschwinden trotzdem: Sie führen sonst beim
         # nächsten Blick in die Konfiguration nur in die Irre.
         assert CONF_BATTERY_POWER_ENTITY not in entry.data
+
+
+class TestEntitaetenWandern:
+    """Die Stellgrößen ziehen ans Speichergerät — mit ihrer Entitäts-ID.
+
+    Das ist die eine Stelle des Umbaus, an der ein Fehler dem Nutzer wirklich
+    Arbeit macht: Die Entitäts-ID steht in Dashboards, Automatisierungen und
+    Verlaufsdaten. Greift das Umschreiben nicht, entsteht daneben eine zweite
+    Entität mit ``_2``, und alles Verknüpfte zeigt ins Leere.
+    """
+
+    def _alte_entitaet(self, hass: HomeAssistant, entry: MockConfigEntry, key: str) -> str:
+        """Legt eine Entität an, wie eine ältere Fassung sie hinterlassen hat."""
+        registry = er.async_get(hass)
+        eintrag = registry.async_get_or_create(
+            "number",
+            DOMAIN,
+            f"{entry.entry_id}_{key}",
+            config_entry=entry,
+            suggested_object_id=f"energy_manager_{key}",
+        )
+        return eintrag.entity_id
+
+    async def test_die_entitaets_id_bleibt(self, hass: HomeAssistant) -> None:
+        entry = alteintrag(
+            **{
+                CONF_BATTERY_SOC_ENTITY: "sensor.akku_soc",
+                CONF_BATTERY_POWER_ENTITY: "sensor.akku_leistung",
+                CONF_BATTERY_MAX_CHARGE_W: 5000,
+            }
+        )
+        entry.add_to_hass(hass)
+        vorher = {
+            key: self._alte_entitaet(hass, entry, key)
+            for key in ("battery_priority", "battery_min_soc")
+        }
+
+        await setup(hass, entry)
+
+        registry = er.async_get(hass)
+        subentry_id = speicher(entry)[0].subentry_id
+
+        for alt, neu in (("battery_priority", "priority"), ("battery_min_soc", "min_soc")):
+            eintrag = registry.async_get(vorher[alt])
+            assert eintrag is not None, f"{vorher[alt]} ist verschwunden"
+            assert eintrag.unique_id == f"{subentry_id}_{neu}"
+            assert eintrag.config_subentry_id == subentry_id
+
+        # Und keine zweite daneben: Genau darin bestünde der Schaden.
+        assert len(registry.entities) == len(
+            [e for e in registry.entities.values() if not e.entity_id.endswith("_2")]
+        )
+
+    async def test_ohne_altbestand_geschieht_nichts(self, hass: HomeAssistant) -> None:
+        """Eine frische Einrichtung hat nichts umzuhängen."""
+        entry = alteintrag(**{CONF_BATTERY_SOC_ENTITY: "sensor.akku_soc"})
+        await setup(hass, entry)
+
+        registry = er.async_get(hass)
+        assert (
+            registry.async_get_entity_id("number", DOMAIN, f"{entry.entry_id}_battery_min_soc")
+            is None
+        )
+
+    async def test_eine_belegte_kennung_bricht_nichts_ab(self, hass: HomeAssistant) -> None:
+        """Der Fall des Nutzers, der die Fassung ohne diesen Schritt schon lief.
+
+        Er hat bereits eine Entität mit der neuen Kennung. Das Umschreiben würde
+        hart werfen und die Einrichtung abbrechen — damit ist ihm nicht
+        geholfen. Der alte Eintrag bleibt dann eben liegen.
+        """
+        entry = alteintrag(
+            ConfigSubentryData(
+                subentry_type=SUBENTRY_TYPE_BATTERY,
+                title="Keller",
+                unique_id=None,
+                data={CONF_NAME: "Keller", CONF_BATTERY_SOC_ENTITY: "sensor.akku_soc"},
+            )
+        )
+        entry.add_to_hass(hass)
+        subentry_id = speicher(entry)[0].subentry_id
+
+        registry = er.async_get(hass)
+        registry.async_get_or_create("number", DOMAIN, f"{subentry_id}_min_soc", config_entry=entry)
+        alt = self._alte_entitaet(hass, entry, "battery_min_soc")
+
+        await setup(hass, entry)
+
+        # Kein Abbruch, und der alte Eintrag ist unverändert.
+        assert entry.state is ConfigEntryState.LOADED
+        assert registry.async_get(alt).unique_id == f"{entry.entry_id}_battery_min_soc"

@@ -186,13 +186,13 @@ class TestEntitaeten:
     async def test_prioritaets_entitaet_der_batterie(self, hass: HomeAssistant) -> None:
         await setup_battery(hass, netz=-2500, soc=60, battery_prio=2)
 
-        state = hass.states.get("number.energy_manager_battery_priority")
+        state = hass.states.get("number.hausbatterie_priority")
         assert state is not None
         assert float(state.state) == 2
 
     async def test_keine_batterie_entitaet_ohne_ladeleistung(self, hass: HomeAssistant) -> None:
         await setup_battery(hass, netz=-2500, soc=60, max_charge=0)
-        assert hass.states.get("number.energy_manager_battery_priority") is None
+        assert hass.states.get("number.hausbatterie_priority") is None
 
     async def test_hub_sensor_traegt_die_batterie_attribute(self, hass: HomeAssistant) -> None:
         """Die Karte baut ihre Batteriezeile allein aus diesen Attributen."""
@@ -216,3 +216,43 @@ class TestEntitaeten:
         entry = await setup_battery(hass, netz=-2500, soc=60, battery_prio=3)
         coordinator = entry.runtime_data
         assert coordinator.battery_priority == 3
+
+
+class TestSpeicherSensor:
+    """Der Ampel-Sensor am Speichergerät.
+
+    Damit baut eine Anzeige die Zeile eines Speichers genauso wie die eines
+    Verbrauchers — aus einem Sensor und seinen Attributen. Vorher lagen die
+    Angaben am Überschuss-Sensor des Hubs, wo genau einer Platz hatte.
+    """
+
+    def _sensor(self, hass: HomeAssistant):
+        return next(
+            state
+            for state in hass.states.async_all("sensor")
+            if state.attributes.get("kind") == "battery"
+        )
+
+    async def test_traegt_die_angaben_des_speichers(self, hass: HomeAssistant) -> None:
+        await setup_battery(hass, netz=-3000, soc=50, max_charge=2000, battery_prio=2)
+        sensor = self._sensor(hass)
+
+        assert sensor.attributes["consumer_name"]
+        assert sensor.attributes["soc_entity"] == "sensor.akku_soc"
+        assert sensor.attributes["soc"] == 50
+        assert sensor.attributes["max_charge_w"] == 2000
+        assert sensor.attributes["shiftable"] is True
+        assert sensor.attributes["rank"] == 2
+        assert sensor.attributes["full"] is False
+
+    async def test_ohne_ladeleistung_bleibt_er_ein_korrekturterm(self, hass: HomeAssistant) -> None:
+        """Dann hat er weder Rang noch Anspruch — aber es gibt ihn trotzdem.
+
+        Genau daran erkennt eine Anzeige, dass sie für ihn keine Zeile in der
+        Reihenfolge zeichnen darf.
+        """
+        await setup_battery(hass, netz=-3000, soc=50, max_charge=0)
+        sensor = self._sensor(hass)
+
+        assert sensor.attributes["shiftable"] is False
+        assert "rank" not in sensor.attributes

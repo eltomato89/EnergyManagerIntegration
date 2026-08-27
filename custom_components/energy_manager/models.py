@@ -43,6 +43,8 @@ from .const import (
     CONF_TURN_ON_DELAY,
     CONSUMER_TYPE_MODULATING,
     CONSUMER_TYPE_SWITCH,
+    DEFAULT_BATTERY_MIN_SOC,
+    DEFAULT_BATTERY_PRIORITY,
 )
 
 
@@ -374,6 +376,33 @@ class BatteryConfig:
             mode=data.get(CONF_BATTERY_MODE, BATTERY_MODE_CHARGE_ONLY),
             reserve_w=float(data.get(CONF_BATTERY_RESERVE_W) or 0.0),
             max_charge_w=float(data.get(CONF_BATTERY_MAX_CHARGE_W) or 0.0),
+        )
+
+
+@dataclass
+class BatteryRuntime:
+    """Die Stellgrößen eines Speichers.
+
+    Getrennt von seiner Konfiguration, weil sie nicht die Anlage beschreiben,
+    sondern eine Vorgabe sind, die sich mit dem Tag ändert — und weil sie über
+    Entitäten gestellt werden, nicht über ein Formular. Persistiert, damit ein
+    Neustart sie nicht auf die Vorgabe zurücksetzt.
+    """
+
+    priority: float = DEFAULT_BATTERY_PRIORITY
+    """Rang, 1 = zuerst laden."""
+
+    min_soc: float = DEFAULT_BATTERY_MIN_SOC
+    """Ladestand, unterhalb dessen das Laden Vorrang hat. 0 schaltet das ab."""
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"priority": self.priority, "min_soc": self.min_soc}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> BatteryRuntime:
+        return cls(
+            priority=float(data.get("priority", DEFAULT_BATTERY_PRIORITY)),
+            min_soc=float(data.get("min_soc", DEFAULT_BATTERY_MIN_SOC)),
         )
 
 

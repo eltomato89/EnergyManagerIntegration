@@ -80,6 +80,7 @@ from .estimate import async_estimate_power
 from .models import (
     BatteryConfig,
     BatteryLoad,
+    BatteryRuntime,
     BatteryView,
     ConsumerConfig,
     ConsumerRuntime,
@@ -137,12 +138,10 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         # Rang der Batterie als verschiebbare Last. Getrennt vom Verbraucher-
         # Laufzeitzustand, weil die Batterie kein Subentry ist und beim
         # Neuladen der Verbraucher nicht mit weggeräumt werden darf.
-        self._battery_priority = DEFAULT_BATTERY_PRIORITY
-
-        # Der Mindestladestand liegt aus demselben Grund hier und nicht in den
-        # Eintragsdaten: Er ist eine Vorgabe, die sich mit dem Tag ändert, und
-        # wird über eine eigene Entität gestellt.
-        self._battery_min_soc = DEFAULT_BATTERY_MIN_SOC
+        # Rang und Ladevorranggrenze je Speicher. Getrennt vom Verbraucher-
+        # Laufzeitzustand, weil ein Speicher andere Stellgrößen hat — und
+        # getrennt je Speicher, weil zwei davon nicht dieselbe Grenze teilen.
+        self.battery_runtime: dict[str, BatteryRuntime] = {}
 
         self._store: Store[dict[str, Any]] = Store(
             hass,
@@ -193,25 +192,37 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             for key, value in (stored.get("consumers") or {}).items()
         }
         self.automation_enabled = bool(stored.get("automation_enabled", False))
-        self._battery_priority = float(stored.get("battery_priority", DEFAULT_BATTERY_PRIORITY))
-        self._battery_min_soc = self._restore_min_soc(stored)
+        self.battery_runtime = {
+            key: BatteryRuntime.from_dict(value)
+            for key, value in (stored.get("batteries") or {}).items()
+        }
         self.reload_consumers()
+        self._uebernimm_alte_stellgroessen(stored)
 
-    def _restore_min_soc(self, stored: dict[str, Any]) -> float:
-        """Der Mindestladestand, beim ersten Mal aus der alten Konfiguration.
+    def _uebernimm_alte_stellgroessen(self, stored: dict[str, Any]) -> None:
+        """Holt Rang und Grenze aus den Zeiten der einen Batterie.
 
-        Bis zu dieser Fassung stand er als Formularfeld in den Eintragsdaten.
-        Wer ihn dort eingetragen hat, soll ihn nach dem Update unverändert
-        wiederfinden — deshalb die einmalige Übernahme statt eines Rückfalls auf
-        die Vorgabe. Ab dem ersten Speichern gilt nur noch der Laufzeitwert; der
-        alte Eintrag verfällt beim nächsten Neukonfigurieren von selbst, weil das
-        Formular ihn nicht mehr kennt.
+        Beide standen bis 0.5.0b3 einzeln im Speicher, der Mindestladestand
+        davor sogar als Formularfeld. Wer sie gesetzt hat, soll sie nach dem
+        Update unverändert wiederfinden — für einen einzelnen Speicher ist die
+        Zuordnung eindeutig, und mehr als einen gab es nie.
+
+        Nur, solange der Speicher noch keine eigenen Werte hat: Danach zählen
+        seine, sonst spränge jede Änderung beim Neustart zurück.
         """
-        if (gespeichert := stored.get("battery_min_soc")) is not None:
-            return float(gespeichert)
+        speicher = self.battery()
+        if speicher is None or speicher.subentry_id in self.battery_runtime:
+            return
 
         data = dict(self.config_entry.data) if self.config_entry else {}
-        return float(data.get(CONF_BATTERY_MIN_SOC) or DEFAULT_BATTERY_MIN_SOC)
+        self.battery_runtime[speicher.subentry_id] = BatteryRuntime(
+            priority=float(stored.get("battery_priority", DEFAULT_BATTERY_PRIORITY)),
+            min_soc=float(
+                stored.get("battery_min_soc")
+                if stored.get("battery_min_soc") is not None
+                else data.get(CONF_BATTERY_MIN_SOC) or DEFAULT_BATTERY_MIN_SOC
+            ),
+        )
 
     @callback
     def reload_consumers(self) -> None:
@@ -878,7 +889,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         available = apply_reserve(
             smoothed,
             self.battery_soc(),
-            self._battery_min_soc,
+            self.battery_min_soc,
             0.0 if battery is None else battery.reserve_w,
         )
 
@@ -934,7 +945,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
                 # Am Eintrag und nicht am Speicher: Das beschreibt, was der
                 # Zähler mitmisst, nicht was die Batterie tut.
                 consumption_includes_battery=data.get(CONF_CONSUMPTION_INCLUDES_BATTERY, False),
-                battery_min_soc=self._battery_min_soc,
+                battery_min_soc=self.battery_min_soc,
                 battery_reserve_w=0.0 if battery is None else battery.reserve_w,
             )
         )
@@ -967,7 +978,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             return None
 
         return BatteryLoad(
-            priority=self._battery_priority,
+            priority=self.battery_priority,
             max_charge_w=battery.max_charge_w,
             reserve_w=battery.reserve_w,
             soc=read_percent(self.hass, battery.soc_entity),
@@ -1121,22 +1132,33 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         battery = self.battery()
         return None if battery is None else battery.soc_entity
 
+    def battery_runtime_for(self, subentry_id: str) -> BatteryRuntime:
+        """Die Stellgrößen eines Speichers, angelegt sobald jemand fragt."""
+        return self.battery_runtime.setdefault(subentry_id, BatteryRuntime())
+
     @property
     def battery_priority(self) -> float:
-        """Rang der Batterie als verschiebbare Last, 1 = höchste."""
-        return self._battery_priority
+        """Rang des Speichers als verschiebbare Last, 1 = höchste."""
+        battery = self.battery()
+        if battery is None:
+            return DEFAULT_BATTERY_PRIORITY
+        return self.battery_runtime_for(battery.subentry_id).priority
 
-    async def async_set_battery_priority(self, value: float) -> None:
-        """Setzt den Rang der Batterie und wertet sofort neu aus."""
-        self._battery_priority = value
-        self.schedule_save()
-        await self.async_request_refresh_now()
+    async def async_set_battery_priority(
+        self, value: float, subentry_id: str | None = None
+    ) -> None:
+        """Setzt den Rang eines Speichers und wertet sofort neu aus."""
+        await self._setze_stellgroesse(subentry_id, "priority", value)
 
     @property
     def battery_min_soc(self) -> float:
-        return self._battery_min_soc
+        """Ladevorranggrenze des Speichers, mit dem gerechnet wird."""
+        battery = self.battery()
+        if battery is None:
+            return DEFAULT_BATTERY_MIN_SOC
+        return self.battery_runtime_for(battery.subentry_id).min_soc
 
-    async def async_set_battery_min_soc(self, value: float) -> None:
+    async def async_set_battery_min_soc(self, value: float, subentry_id: str | None = None) -> None:
         """Setzt die Ladevorranggrenze und wertet sofort neu aus.
 
         Sofort und nicht erst beim nächsten Durchlauf: Die Grenze greift in der
@@ -1144,7 +1166,17 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         ist, erwartet nicht, dass die Verbraucher erst eine Runde später
         anlaufen.
         """
-        self._battery_min_soc = value
+        await self._setze_stellgroesse(subentry_id, "min_soc", value)
+
+    async def _setze_stellgroesse(self, subentry_id: str | None, feld: str, value: float) -> None:
+        """Ohne Angabe gilt der Speicher, mit dem gerechnet wird."""
+        if subentry_id is None:
+            battery = self.battery()
+            if battery is None:
+                return
+            subentry_id = battery.subentry_id
+
+        setattr(self.battery_runtime_for(subentry_id), feld, value)
         self.schedule_save()
         await self.async_request_refresh_now()
 
@@ -1159,9 +1191,8 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
     def _data_to_save(self) -> dict[str, Any]:
         return {
             "automation_enabled": self.automation_enabled,
-            "battery_priority": self._battery_priority,
-            "battery_min_soc": self._battery_min_soc,
             "consumers": {key: value.as_dict() for key, value in self.runtime.items()},
+            "batteries": {key: value.as_dict() for key, value in self.battery_runtime.items()},
         }
 
     async def async_remove_storage(self) -> None:

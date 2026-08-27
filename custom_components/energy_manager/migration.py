@@ -13,8 +13,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 
 from .const import (
     CONF_BATTERY_CHARGE_ENTITY,
@@ -26,6 +28,7 @@ from .const import (
     CONF_BATTERY_RESERVE_W,
     CONF_BATTERY_SOC_ENTITY,
     CONF_NAME,
+    DOMAIN,
     SUBENTRY_TYPE_BATTERY,
 )
 from .models import BatteryConfig
@@ -106,3 +109,60 @@ def async_migrate_battery(hass: HomeAssistant, entry: ConfigEntry) -> None:
             if schluessel not in BATTERIE_FELDER
         },
     )
+
+
+# Die beiden Stellgrößen, die am Hub hingen. Links der Schlüssel von damals,
+# rechts der von heute — am Speichergerät braucht keiner mehr ein Präfix.
+STELLGROESSEN: tuple[tuple[str, str], ...] = (
+    ("battery_priority", "priority"),
+    ("battery_min_soc", "min_soc"),
+)
+
+
+@callback
+def async_migrate_battery_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Hängt die Stellgrößen der Batterie an ihr neues Gerät.
+
+    Die Entitäts-ID bleibt dabei erhalten — und darauf kommt es an: Sie steht in
+    Dashboards, Automatisierungen und Verlaufsdaten. Home Assistant leitet sie
+    nur beim ersten Anlegen aus dem Namen ab; danach ist sie ein eigener Wert
+    und überlebt sowohl den Gerätewechsel als auch die neue ``unique_id``.
+
+    Ohne diesen Schritt entstünde beim Einrichten eine zweite Entität — die alte
+    ``unique_id`` findet keiner mehr, die neue ist frei, und weil die schöne
+    Entitäts-ID noch belegt ist, hinge an der neuen ein ``_2``. Der Nutzer
+    behielte einen toten Eintrag und verlöre jede Verknüpfung.
+    """
+    speicher = next(
+        (sub for sub in entry.subentries.values() if sub.subentry_type == SUBENTRY_TYPE_BATTERY),
+        None,
+    )
+    if speicher is None:
+        return
+
+    registry = er.async_get(hass)
+
+    for alt, neu in STELLGROESSEN:
+        entity_id = registry.async_get_entity_id(NUMBER_DOMAIN, DOMAIN, f"{entry.entry_id}_{alt}")
+        if entity_id is None:
+            continue
+
+        neue_kennung = f"{speicher.subentry_id}_{neu}"
+
+        # Ist die neue Kennung schon vergeben, würde das Umschreiben hart
+        # werfen und die Einrichtung abbrechen. Das passiert genau einem
+        # Nutzer: dem, der die Fassung ohne diesen Schritt schon geladen hat und
+        # nun eine ``_2``-Entität besitzt. Ihm ist mit einem Abbruch nicht
+        # geholfen — der alte Eintrag bleibt dann eben liegen.
+        if registry.async_get_entity_id(NUMBER_DOMAIN, DOMAIN, neue_kennung):
+            continue
+
+        registry.async_update_entity(
+            entity_id,
+            # Beides zusammen: Ohne ``config_entry_id`` prüft Home Assistant
+            # gar nicht, ob es den Subentry überhaupt gibt, und schriebe eine
+            # falsche Zuordnung wortlos fort.
+            config_entry_id=entry.entry_id,
+            config_subentry_id=speicher.subentry_id,
+            new_unique_id=neue_kennung,
+        )

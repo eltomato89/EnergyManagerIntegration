@@ -34,6 +34,7 @@ SUBENTRY_TYPE_BATTERY: Final = "battery"
 # hält sie zusammen.
 DEVICE_MODEL_HUB: Final = "Surplus control"
 DEVICE_MODEL_CONSUMER: Final = "Load"
+DEVICE_MODEL_BATTERY: Final = "Battery"
 
 # --- Zählerquellen ----------------------------------------------------------
 
