@@ -1,42 +1,50 @@
-# 0.5.0b3 — pre-release
+# 0.5.0b4 — pre-release
 
-One request from the issue tracker, one correction to the interface language, and a display
-that finally speaks the unit you typed.
+Batteries have become a category of their own. This is the largest change in the 0.5 series,
+and the only one so far that alters behaviour on an existing installation — the section
+"What actually changes for you" says exactly when.
+
+**This release belongs together with card `0.7.0-beta.4`.** Everything about a single battery
+moved from the hub to the battery's own device, so an older card finds none of it and shows no
+battery row at all.
 
 ## Changed
 
-- **The battery's minimum state of charge is now an entity**, `number.…_battery_min_soc`,
-  instead of a field in the setup form ([#4]). It is not a property of your installation —
-  it changes with the day: with a very good forecast you may want the loads to start in the
-  late morning at a low state of charge, on an overcast day you may not. A form field cannot
-  be automated; `number.set_value` can.
+- **A battery is a subentry of its own now**, added through "Add subentry" like a load and
+  shown as its own device — and there may be several. It is still not a load: it is never
+  switched, it has a state of charge, and its power is part of the surplus formula itself.
+  That is why it gets its own type rather than a flag on the existing form; the two share no
+  required field.
 
-  A change takes effect immediately, not on the next cycle. Your current value is carried
-  over once on first start, so nothing changes silently, and from then on only the entity
-  counts. `0` switches the rule off. Without a state-of-charge sensor the entity is not
-  created — the threshold would have nothing to compare against, and a control that does
-  nothing is worse than no control at all. The former form error about this is gone with the
-  field.
+  **The migration runs by itself.** On the first start after the update an existing battery
+  moves into a subentry named "Hausbatterie", its two controls move to the new device, and
+  their **entity IDs are kept** — dashboards and automations keep working. The way back is not
+  open this time: on an older version the battery would be unconfigured.
 
-  The value is also exposed as a `battery_min_soc` attribute on the surplus sensor.
+- **Several batteries are added up in the balance**, each with its own rule for how discharging
+  counts. One may sit at the house connection and another behind a meter of its own — that is a
+  property of the connection, not of the installation.
 
-- **A daily target is now reported in the unit it was entered in.** For a switchable load
-  that is hours: the status sensor carries `daily_target_h` and `daily_done_h` alongside the
-  kWh the automation actually computes with. Reading "0.8 of 4.0 kWh" forced you to divide by
-  the rated power to recognise a target you typed as "4 h". Needs card `0.7.0-beta.3` for the
-  display; on an older card nothing changes.
+- **The charging-priority threshold is a claim in the order instead of a lock in the formula.**
+  It used to cap the reported surplus at zero, so nobody got anything while the card said "no
+  surplus" with the sun shining. A battery below its threshold now moves ahead of every load
+  and claims there — and its row shows that it does.
 
-  These are full-load hours, not the clock at the switch — running below the rated power, they
-  advance more slowly than time does. The automation compares energy against forecast, and the
-  display should show what the automation does.
+- **The surplus sensor keeps only figures for the installation as a whole.** Everything about a
+  single battery is on that battery's own sensor. The state of charge stays while there is
+  exactly one: a combined figure would need the capacities, and 5 kWh at 20 % plus 10 kWh at
+  80 % is not 50 %.
 
-## Fixed
+- The device models are now `Surplus control`, `Load` and `Battery`.
 
-- **The device models were German** — "Überschusssteuerung" on the hub, "Verbraucher" on every
-  load — and stood that way in an English interface too. A device model cannot be translated
-  in Home Assistant; there is no `translation_key` for it. They are now `Surplus control` and
-  `Load`. Existing devices pick up the new name when the integration reloads; automations are
-  unaffected, as the model is only a filter in the device picker.
+## What actually changes for you
+
+Only installations that entered a **maximum charge power smaller than their surplus**, and only
+while the battery is below its threshold: the loads now get the remainder the battery cannot
+take anyway. Previously nobody got anything.
+
+Without a charge power the battery still claims everything below its threshold — which is
+exactly the old lock, except the surplus is now reported instead of being calculated away.
 
 ## Before you arm anything
 
@@ -46,5 +54,3 @@ installation is actually doing.
 
 **Known limitation:** the forecast is still not divided among several daily targets. With a
 single daily target this does not occur.
-
-[#4]: https://github.com/eltomato89/EnergyManagerIntegration/issues/4
