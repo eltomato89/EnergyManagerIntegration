@@ -2,6 +2,46 @@
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+## [Unveröffentlicht]
+
+### Geändert
+
+- **Speicher sind eine eigene Kategorie geworden.** Die Hausbatterie stand als Feldergruppe im
+  Haupteintrag, und es gab genau eine. Jetzt ist jeder Speicher ein eigener Subentry mit eigenem
+  Gerät — angelegt über „Speicher hinzufügen", wie ein Verbraucher —, und es dürfen mehrere sein.
+
+  Ein Speicher ist trotzdem kein Verbraucher: Er wird nie geschaltet, er hat einen Ladestand, und
+  seine Leistung steht in der Überschussformel selbst. Deshalb ein eigener Typ und kein Schalter im
+  bestehenden Formular; die beiden teilen kein einziges Pflichtfeld.
+
+  **Die Wanderung läuft von selbst.** Beim ersten Start nach dem Update zieht eine bestehende
+  Batterie in einen Subentry „Hausbatterie", ihre Stellgrößen ziehen ans neue Gerät mit, und ihre
+  **Entitäts-IDs bleiben erhalten** — Dashboards und Automatisierungen brechen nicht. Der Rückweg
+  auf eine ältere Fassung steht diesmal nicht offen: Dort fände sich der Speicher unkonfiguriert
+  wieder.
+
+- **Mehrere Speicher zählen zusammen in die Bilanz**, jeder mit seiner eigenen Regel dafür, wie
+  Entladen zählt. Einer kann am Hausanschluss hängen und einer hinter einem eigenen Zähler — das
+  ist eine Eigenschaft des Anschlusses, nicht der Anlage. Fällt ein Sensor aus, gilt das Ergebnis
+  als unsicher; der lesbare Teil wird trotzdem verrechnet, denn 0 wäre schlechter geraten.
+
+- **Die Ladevorranggrenze ist ein Anspruch in der Reihenfolge statt einer Sperre in der Formel.**
+  Bisher deckelte sie den ausgewiesenen Überschuss auf 0 — dann bekam niemand etwas, und in der
+  Karte stand „kein Überschuss", während die Sonne schien. Jetzt rückt ein Speicher unter seiner
+  Grenze vor alle Verbraucher und fordert dort.
+
+  Mit eingetragener Ladeleistung fordert er genau diese und gibt den Rest weiter; ohne fordert er
+  alles, und das ist verhaltensgleich mit der alten Sperre. **Es ändert sich also nur für Anlagen
+  etwas, deren Ladeleistung kleiner ist als der Überschuss** — dort bekommen die Verbraucher jetzt
+  den Überhang, den der Speicher ohnehin nicht aufnehmen kann.
+
+- **Der Überschuss-Sensor führt nur noch Anlagensummen.** Alles zu einem einzelnen Speicher steht
+  an dessen eigenem Sensor; bei zweien hätte am Hub nur einer Platz, und welcher das wäre, ließe
+  sich nicht sagen. Der Ladestand bleibt, solange es genau einen gibt — ein Gesamtwert bräuchte die
+  Kapazitäten, und 5 kWh bei 20 % plus 10 kWh bei 80 % sind nicht 50 %.
+
+- Die Modellbezeichnungen der Geräte heißen jetzt `Surplus control`, `Load` und `Battery`.
+
 ## [0.5.0b3] — 2026-08-27
 
 ### Geändert
