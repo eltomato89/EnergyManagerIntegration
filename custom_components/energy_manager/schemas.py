@@ -131,8 +131,14 @@ SPLIT_SCHEMA = vol.Schema(
     }
 )
 
+# Die Felder eines Speichers. Sie heißen weiter ``battery_…``, obwohl sie jetzt
+# in einem eigenen Subentry stehen und das Präfix dort nichts mehr unterscheidet:
+# Gleiche Namen heißen, dass die Wanderung aus dem Haupteintrag ein reines
+# Kopieren ist — kein Umbenennen, bei dem ein Feld verloren gehen könnte, und
+# dieselben Übersetzungsschlüssel wie bisher.
 BATTERY_SCHEMA = vol.Schema(
     {
+        vol.Required(CONF_NAME, default="Hausbatterie"): selector.TextSelector(),
         vol.Optional(CONF_BATTERY_SOC_ENTITY): BATTERY_SENSOR,
         vol.Optional(CONF_BATTERY_POWER_ENTITY): POWER_SENSOR,
         vol.Optional(CONF_BATTERY_INVERT, default=False): selector.BooleanSelector(),

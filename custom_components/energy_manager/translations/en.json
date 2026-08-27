@@ -181,6 +181,66 @@
         "select_not_ready": "This select reports no options. Without them no field per level can be offered.",
         "energy_entity_required": "A daily target needs an energy meter. Without it there is no way to tell how far the load has come today, and the number would have no effect."
       }
+    },
+    "battery": {
+      "title": "Battery",
+      "entry_type": "Battery",
+      "initiate_flow": {
+        "user": "Add battery",
+        "reconfigure": "Edit battery"
+      },
+      "step": {
+        "user": {
+          "title": "Add battery",
+          "data": {
+            "name": "Name",
+            "battery_soc_entity": "State of charge",
+            "battery_power_entity": "Battery power",
+            "battery_invert": "Invert sign",
+            "battery_charge_entity": "Charge power",
+            "battery_discharge_entity": "Discharge power",
+            "battery_mode": "Discharging in the surplus",
+            "battery_reserve_w": "Battery reserve",
+            "battery_max_charge_w": "Maximum charge power"
+          },
+          "data_description": {
+            "name": "Shown as the device name and in the card.",
+            "battery_power_entity": "A bidirectional sensor: positive when charging, negative when discharging.",
+            "battery_charge_entity": "Alternative to the bidirectional sensor: two always-positive sensors.",
+            "battery_mode": "Charging power always counts as available. This setting determines whether discharging reduces the surplus.",
+            "battery_reserve_w": "Power always kept for the battery. It counts towards the maximum charge power rather than adding to it.",
+            "battery_max_charge_w": "Lets the battery take part in the priority order as a shiftable load, and at the same time caps how much surplus it receives in total. Higher-priority loads are served first and stay on; at its rank the battery sets aside up to this power, less any reserve already configured; only the remainder is available to lower-priority loads. 0 disables participation."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit battery",
+          "data": {
+            "name": "Name",
+            "battery_soc_entity": "State of charge",
+            "battery_power_entity": "Battery power",
+            "battery_invert": "Invert sign",
+            "battery_charge_entity": "Charge power",
+            "battery_discharge_entity": "Discharge power",
+            "battery_mode": "Discharging in the surplus",
+            "battery_reserve_w": "Battery reserve",
+            "battery_max_charge_w": "Maximum charge power"
+          },
+          "data_description": {
+            "name": "Shown as the device name and in the card.",
+            "battery_power_entity": "A bidirectional sensor: positive when charging, negative when discharging.",
+            "battery_charge_entity": "Alternative to the bidirectional sensor: two always-positive sensors.",
+            "battery_mode": "Charging power always counts as available. This setting determines whether discharging reduces the surplus.",
+            "battery_reserve_w": "Power always kept for the battery. It counts towards the maximum charge power rather than adding to it.",
+            "battery_max_charge_w": "Lets the battery take part in the priority order as a shiftable load, and at the same time caps how much surplus it receives in total. Higher-priority loads are served first and stay on; at its rank the battery sets aside up to this power, less any reserve already configured; only the remainder is available to lower-priority loads. 0 disables participation."
+          }
+        }
+      },
+      "error": {
+        "battery_entity_required": "A battery needs at least one entity that says something about it: state of charge, battery power, or charge and discharge power. Without a reading there is no way to tell whether it is charging or full."
+      },
+      "abort": {
+        "reconfigure_successful": "The load was changed."
+      }
     }
   },
   "entity": {

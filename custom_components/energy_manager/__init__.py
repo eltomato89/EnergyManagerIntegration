@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .coordinator import EnergyManagerCoordinator
+from .migration import async_migrate_battery
 from .services import async_remove_services, async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,6 +27,10 @@ type EnergyManagerConfigEntry = ConfigEntry[EnergyManagerCoordinator]
 
 async def async_setup_entry(hass: HomeAssistant, entry: EnergyManagerConfigEntry) -> bool:
     """Richtet einen Konfigurationseintrag ein."""
+    # Ganz am Anfang: Der Koordinator liest die Speicher aus den Subentries,
+    # und die entstehen hier. Später käme die Wanderung zu spät.
+    async_migrate_battery(hass, entry)
+
     coordinator = EnergyManagerCoordinator(hass, entry)
     await coordinator.async_load()
 

@@ -86,6 +86,8 @@ def test_beide_sprachen_deckungsgleich() -> None:
 GLEICH_ERLAUBT = {
     "config_subentries.consumer.step.user.data.name",
     "config_subentries.consumer.step.reconfigure.data.name",
+    "config_subentries.battery.step.user.data.name",
+    "config_subentries.battery.step.reconfigure.data.name",
     "entity.sensor.status.name",
 }
 

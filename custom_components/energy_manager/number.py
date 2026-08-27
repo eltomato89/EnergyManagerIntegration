@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import CONF_BATTERY_SOC_ENTITY, SUBENTRY_TYPE_CONSUMER
+from .const import SUBENTRY_TYPE_CONSUMER
 from .coordinator import EnergyManagerCoordinator
 from .entity import ConsumerEntity, EnergyManagerEntity
 from .models import ConsumerConfig
@@ -35,7 +35,8 @@ async def async_setup_entry(
     # ist hier ohne Belang. Ohne Ladestandssensor gibt es die Entität nicht,
     # denn dann bliebe sie ohne Wirkung, und ein wirkungsloser Regler ist
     # schlimmer als keiner.
-    if entry.data.get(CONF_BATTERY_SOC_ENTITY):
+    battery = coordinator.battery()
+    if battery is not None and battery.soc_entity:
         async_add_entities([BatteryMinSocNumber(coordinator)])
 
     for subentry_id, subentry in entry.subentries.items():

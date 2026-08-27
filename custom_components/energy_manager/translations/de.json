@@ -181,6 +181,66 @@
         "select_not_ready": "Diese Auswahlliste meldet keine Optionen. Ohne sie lässt sich kein Feld je Stufe anbieten.",
         "energy_entity_required": "Ein Tagesziel braucht einen Zählerstand. Ohne ihn ist nicht zu ermitteln, wie weit der Verbraucher heute gekommen ist, und die Zahl bliebe wirkungslos."
       }
+    },
+    "battery": {
+      "title": "Speicher",
+      "entry_type": "Speicher",
+      "initiate_flow": {
+        "user": "Speicher hinzufügen",
+        "reconfigure": "Speicher bearbeiten"
+      },
+      "step": {
+        "user": {
+          "title": "Speicher hinzufügen",
+          "data": {
+            "name": "Name",
+            "battery_soc_entity": "Ladestand",
+            "battery_power_entity": "Batterieleistung",
+            "battery_invert": "Vorzeichen umkehren",
+            "battery_charge_entity": "Ladeleistung",
+            "battery_discharge_entity": "Entladeleistung",
+            "battery_mode": "Entladung im Überschuss",
+            "battery_reserve_w": "Batteriereserve",
+            "battery_max_charge_w": "Maximale Ladeleistung"
+          },
+          "data_description": {
+            "name": "Erscheint als Gerätename und in der Karte.",
+            "battery_power_entity": "Ein bidirektionaler Sensor: positiv beim Laden, negativ beim Entladen.",
+            "battery_charge_entity": "Alternative zum bidirektionalen Sensor: zwei stets positive Sensoren.",
+            "battery_mode": "Ladeleistung gilt stets als verfügbar. Diese Einstellung bestimmt, ob eine Entladung den Überschuss verringert.",
+            "battery_reserve_w": "Leistung, die immer der Batterie vorbehalten bleibt. Sie wird auf die maximale Ladeleistung angerechnet, nicht zu ihr addiert.",
+            "battery_max_charge_w": "Lässt die Batterie als verschiebbare Last an der Prioritätsreihenfolge teilnehmen und begrenzt zugleich, wie viel Überschuss sie insgesamt bekommt. Höher priorisierte Verbraucher werden zuerst versorgt und bleiben eingeschaltet; die Batterie legt an ihrem Rang bis zu dieser Leistung zurück, abzüglich einer bereits eingetragenen Reserve; nur der Rest steht tiefer priorisierten Verbrauchern zur Verfügung. 0 schaltet die Teilnahme ab."
+          }
+        },
+        "reconfigure": {
+          "title": "Speicher bearbeiten",
+          "data": {
+            "name": "Name",
+            "battery_soc_entity": "Ladestand",
+            "battery_power_entity": "Batterieleistung",
+            "battery_invert": "Vorzeichen umkehren",
+            "battery_charge_entity": "Ladeleistung",
+            "battery_discharge_entity": "Entladeleistung",
+            "battery_mode": "Entladung im Überschuss",
+            "battery_reserve_w": "Batteriereserve",
+            "battery_max_charge_w": "Maximale Ladeleistung"
+          },
+          "data_description": {
+            "name": "Erscheint als Gerätename und in der Karte.",
+            "battery_power_entity": "Ein bidirektionaler Sensor: positiv beim Laden, negativ beim Entladen.",
+            "battery_charge_entity": "Alternative zum bidirektionalen Sensor: zwei stets positive Sensoren.",
+            "battery_mode": "Ladeleistung gilt stets als verfügbar. Diese Einstellung bestimmt, ob eine Entladung den Überschuss verringert.",
+            "battery_reserve_w": "Leistung, die immer der Batterie vorbehalten bleibt. Sie wird auf die maximale Ladeleistung angerechnet, nicht zu ihr addiert.",
+            "battery_max_charge_w": "Lässt die Batterie als verschiebbare Last an der Prioritätsreihenfolge teilnehmen und begrenzt zugleich, wie viel Überschuss sie insgesamt bekommt. Höher priorisierte Verbraucher werden zuerst versorgt und bleiben eingeschaltet; die Batterie legt an ihrem Rang bis zu dieser Leistung zurück, abzüglich einer bereits eingetragenen Reserve; nur der Rest steht tiefer priorisierten Verbrauchern zur Verfügung. 0 schaltet die Teilnahme ab."
+          }
+        }
+      },
+      "error": {
+        "battery_entity_required": "Ein Speicher braucht mindestens eine Entität, die etwas über ihn sagt: Ladestand, Batterieleistung oder Lade- und Entladeleistung. Ohne Messwert lässt sich weder erkennen, ob er lädt, noch ob er voll ist."
+      },
+      "abort": {
+        "reconfigure_successful": "Der Verbraucher wurde geändert."
+      }
     }
   },
   "entity": {

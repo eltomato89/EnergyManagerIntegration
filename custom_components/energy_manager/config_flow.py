@@ -24,7 +24,7 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 
 from .const import (
-    CONF_BATTERY_MAX_CHARGE_W,
+    CONF_BATTERY_POWER_ENTITY,
     CONF_CONSUMER_TYPE,
     CONF_CONTROL_ENTITY,
     CONF_DAILY_TARGET,
@@ -38,10 +38,11 @@ from .const import (
     CONSUMER_TYPE_MODULATING,
     DOMAIN,
     METER_MODE_GRID,
+    SUBENTRY_TYPE_BATTERY,
     SUBENTRY_TYPE_CONSUMER,
 )
 from .ladder import build_ladder, control_kind, describe
-from .models import ConsumerConfig, has_battery
+from .models import BatteryConfig, ConsumerConfig
 from .schemas import (
     BATTERY_SCHEMA,
     CONSUMER_SCHEMA,
@@ -113,10 +114,16 @@ class EnergyManagerConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="user", data_schema=METER_MODE_SCHEMA)
 
     async def async_step_grid(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Bidirektionaler Netzsensor."""
+        """Bidirektionaler Netzsensor — und damit der letzte Schritt.
+
+        Ein Speicher wird hier nicht mehr abgefragt: Er ist ein eigener
+        Subentry, weil es mehr als einen geben darf. Das Formular ohne ihn ist
+        auch kürzer geworden — die Einrichtung fragt jetzt nur noch das, was
+        jede Anlage hat.
+        """
         if user_input is not None:
             self._data.update(clean(user_input))
-            return await self.async_step_battery()
+            return self._finish()
 
         return self._form("grid", GRID_SCHEMA)
 
@@ -124,40 +131,9 @@ class EnergyManagerConfigFlow(ConfigFlow, domain=DOMAIN):
         """Getrennte Sensoren für Erzeugung und Verbrauch."""
         if user_input is not None:
             self._data.update(clean(user_input))
-            return await self.async_step_battery()
+            return self._finish()
 
         return self._form("split", SPLIT_SCHEMA)
-
-    async def async_step_battery(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Hausbatterie — freiwillig, das Formular darf leer bleiben."""
-        errors: dict[str, str] = {}
-
-        if user_input is not None:
-            geplant = {**self._data, **clean(user_input)}
-
-            # Die Angabe braucht einen Messwert, um überhaupt zu wirken. Ohne
-            # diese Prüfung stünde eine Zahl im Formular, die stillschweigend
-            # nichts tut — dieselbe Art Fehler wie eine falsche Entität, nur
-            # ohne jede Rückmeldung.
-            #
-            # Für den Mindestladestand gilt dasselbe, nur an anderer Stelle: Die
-            # Entität dafür entsteht erst gar nicht, wenn kein Ladestandssensor
-            # eingetragen ist.
-            if geplant.get(CONF_BATTERY_MAX_CHARGE_W) and not has_battery(geplant):
-                errors[CONF_BATTERY_MAX_CHARGE_W] = "battery_entity_required"
-
-            if not errors:
-                self._data = geplant
-                return self._finish()
-
-            # Die Eingabe stehen lassen, statt sie gegen den alten Stand zu
-            # ersetzen: Sonst verschwindet beim Fehler genau der Wert, den der
-            # Nutzer gerade korrigieren soll.
-            self._suggestions = {**self._suggestions, **user_input}
-
-        return self._form("battery", BATTERY_SCHEMA, errors)
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
@@ -190,8 +166,16 @@ class EnergyManagerConfigFlow(ConfigFlow, domain=DOMAIN):
     def async_get_supported_subentry_types(
         cls, config_entry: ConfigEntry
     ) -> dict[str, type[ConfigSubentryFlow]]:
-        """Meldet an, dass Verbraucher als Subentries angelegt werden."""
-        return {SUBENTRY_TYPE_CONSUMER: ConsumerSubentryFlowHandler}
+        """Meldet an, welche Subentries es gibt.
+
+        Zwei Typen und nicht einer mit Umschalter: Ein Speicher hat keine
+        Schalt-Entität, dafür einen Ladestand — die Formulare teilen kein
+        einziges Pflichtfeld.
+        """
+        return {
+            SUBENTRY_TYPE_CONSUMER: ConsumerSubentryFlowHandler,
+            SUBENTRY_TYPE_BATTERY: BatterySubentryFlowHandler,
+        }
 
 
 class EnergyManagerOptionsFlow(OptionsFlow):
@@ -438,3 +422,55 @@ class ConsumerSubentryFlowHandler(ConfigSubentryFlow):
         if (phasen := vorbelegung.get(CONF_PHASES)) is not None:
             vorbelegung[CONF_PHASES] = str(phasen)
         return vorbelegung
+
+
+class BatterySubentryFlowHandler(ConfigSubentryFlow):
+    """Ein Speicher — anlegen und ändern.
+
+    Ein einziger Schritt: Anders als beim Verbraucher hängt hier nichts von
+    einer vorherigen Antwort ab. Was der Speicher meldet, steht in seinen
+    Entitäten; was er darf, in zwei Zahlen.
+    """
+
+    def __init__(self) -> None:
+        self._subentry: Any = None
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        return await self._form("user", user_input)
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        self._subentry = self._get_reconfigure_subentry()
+        return await self._form("reconfigure", user_input)
+
+    async def _form(self, step_id: str, user_input: dict[str, Any] | None) -> SubentryFlowResult:
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            daten = clean(user_input)
+
+            # Ohne Messwert ist ein Speicher nicht zu beurteilen: Weder ob er
+            # lädt, noch ob er voll ist, ließe sich sagen — und beides braucht
+            # die Reihenfolge. Ein Eintrag aus lauter Zahlen wäre eine Zeile in
+            # der Karte, hinter der nichts steht.
+            if not BatteryConfig.from_subentry("probe", daten).has_reading:
+                errors[CONF_BATTERY_POWER_ENTITY] = "battery_entity_required"
+
+            if not errors:
+                titel = daten[CONF_NAME]
+                if self._subentry is not None:
+                    return self.async_update_and_abort(
+                        self._get_entry(), self._subentry, data=daten, title=titel
+                    )
+                return self.async_create_entry(title=titel, data=daten)
+
+        vorbelegung = user_input if user_input is not None else self._vorher()
+        return self.async_show_form(
+            step_id=step_id,
+            data_schema=self.add_suggested_values_to_schema(BATTERY_SCHEMA, vorbelegung),
+            errors=errors,
+        )
+
+    def _vorher(self) -> dict[str, Any]:
+        return dict(self._subentry.data) if self._subentry is not None else {}

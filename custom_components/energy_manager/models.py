@@ -11,9 +11,14 @@ from enum import StrEnum
 from typing import Any
 
 from .const import (
+    BATTERY_MODE_CHARGE_ONLY,
     CONF_BATTERY_CHARGE_ENTITY,
     CONF_BATTERY_DISCHARGE_ENTITY,
+    CONF_BATTERY_INVERT,
+    CONF_BATTERY_MAX_CHARGE_W,
+    CONF_BATTERY_MODE,
     CONF_BATTERY_POWER_ENTITY,
+    CONF_BATTERY_RESERVE_W,
     CONF_BATTERY_SOC_ENTITY,
     CONF_CONSUMER_TYPE,
     CONF_CONTROL_ENTITY,
@@ -303,6 +308,72 @@ class ConsumerConfig:
             min_off_time=data.get(CONF_MIN_OFF_TIME, 0),
             turn_on_delay=data.get(CONF_TURN_ON_DELAY, 0),
             turn_off_delay=data.get(CONF_TURN_OFF_DELAY, 0),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class BatteryConfig:
+    """Ein Speicher, wie er im Subentry steht.
+
+    Anders als ein Verbraucher hat er keine Schalt-Entität: Die Integration
+    kommandiert keine Batterie, sie liest sie und berücksichtigt sie in der
+    Reihenfolge. Was hier steht, beschreibt die Anlage; die Stellgrößen — Rang
+    und Ladevorranggrenze — liegen im Laufzeitzustand hinter eigenen Entitäten.
+    """
+
+    subentry_id: str
+    name: str
+
+    soc_entity: str | None = None
+    power_entity: str | None = None
+    invert: bool = False
+    charge_entity: str | None = None
+    discharge_entity: str | None = None
+
+    mode: str = BATTERY_MODE_CHARGE_ONLY
+    """Wie die gemessene Leistung in die Bilanz eingeht.
+
+    ``charge_only`` zählt nur die Ladeleistung als Überschuss, ``full`` lässt
+    eine entladende Batterie ihn mindern. Eine reine Rechenregel — kein
+    Steuerbefehl, und je Speicher verschieden zu beantworten, wenn einer am
+    Hausanschluss hängt und ein zweiter hinter einem eigenen Zähler.
+    """
+
+    reserve_w: float = 0.0
+    max_charge_w: float = 0.0
+
+    @property
+    def has_reading(self) -> bool:
+        """Sagt irgendeine Entität etwas über diesen Speicher?
+
+        Ohne Messwert lässt sich weder erkennen, ob geladen wird, noch ob er
+        voll ist. Reine Zahlenangaben wie die Ladeleistung genügen nicht.
+        """
+        return any((self.power_entity, self.charge_entity, self.discharge_entity, self.soc_entity))
+
+    @property
+    def shiftable(self) -> bool:
+        """Nimmt er als verschiebbare Last an der Reihenfolge teil?
+
+        Nur mit eingetragener Ladeleistung. Ohne sie bleibt er ein
+        Korrekturterm in der Überschussformel und taucht in der Reihenfolge
+        nicht auf — das bisherige Verhalten.
+        """
+        return self.has_reading and self.max_charge_w > 0
+
+    @classmethod
+    def from_subentry(cls, subentry_id: str, data: dict[str, Any]) -> BatteryConfig:
+        return cls(
+            subentry_id=subentry_id,
+            name=data.get(CONF_NAME, "Batterie"),
+            soc_entity=data.get(CONF_BATTERY_SOC_ENTITY),
+            power_entity=data.get(CONF_BATTERY_POWER_ENTITY),
+            invert=bool(data.get(CONF_BATTERY_INVERT, False)),
+            charge_entity=data.get(CONF_BATTERY_CHARGE_ENTITY),
+            discharge_entity=data.get(CONF_BATTERY_DISCHARGE_ENTITY),
+            mode=data.get(CONF_BATTERY_MODE, BATTERY_MODE_CHARGE_ONLY),
+            reserve_w=float(data.get(CONF_BATTERY_RESERVE_W) or 0.0),
+            max_charge_w=float(data.get(CONF_BATTERY_MAX_CHARGE_W) or 0.0),
         )
 
 

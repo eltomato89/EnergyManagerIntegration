@@ -15,6 +15,13 @@ DOMAIN: Final = "energy_manager"
 # Subentry-Typ für einen Verbraucher.
 SUBENTRY_TYPE_CONSUMER: Final = "consumer"
 
+# Subentry-Typ für einen Speicher. Eigener Typ und kein Verbraucher, denn drei
+# Dinge unterscheiden ihn: Er wird nie geschaltet, er hat einen Ladestand, und
+# seine Leistung steht in der Überschussformel selbst. Als Subentry statt als
+# Feld am Eintrag, damit es mehr als einen geben kann und jeder seine eigenen
+# Stellgrößen an seinem eigenen Gerät trägt.
+SUBENTRY_TYPE_BATTERY: Final = "battery"
+
 # Modellbezeichnungen der angelegten Geräte. **Englisch**, und das ist keine
 # Nachlässigkeit: Ein Gerätemodell lässt sich in Home Assistant nicht
 # übersetzen — anders als Entitäts- und Feldnamen gibt es dafür keinen

@@ -44,15 +44,8 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    CONF_BATTERY_CHARGE_ENTITY,
-    CONF_BATTERY_DISCHARGE_ENTITY,
-    CONF_BATTERY_INVERT,
-    CONF_BATTERY_MAX_CHARGE_W,
+    BATTERY_MODE_CHARGE_ONLY,
     CONF_BATTERY_MIN_SOC,
-    CONF_BATTERY_MODE,
-    CONF_BATTERY_POWER_ENTITY,
-    CONF_BATTERY_RESERVE_W,
-    CONF_BATTERY_SOC_ENTITY,
     CONF_CONSUMPTION_ENTITY,
     CONF_CONSUMPTION_INCLUDES_BATTERY,
     CONF_FORECAST_ENTITY,
@@ -77,6 +70,7 @@ from .const import (
     STORAGE_MINOR_VERSION,
     STORAGE_SAVE_DELAY,
     STORAGE_VERSION,
+    SUBENTRY_TYPE_BATTERY,
     SUBENTRY_TYPE_CONSUMER,
     TICK_INTERVAL,
 )
@@ -84,6 +78,7 @@ from .daily import read_energy_kwh
 from .engine import Decision, Evaluation, anticipated_w, build_views, decide
 from .estimate import async_estimate_power
 from .models import (
+    BatteryConfig,
     BatteryLoad,
     BatteryView,
     ConsumerConfig,
@@ -94,7 +89,6 @@ from .models import (
     Reading,
     ReadingReason,
     SurplusResult,
-    has_battery,
 )
 from .smoothing import TimeWeightedWindow
 from .surplus import SurplusInput, apply_reserve, compute_surplus
@@ -126,6 +120,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             always_update=False,
         )
         self.consumers: dict[str, ConsumerConfig] = {}
+        self.batteries: dict[str, BatteryConfig] = {}
         self.runtime: dict[str, ConsumerRuntime] = {}
         # Schalt-Entität → Verbraucher. Nur für die Rückrichtung: ein
         # Zustandsereignis nennt die Entität, gebraucht wird der Verbraucher.
@@ -220,7 +215,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
 
     @callback
     def reload_consumers(self) -> None:
-        """Liest die Verbraucher aus den Subentries."""
+        """Liest Verbraucher und Speicher aus den Subentries."""
         entry = self.config_entry
         assert entry is not None
 
@@ -228,6 +223,12 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             subentry_id: ConsumerConfig.from_subentry(subentry_id, dict(subentry.data))
             for subentry_id, subentry in entry.subentries.items()
             if subentry.subentry_type == SUBENTRY_TYPE_CONSUMER
+        }
+
+        self.batteries = {
+            subentry_id: BatteryConfig.from_subentry(subentry_id, dict(subentry.data))
+            for subentry_id, subentry in entry.subentries.items()
+            if subentry.subentry_type == SUBENTRY_TYPE_BATTERY
         }
 
         self._switch_owners = {
@@ -312,23 +313,36 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
             self._unsub_state()
             self._unsub_state = None
 
+    def battery(self) -> BatteryConfig | None:
+        """Der Speicher, mit dem gerechnet wird.
+
+        Vorerst der erste: Die Überschussformel verträgt genau eine Bilanz, und
+        das Zusammenfassen mehrerer ist ein eigener Schritt. Bis dahin ändert
+        sich am Verhalten nichts — es gab noch nie mehr als einen.
+        """
+        return next(iter(self.batteries.values()), None)
+
     @callback
     def tracked_entities(self) -> set[str]:
         """Alle Entitäten, deren Änderung eine neue Auswertung rechtfertigt."""
         data = dict(self.config_entry.data) if self.config_entry else {}
         ids: set[str] = set()
 
-        for key in (
-            CONF_GRID_ENTITY,
-            CONF_PRODUCTION_ENTITY,
-            CONF_CONSUMPTION_ENTITY,
-            CONF_BATTERY_SOC_ENTITY,
-            CONF_BATTERY_POWER_ENTITY,
-            CONF_BATTERY_CHARGE_ENTITY,
-            CONF_BATTERY_DISCHARGE_ENTITY,
-        ):
+        for key in (CONF_GRID_ENTITY, CONF_PRODUCTION_ENTITY, CONF_CONSUMPTION_ENTITY):
             if entity_id := data.get(key):
                 ids.add(entity_id)
+
+        for battery in self.batteries.values():
+            ids.update(
+                entity_id
+                for entity_id in (
+                    battery.soc_entity,
+                    battery.power_entity,
+                    battery.charge_entity,
+                    battery.discharge_entity,
+                )
+                if entity_id
+            )
 
         for consumer in self.consumers.values():
             ids.add(consumer.switch_entity)
@@ -858,14 +872,14 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         if smoothed is None:
             return instant
 
-        data = dict(self.config_entry.data) if self.config_entry else {}
         # Geglättet wird der Rohwert; Reserve und Ladestandsregel greifen
         # danach, sonst laufen sie dem Mittelungsfenster hinterher.
+        battery = self.battery()
         available = apply_reserve(
             smoothed,
-            read_percent(self.hass, data.get(CONF_BATTERY_SOC_ENTITY)),
+            self.battery_soc(),
             self._battery_min_soc,
-            data.get(CONF_BATTERY_RESERVE_W, 0),
+            0.0 if battery is None else battery.reserve_w,
         )
 
         return SurplusResult(
@@ -903,7 +917,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         """Momentanwert ohne Glättung."""
         data = dict(self.config_entry.data) if self.config_entry else {}
 
-        battery = self._battery_reading(data)
+        battery = self.battery()
         return compute_surplus(
             SurplusInput(
                 mode=data.get(CONF_METER_MODE, METER_MODE_GRID),
@@ -913,26 +927,28 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
                 ),
                 production=read_power_w(self.hass, data.get(CONF_PRODUCTION_ENTITY)),
                 consumption=read_power_w(self.hass, data.get(CONF_CONSUMPTION_ENTITY)),
-                battery=battery,
-                battery_configured=has_battery(data),
-                battery_mode=data.get(CONF_BATTERY_MODE, "charge_only"),
-                battery_soc=read_percent(self.hass, data.get(CONF_BATTERY_SOC_ENTITY)),
+                battery=self._battery_reading(battery),
+                battery_configured=battery is not None and battery.has_reading,
+                battery_mode=BATTERY_MODE_CHARGE_ONLY if battery is None else battery.mode,
+                battery_soc=self.battery_soc(),
+                # Am Eintrag und nicht am Speicher: Das beschreibt, was der
+                # Zähler mitmisst, nicht was die Batterie tut.
                 consumption_includes_battery=data.get(CONF_CONSUMPTION_INCLUDES_BATTERY, False),
                 battery_min_soc=self._battery_min_soc,
-                battery_reserve_w=data.get(CONF_BATTERY_RESERVE_W, 0),
+                battery_reserve_w=0.0 if battery is None else battery.reserve_w,
             )
         )
 
-    def _battery_reading(self, data: dict[str, Any]) -> Reading:
-        if data.get(CONF_BATTERY_CHARGE_ENTITY) or data.get(CONF_BATTERY_DISCHARGE_ENTITY):
+    def _battery_reading(self, battery: BatteryConfig | None) -> Reading:
+        """Die gemessene Leistung eines Speichers, positiv beim Laden."""
+        if battery is None:
+            return _NO_READING
+        if battery.charge_entity or battery.discharge_entity:
             return combine_battery(
-                read_power_w(self.hass, data.get(CONF_BATTERY_CHARGE_ENTITY)),
-                read_power_w(self.hass, data.get(CONF_BATTERY_DISCHARGE_ENTITY)),
+                read_power_w(self.hass, battery.charge_entity),
+                read_power_w(self.hass, battery.discharge_entity),
             )
-        return invert(
-            read_power_w(self.hass, data.get(CONF_BATTERY_POWER_ENTITY)),
-            data.get(CONF_BATTERY_INVERT, False),
-        )
+        return invert(read_power_w(self.hass, battery.power_entity), battery.invert)
 
     def _build_views(self, surplus: SurplusResult) -> tuple[list[ConsumerView], BatteryView | None]:
         """Bewertet die Verbraucher in Prioritätsreihenfolge."""
@@ -946,18 +962,16 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         Batterie wie bisher ein reiner Korrekturterm im Überschuss und taucht in
         der Reihenfolge nicht auf.
         """
-        data = dict(self.config_entry.data) if self.config_entry else {}
-        max_charge = data.get(CONF_BATTERY_MAX_CHARGE_W)
-        if not has_battery(data) or not max_charge:
+        battery = self.battery()
+        if battery is None or not battery.shiftable:
             return None
 
-        reading = self._battery_reading(data)
         return BatteryLoad(
             priority=self._battery_priority,
-            max_charge_w=float(max_charge),
-            reserve_w=float(data.get(CONF_BATTERY_RESERVE_W) or 0.0),
-            soc=read_percent(self.hass, data.get(CONF_BATTERY_SOC_ENTITY)),
-            charging_w=reading.w,
+            max_charge_w=battery.max_charge_w,
+            reserve_w=battery.reserve_w,
+            soc=read_percent(self.hass, battery.soc_entity),
+            charging_w=self._battery_reading(battery).w,
         )
 
     # -- Hilfen für Entitäten ------------------------------------------------
@@ -1097,15 +1111,15 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         return self._smoothing_window()
 
     def battery_soc(self) -> float | None:
-        """Aktueller Ladestand, oder None ohne Batterie."""
-        data = dict(self.config_entry.data) if self.config_entry else {}
-        return read_percent(self.hass, data.get(CONF_BATTERY_SOC_ENTITY))
+        """Aktueller Ladestand, oder None ohne Speicher."""
+        battery = self.battery()
+        return None if battery is None else read_percent(self.hass, battery.soc_entity)
 
     @property
     def battery_soc_entity(self) -> str | None:
         """Entität des Ladestands, damit die Karte den Detail-Dialog öffnen kann."""
-        data = dict(self.config_entry.data) if self.config_entry else {}
-        return data.get(CONF_BATTERY_SOC_ENTITY)
+        battery = self.battery()
+        return None if battery is None else battery.soc_entity
 
     @property
     def battery_priority(self) -> float:

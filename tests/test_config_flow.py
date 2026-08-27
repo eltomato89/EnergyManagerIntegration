@@ -9,10 +9,10 @@ from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.energy_manager.const import (
-    BATTERY_MODE_CHARGE_ONLY,
     CONF_BATTERY_MAX_CHARGE_W,
     CONF_BATTERY_MIN_SOC,
     CONF_BATTERY_POWER_ENTITY,
+    CONF_BATTERY_SOC_ENTITY,
     CONF_CONSUMPTION_ENTITY,
     CONF_GRID_ENTITY,
     CONF_INVERT_GRID,
@@ -26,6 +26,7 @@ from custom_components.energy_manager.const import (
     DOMAIN,
     METER_MODE_GRID,
     METER_MODE_SPLIT,
+    SUBENTRY_TYPE_BATTERY,
     SUBENTRY_TYPE_CONSUMER,
 )
 
@@ -43,21 +44,19 @@ async def test_grid_flow(hass: HomeAssistant) -> None:
     )
     assert result["step_id"] == "grid"
 
+    # Der Zählerschritt ist der letzte: Ein Speicher ist ein eigener Subentry,
+    # weil es mehr als einen geben darf.
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_GRID_ENTITY: "sensor.netz", CONF_INVERT_GRID: False},
     )
-    assert result["step_id"] == "battery"
-
-    # Ohne Batterie: leer bestätigen.
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_GRID_ENTITY] == "sensor.netz"
     assert result["data"][CONF_METER_MODE] == METER_MODE_GRID
 
 
-async def test_split_flow_mit_batterie(hass: HomeAssistant) -> None:
-    """Einrichtung mit getrennten Sensoren und Batterie."""
+async def test_split_flow(hass: HomeAssistant) -> None:
+    """Einrichtung mit getrennten Sensoren für Erzeugung und Verbrauch."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
@@ -73,34 +72,10 @@ async def test_split_flow_mit_batterie(hass: HomeAssistant) -> None:
             CONF_CONSUMPTION_ENTITY: "sensor.haus",
         },
     )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_BATTERY_POWER_ENTITY: "sensor.batterie",
-            "battery_mode": BATTERY_MODE_CHARGE_ONLY,
-        },
-    )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_PRODUCTION_ENTITY] == "sensor.pv"
-    assert result["data"][CONF_BATTERY_POWER_ENTITY] == "sensor.batterie"
-
-
-async def test_leere_felder_werden_nicht_gespeichert(hass: HomeAssistant) -> None:
-    """Ein leeres Formularfeld ist etwas anderes als ein gespeicherter Leerwert."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_METER_MODE: METER_MODE_GRID}
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_GRID_ENTITY: "sensor.netz"}
-    )
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-
-    # Kein battery_soc_entity mit leerem Wert in den Daten.
-    assert "battery_soc_entity" not in result["data"]
+    assert result["data"][CONF_CONSUMPTION_ENTITY] == "sensor.haus"
 
 
 async def test_nur_eine_instanz(hass: HomeAssistant, mock_config_entry: MockConfigEntry) -> None:
@@ -146,26 +121,16 @@ class TestNeuKonfigurieren:
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {CONF_GRID_ENTITY: "sensor.netz_neu"}
         )
-        assert result["step_id"] == "battery"
-
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            {
-                CONF_BATTERY_POWER_ENTITY: "sensor.batterie",
-                CONF_BATTERY_MAX_CHARGE_W: 5000,
-            },
-        )
         await hass.async_block_till_done()
 
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "reconfigure_successful"
         assert len(hass.config_entries.async_entries(DOMAIN)) == 1
         assert mock_config_entry.data[CONF_GRID_ENTITY] == "sensor.netz_neu"
-        assert mock_config_entry.data[CONF_BATTERY_MAX_CHARGE_W] == 5000
 
     async def test_formulare_sind_vorbelegt(self, hass: HomeAssistant) -> None:
         """Sonst müsste jedes Feld erneut ausgefüllt werden, um eines zu ändern."""
-        entry = _eintrag_mit_batterie()
+        entry = _eintrag()
         entry.add_to_hass(hass)
 
         result = await hass.config_entries.flow.async_init(
@@ -175,113 +140,22 @@ class TestNeuKonfigurieren:
                 "entry_id": entry.entry_id,
             },
         )
+        assert _suggested(result, CONF_METER_MODE) == METER_MODE_GRID
+
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {CONF_METER_MODE: METER_MODE_GRID}
         )
         assert _suggested(result, CONF_GRID_ENTITY) == "sensor.netz"
 
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_GRID_ENTITY: "sensor.netz"}
-        )
-        assert _suggested(result, CONF_BATTERY_POWER_ENTITY) == "sensor.batterie"
 
-    async def test_geleertes_feld_bleibt_leer(self, hass: HomeAssistant) -> None:
-        """Vorbelegte Felder müssen sich auch wieder abwählen lassen."""
-        entry = _eintrag_mit_batterie()
-        entry.add_to_hass(hass)
-
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN,
-            context={
-                "source": config_entries.SOURCE_RECONFIGURE,
-                "entry_id": entry.entry_id,
-            },
-        )
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_METER_MODE: METER_MODE_GRID}
-        )
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_GRID_ENTITY: "sensor.netz"}
-        )
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
-
-        assert result["type"] is FlowResultType.ABORT
-        assert CONF_BATTERY_POWER_ENTITY not in entry.data
-
-
-class TestStummeAngaben:
-    """Eine Zahl, die ohne ihren Messwert nichts tut, gehört abgewiesen.
-
-    Beide Felder hängen an einer Batterie-Entität. Ohne sie stünde ein Wert im
-    Formular, der stillschweigend wirkungslos bleibt — dieselbe Art Fehler wie
-    eine verwechselte Entität, nur ohne jede Rückmeldung.
-    """
-
-    async def _bis_batterie(self, hass: HomeAssistant) -> dict:
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": config_entries.SOURCE_USER}
-        )
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_METER_MODE: METER_MODE_GRID}
-        )
-        return await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_GRID_ENTITY: "sensor.netz"}
-        )
-
-    async def test_ladeleistung_ohne_batterie_entitaet(self, hass: HomeAssistant) -> None:
-        result = await self._bis_batterie(hass)
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_BATTERY_MAX_CHARGE_W: 5000}
-        )
-
-        assert result["type"] is FlowResultType.FORM
-        assert result["errors"] == {CONF_BATTERY_MAX_CHARGE_W: "battery_entity_required"}
-
-    async def test_der_mindestladestand_steht_nicht_mehr_im_formular(
-        self, hass: HomeAssistant
-    ) -> None:
-        """Er ist eine Vorgabe, die sich mit dem Tag ändert, keine Beschreibung
-        der Anlage — und liegt deshalb hinter einer eigenen Entität.
-
-        Stünde er hier weiterhin, gäbe es zwei Orte für denselben Wert, und wer
-        ihn im Formular änderte, sähe nichts geschehen.
-        """
-        result = await self._bis_batterie(hass)
-
-        assert CONF_BATTERY_MIN_SOC not in result["data_schema"].schema
-
-    async def test_die_eingabe_bleibt_nach_dem_fehler_stehen(self, hass: HomeAssistant) -> None:
-        """Sonst verschwindet genau der Wert, der korrigiert werden soll."""
-        result = await self._bis_batterie(hass)
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_BATTERY_MAX_CHARGE_W: 5000}
-        )
-
-        assert _suggested(result, CONF_BATTERY_MAX_CHARGE_W) == 5000
-
-    async def test_mit_batterie_geht_es_durch(self, hass: HomeAssistant) -> None:
-        result = await self._bis_batterie(hass)
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            {
-                CONF_BATTERY_POWER_ENTITY: "sensor.batterie",
-                CONF_BATTERY_MAX_CHARGE_W: 5000,
-            },
-        )
-
-        assert result["type"] is FlowResultType.CREATE_ENTRY
-        assert result["data"][CONF_BATTERY_MAX_CHARGE_W] == 5000
-
-
-def _eintrag_mit_batterie() -> MockConfigEntry:
+def _eintrag(**extra) -> MockConfigEntry:
     return MockConfigEntry(
         domain=DOMAIN,
         title="Energy Manager",
         data={
             CONF_METER_MODE: METER_MODE_GRID,
             CONF_GRID_ENTITY: "sensor.netz",
-            CONF_BATTERY_POWER_ENTITY: "sensor.batterie",
+            **extra,
         },
         options={},
         unique_id=DOMAIN,
@@ -493,3 +367,183 @@ class TestNullwerte:
         )
         assert CONF_MAX_POWER not in gereinigt
         assert gereinigt[CONF_HYSTERESIS] == 0
+
+
+class TestSpeicherAnlegen:
+    """Der Speicher als eigener Subentry-Typ.
+
+    Er ist kein Verbraucher: keine Schalt-Entität, dafür ein Ladestand, und
+    seine Leistung steht in der Überschussformel selbst. Die beiden Formulare
+    teilen kein einziges Pflichtfeld — deshalb zwei Typen und nicht einer mit
+    Umschalter.
+    """
+
+    async def _setup(self, hass: HomeAssistant, entry: MockConfigEntry) -> None:
+        entry.add_to_hass(hass)
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    async def _formular(self, hass: HomeAssistant, entry: MockConfigEntry):
+        """Startet den Ablauf; mehrfach aufrufbar für mehrere Speicher."""
+        return await hass.config_entries.subentries.async_init(
+            (entry.entry_id, SUBENTRY_TYPE_BATTERY),
+            context={"source": config_entries.SOURCE_USER},
+        )
+
+    async def test_wird_angelegt(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        await self._setup(hass, mock_config_entry)
+        result = await self._formular(hass, mock_config_entry)
+        assert result["type"] is FlowResultType.FORM
+
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"],
+            {
+                CONF_NAME: "Keller",
+                CONF_BATTERY_SOC_ENTITY: "sensor.akku_soc",
+                CONF_BATTERY_POWER_ENTITY: "sensor.akku_leistung",
+                CONF_BATTERY_MAX_CHARGE_W: 5000,
+            },
+        )
+        await hass.async_block_till_done()
+
+        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["title"] == "Keller"
+
+        speicher = [
+            s
+            for s in mock_config_entry.subentries.values()
+            if s.subentry_type == SUBENTRY_TYPE_BATTERY
+        ]
+        assert len(speicher) == 1
+        assert speicher[0].data[CONF_BATTERY_SOC_ENTITY] == "sensor.akku_soc"
+
+    async def test_zwei_speicher_nebeneinander(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Der ganze Zweck des Umbaus: Es darf mehr als einen geben.
+
+        Anders als bei Verbrauchern gibt es keine Prüfung auf doppelte
+        Entitäten — zwei Speicher am selben Sensor wären ein Versehen, aber
+        eines, das sich nicht von einer Anlage mit zwei Wechselrichtern am
+        selben Summenzähler unterscheiden lässt.
+        """
+        await self._setup(hass, mock_config_entry)
+
+        for name, sensor in (("Keller", "sensor.keller_soc"), ("Garage", "sensor.garage_soc")):
+            result = await self._formular(hass, mock_config_entry)
+            result = await hass.config_entries.subentries.async_configure(
+                result["flow_id"], {CONF_NAME: name, CONF_BATTERY_SOC_ENTITY: sensor}
+            )
+            await hass.async_block_till_done()
+            assert result["type"] is FlowResultType.CREATE_ENTRY
+
+        speicher = [
+            s
+            for s in mock_config_entry.subentries.values()
+            if s.subentry_type == SUBENTRY_TYPE_BATTERY
+        ]
+        assert [s.title for s in speicher] == ["Keller", "Garage"]
+
+    async def test_ohne_messwert_wird_abgelehnt(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Ein Eintrag aus lauter Zahlen wäre eine Zeile, hinter der nichts steht.
+
+        Ohne Messwert lässt sich weder erkennen, ob der Speicher lädt, noch ob
+        er voll ist — und beides braucht die Reihenfolge.
+        """
+        await self._setup(hass, mock_config_entry)
+        result = await self._formular(hass, mock_config_entry)
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"], {CONF_NAME: "Luftschloss", CONF_BATTERY_MAX_CHARGE_W: 5000}
+        )
+
+        assert result["type"] is FlowResultType.FORM
+        assert result["errors"] == {CONF_BATTERY_POWER_ENTITY: "battery_entity_required"}
+
+    async def test_leere_felder_werden_nicht_gespeichert(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Ein leeres Formularfeld ist etwas anderes als ein gespeicherter Leerwert.
+
+        Gespeichert höbe er die Vorgabewerte auf und stünde für immer in den
+        Daten, ohne dass ihn je jemand einträgt.
+        """
+        await self._setup(hass, mock_config_entry)
+        result = await self._formular(hass, mock_config_entry)
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"],
+            {CONF_NAME: "Keller", CONF_BATTERY_SOC_ENTITY: "sensor.akku_soc"},
+        )
+        await hass.async_block_till_done()
+
+        gespeichert = next(
+            s.data
+            for s in mock_config_entry.subentries.values()
+            if s.subentry_type == SUBENTRY_TYPE_BATTERY
+        )
+        assert CONF_BATTERY_POWER_ENTITY not in gespeichert
+
+    async def test_geleertes_feld_bleibt_leer(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Vorbelegte Felder müssen sich auch wieder abwählen lassen."""
+        await self._setup(hass, mock_config_entry)
+        result = await self._formular(hass, mock_config_entry)
+        await hass.config_entries.subentries.async_configure(
+            result["flow_id"],
+            {
+                CONF_NAME: "Keller",
+                CONF_BATTERY_SOC_ENTITY: "sensor.akku_soc",
+                CONF_BATTERY_POWER_ENTITY: "sensor.akku_leistung",
+            },
+        )
+        await hass.async_block_till_done()
+
+        speicher = next(
+            s
+            for s in mock_config_entry.subentries.values()
+            if s.subentry_type == SUBENTRY_TYPE_BATTERY
+        )
+        result = await hass.config_entries.subentries.async_init(
+            (mock_config_entry.entry_id, SUBENTRY_TYPE_BATTERY),
+            context={"source": "reconfigure", "subentry_id": speicher.subentry_id},
+        )
+        assert _suggested(result, CONF_BATTERY_POWER_ENTITY) == "sensor.akku_leistung"
+
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"],
+            {CONF_NAME: "Keller", CONF_BATTERY_SOC_ENTITY: "sensor.akku_soc"},
+        )
+        await hass.async_block_till_done()
+
+        assert result["type"] is FlowResultType.ABORT
+        assert CONF_BATTERY_POWER_ENTITY not in speicher.data
+
+    async def test_der_mindestladestand_steht_nicht_im_formular(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Er ist eine Vorgabe, die sich mit dem Tag ändert, keine Beschreibung
+        der Anlage — und liegt deshalb hinter einer eigenen Entität.
+
+        Stünde er hier, gäbe es zwei Orte für denselben Wert, und wer ihn im
+        Formular änderte, sähe nichts geschehen.
+        """
+        await self._setup(hass, mock_config_entry)
+        result = await self._formular(hass, mock_config_entry)
+
+        assert CONF_BATTERY_MIN_SOC not in result["data_schema"].schema
+
+    async def test_die_eingabe_bleibt_nach_dem_fehler_stehen(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Sonst verschwindet genau der Wert, der korrigiert werden soll."""
+        await self._setup(hass, mock_config_entry)
+        result = await self._formular(hass, mock_config_entry)
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"], {CONF_NAME: "Luftschloss", CONF_BATTERY_MAX_CHARGE_W: 5000}
+        )
+
+        assert _suggested(result, CONF_BATTERY_MAX_CHARGE_W) == 5000
