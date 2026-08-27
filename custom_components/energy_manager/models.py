@@ -31,6 +31,7 @@ from .const import (
     CONF_MIN_RUNTIME,
     CONF_NAME,
     CONF_PHASES,
+    CONF_PHASES_ENTITY,
     CONF_POWER_ENTITY,
     CONF_SWITCH_ENTITY,
     CONF_TURN_OFF_DELAY,
@@ -243,6 +244,7 @@ class ConsumerConfig:
 
     control_entity: str | None = None
     phases: int = 1
+    phases_entity: str | None = None
     level_map: dict[str, float] | None = None
     min_level_w: float | None = None
     max_level_w: float | None = None
@@ -286,6 +288,7 @@ class ConsumerConfig:
             consumer_type=data.get(CONF_CONSUMER_TYPE, CONSUMER_TYPE_SWITCH),
             control_entity=data.get(CONF_CONTROL_ENTITY),
             phases=int(data.get(CONF_PHASES, 1) or 1),
+            phases_entity=data.get(CONF_PHASES_ENTITY),
             level_map=data.get(CONF_LEVEL_MAP),
             min_level_w=data.get(CONF_MIN_LEVEL_W),
             max_level_w=data.get(CONF_MAX_LEVEL_W),

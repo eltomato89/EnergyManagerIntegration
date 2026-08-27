@@ -110,6 +110,13 @@ A **missing unit is refused**, and that is stricter than for a power sensor, whe
 An ampere entity read as watts would yield a ladder from 6 to 16 W that fits into any surplus — and
 the automation would write 16 while the device draws 16 A.
 
+**The number of phases is not a constant.** A wallbox switched between single- and three-phase
+changes the power of every current step by a factor of three, and a ladder built on the wrong number
+is off by exactly that. If the device reports its phase count, point `phases_entity` at it and the
+ladder follows; the fixed field is then only a fallback. A plain number is expected — devices with
+their own dialect (go-e reports the phase *mode* as 0, 1, 2) need a template sensor in front, by the
+same rule as the switch entity.
+
 Three more fields per load: a **minimum level** below which the load is switched off rather than
 throttled (the minimum of the control entity is the limit of the charging station, not that of the
 vehicle), a **hold time** between two level changes, and the existing hysteresis, which also acts as

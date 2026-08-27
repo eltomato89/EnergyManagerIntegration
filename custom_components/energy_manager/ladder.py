@@ -47,11 +47,39 @@ def build_ladder(hass: HomeAssistant, consumer: ConsumerConfig) -> Ladder | None
     if domain == "select":
         ladder = _from_select(state, consumer)
     elif domain == "number":
-        ladder = _from_number(state, consumer)
+        ladder = _from_number(state, consumer, resolve_phases(hass, consumer))
     else:
         return None
 
     return _apply_minimum(ladder, consumer.min_level_w)
+
+
+def resolve_phases(hass: HomeAssistant, consumer: ConsumerConfig) -> int:
+    """Die aktuell geltende Phasenzahl.
+
+    Aus der Entität, wenn eine eingetragen ist — sonst aus dem festen Feld. Die
+    Phasenzahl ist keine Konstante: Eine Wallbox, die zwischen ein- und
+    dreiphasig wechselt, ändert damit die Leistung jeder Stromstufe um den
+    Faktor 3, und eine Leiter auf Grundlage der falschen Zahl liegt um ebendiesen
+    Faktor daneben.
+
+    Verlangt einen schlichten Zahlwert. Alles andere — auch der Phasenmodus
+    einer go-e, die 2 für drei Phasen meldet — gehört in einen Template-Sensor
+    davor; die Integration lernt keine Gerätedialekte.
+    """
+    if not consumer.phases_entity:
+        return consumer.phases
+
+    state = hass.states.get(consumer.phases_entity)
+    if is_unavailable(state):
+        return consumer.phases
+    assert state is not None
+
+    try:
+        gemeldet = int(float(state.state))
+    except (TypeError, ValueError):
+        return consumer.phases
+    return gemeldet if gemeldet in (1, 2, 3) else consumer.phases
 
 
 def read_level(hass: HomeAssistant, consumer: ConsumerConfig, ladder: Ladder) -> Level | None:
@@ -79,7 +107,7 @@ def read_level(hass: HomeAssistant, consumer: ConsumerConfig, ladder: Ladder) ->
         return None
 
 
-def _from_number(state: State, consumer: ConsumerConfig) -> Ladder | None:
+def _from_number(state: State, consumer: ConsumerConfig, phases: int) -> Ladder | None:
     """Raster einer ``number``: aus min, max, step und der Einheit.
 
     Die Einheit entscheidet über die Umrechnung, und sie **muss** vorhanden
@@ -93,7 +121,7 @@ def _from_number(state: State, consumer: ConsumerConfig) -> Ladder | None:
         return None
 
     # Dreiphasig zieht dieselbe Stromstufe die dreifache Leistung.
-    per_unit = consumer.phases * NOMINAL_VOLTAGE if kind == CONTROL_NUMBER_A else factor
+    per_unit = phases * NOMINAL_VOLTAGE if kind == CONTROL_NUMBER_A else factor
 
     minimum = _number_attr(state, "min")
     maximum = _number_attr(state, "max")

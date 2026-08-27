@@ -353,3 +353,58 @@ class TestHoechststufe:
     async def test_eine_zu_niedrige_grenze_ergibt_keine_leiter(self, hass: HomeAssistant) -> None:
         set_number(hass)
         assert build_ladder(hass, consumer(phases=3, max_level_w=100)) is None
+
+
+class TestPhasenAusEntitaet:
+    """Die Phasenzahl ist keine Konstante.
+
+    Wer seine Wallbox zwischen ein- und dreiphasig umstellt, ändert damit die
+    Leistung jeder Stromstufe um den Faktor 3. Ein festes Feld steht danach
+    falsch da — und die Leiter um denselben Faktor daneben.
+    """
+
+    async def test_entitaet_hat_vorrang(self, hass: HomeAssistant) -> None:
+        set_number(hass)
+        hass.states.async_set("sensor.wallbox_phasen", "3")
+        leiter = build_ladder(hass, consumer(phases=1, phases_entity="sensor.wallbox_phasen"))
+
+        assert leiter is not None
+        assert leiter.min_w == 4140  # 6 A dreiphasig, nicht 1380
+
+    async def test_umschalten_zieht_die_leiter_mit(self, hass: HomeAssistant) -> None:
+        set_number(hass)
+        c = consumer(phases=1, phases_entity="sensor.wallbox_phasen")
+
+        hass.states.async_set("sensor.wallbox_phasen", "1")
+        einphasig = build_ladder(hass, c)
+        hass.states.async_set("sensor.wallbox_phasen", "3")
+        dreiphasig = build_ladder(hass, c)
+
+        assert einphasig is not None and dreiphasig is not None
+        assert einphasig.max_w == 3680
+        assert dreiphasig.max_w == 11040
+
+    async def test_ohne_entitaet_gilt_das_feld(self, hass: HomeAssistant) -> None:
+        set_number(hass)
+        leiter = build_ladder(hass, consumer(phases=3))
+
+        assert leiter is not None
+        assert leiter.min_w == 4140
+
+    async def test_unbrauchbarer_wert_faellt_auf_das_feld_zurueck(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Ein go-e meldet den Phasenmodus als 0, 1, 2 — die 2 hieße drei Phasen.
+
+        Geraten wird das nicht: 0 und 2 sind keine gültige Phasenzahl, also gilt
+        das Feld. Wer den Dialekt übersetzen will, stellt einen Template-Sensor
+        davor.
+        """
+        set_number(hass)
+        c = consumer(phases=1, phases_entity="sensor.wallbox_phasen")
+
+        for wert in ("0", "unavailable", "kaputt", "7"):
+            hass.states.async_set("sensor.wallbox_phasen", wert)
+            leiter = build_ladder(hass, c)
+            assert leiter is not None
+            assert leiter.max_w == 3680, f"bei {wert!r}"

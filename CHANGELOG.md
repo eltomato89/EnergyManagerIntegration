@@ -2,6 +2,33 @@
 
 Dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+## [Unveröffentlicht]
+
+### Behoben
+
+- **Ein Gerät, das seine kleinste Stufe nicht erreicht, blockierte still Leistung.** `cap_ladder`
+  kappt auf eine Stufe über dem Beobachteten und kommt bauartbedingt nicht unter die erste; die
+  Kaskade legte deshalb dauerhaft die Mindeststufe zurück, obwohl das Gerät einen Bruchteil zog.
+  Beobachtet an einer Wallbox mit falsch eingetragener Phasenzahl: kleinste Stufe 4140 W,
+  tatsächliche Aufnahme 1779 W — und 2361 W, die Poolpumpe und Entfeuchtern fehlten, ohne dass
+  irgendwo ein Fehler stand. Unterhalb der Mindeststufe zählt jetzt, was das Gerät zieht.
+
+- **Die Karte zeichnete eine Leiter mit einer Stufe.** Ein Segment über die volle Breite und
+  „Stufe 1/1" sagen nichts und sehen aus wie ein Gerät mit einer Stufe. Stattdessen steht dort jetzt
+  im Klartext, dass das Gerät seine Mindeststufe nicht erreicht — mitsamt der Leistung, die es
+  tatsächlich schafft.
+
+### Hinzugefügt
+
+- **`phases_entity`: die Phasenzahl darf aus einer Entität kommen.** Sie ist keine Konstante — wer
+  seine Wallbox zwischen ein- und dreiphasig umstellt, ändert die Leistung jeder Stromstufe um den
+  Faktor 3, und eine feste Angabe steht danach falsch da, bis jemand sie nachzieht. Mit der Entität
+  folgt die Leiter von selbst; das feste Feld bleibt Rückfallebene.
+
+  Erwartet wird ein schlichter Zahlwert. Geräte mit eigenem Dialekt — go-e meldet den Phasen*modus*
+  als 0, 1, 2 — bekommen einen Template-Sensor davor, nach derselben Regel wie bei der
+  Schaltentität. Die Integration lernt keine Gerätedialekte.
+
 ## [0.5.0b1] — 2026-08-18
 
 Regelbare Verbraucher: Die Automatik kann Lasten jetzt in **Stufen** fahren statt nur ein- und

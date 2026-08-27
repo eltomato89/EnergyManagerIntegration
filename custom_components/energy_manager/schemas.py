@@ -45,6 +45,7 @@ from .const import (
     CONF_MIN_RUNTIME,
     CONF_NAME,
     CONF_PHASES,
+    CONF_PHASES_ENTITY,
     CONF_POWER_ENTITY,
     CONF_PRODUCTION_ENTITY,
     CONF_SETTLE_TIME,
@@ -242,6 +243,11 @@ CONTROL_SCHEMA = vol.Schema(
                 translation_key="phases",
                 mode=selector.SelectSelectorMode.LIST,
             )
+        ),
+        # Meldet das Gerät seine Phasenzahl selbst, hat sie Vorrang: Wer die
+        # Box umstellt, soll die Leiter nicht von Hand nachziehen müssen.
+        vol.Optional(CONF_PHASES_ENTITY): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["sensor", "number", "input_number"])
         ),
         vol.Optional(CONF_MIN_LEVEL_W): watts(),
         vol.Optional(CONF_MAX_LEVEL_W): watts(),

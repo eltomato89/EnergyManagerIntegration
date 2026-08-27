@@ -153,6 +153,7 @@
           "data": {
             "control_entity": "Steuerentität",
             "phases": "Phasen",
+            "phases_entity": "Phasen-Entität",
             "min_level_w": "Mindeststufe",
             "max_level_w": "Höchststufe",
             "level_hold": "Haltezeit"
@@ -162,7 +163,8 @@
             "phases": "Nur bei einer Steuerentität in Ampere. Bestimmt die Umrechnung in Watt, gerechnet mit 230 V je Phase.",
             "min_level_w": "Unterhalb dieser Leistung wird abgeschaltet statt gedrosselt. Nötig, wenn das Gerät weniger nicht annimmt: Das Minimum der Steuerentität ist die Grenze der Ladestation, nicht die des Fahrzeugs.",
             "level_hold": "Mindestzeit zwischen zwei Stufenwechseln. Ohne sie folgt die Stufe jeder Schwankung des Überschusses.",
-            "max_level_w": "Oberhalb dieser Leistung wird keine Stufe angeboten. Nötig, wenn die Steuerentität mehr entgegennimmt, als das Gerät leisten kann: Ein regelbares Netzteil von 50 bis 600 W meldet als Zahl gern 0 bis 3000. Ohne diese Grenze verteilen sich die Stufen über einen Bereich, den das Gerät nicht bedient."
+            "max_level_w": "Oberhalb dieser Leistung wird keine Stufe angeboten. Nötig, wenn die Steuerentität mehr entgegennimmt, als das Gerät leisten kann: Ein regelbares Netzteil von 50 bis 600 W meldet als Zahl gern 0 bis 3000. Ohne diese Grenze verteilen sich die Stufen über einen Bereich, den das Gerät nicht bedient.",
+            "phases_entity": "Meldet das Gerät seine aktuelle Phasenzahl, wird sie hieraus gelesen und die feste Angabe darüber ignoriert. Erwartet wird ein schlichter Zahlwert (1, 2 oder 3); Geräte mit eigenem Dialekt — go-e meldet den Phasenmodus als 0, 1, 2 — brauchen einen Template-Sensor davor."
           }
         },
         "levels": {

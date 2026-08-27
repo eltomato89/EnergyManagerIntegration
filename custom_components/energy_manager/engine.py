@@ -393,7 +393,7 @@ def build_views(
                 consumer.hysteresis or 0,
             )
             status, budget = _rate_modulating(
-                ladder, level, target, currently_on, managed, power_w, budget
+                ladder, level, target, currently_on, managed, power_w, budget, observed_max
             )
         elif currently_on:
             # Laufende Verbraucher verbrauchen kein Budget: ihr Verbrauch ist im
@@ -517,6 +517,7 @@ def _rate_modulating(
     managed: bool,
     power_w: float | None,
     budget: float,
+    observed_max: float | None = None,
 ) -> tuple[DeviceStatus, float]:
     """Ampelzustand und verbleibendes Budget eines regelbaren Verbrauchers.
 
@@ -545,7 +546,7 @@ def _rate_modulating(
 
         basis = power_w if power_w is not None else (level.w if level is not None else 0.0)
         if managed:
-            budget -= max(target.w - basis, 0.0)
+            budget -= max(_claim_w(ladder, target, observed_max, basis) - basis, 0.0)
 
         if level is not None and target.w < level.w:
             # Muss heruntergehen: gerade wird mehr gezogen als gedeckt ist.
@@ -560,6 +561,34 @@ def _rate_modulating(
     if budget >= ladder.min_w * CLOSE_THRESHOLD_RATIO:
         return DeviceStatus.OFF_CLOSE, budget
     return DeviceStatus.OFF_INSUFFICIENT, budget
+
+
+def _claim_w(
+    ladder: Ladder,
+    target: Level,
+    observed_max: float | None,
+    basis: float,
+) -> float:
+    """Die Leistung, die dieser laufende Verbraucher wirklich beansprucht.
+
+    Sonst die Zielstufe — mit **einer** Ausnahme, und die ist kein Sonderfall,
+    sondern ein Fehler, der sich sonst still auswirkt: Erreicht ein Gerät nicht
+    einmal die **kleinste** Stufe, kann :func:`cap_ladder` nicht mehr helfen. Sie
+    kappt auf eine Stufe über dem Beobachteten und kommt bauartbedingt nicht
+    unter die erste. Die Kaskade legte dann dauerhaft die Mindeststufe zurück,
+    obwohl das Gerät einen Bruchteil davon zieht.
+
+    Beobachtet wurde das an einer Wallbox, deren Phasenzahl falsch eingetragen
+    war: kleinste Stufe 4140 W, tatsächliche Aufnahme 1779 W — und 2361 W, die
+    Poolpumpe und Entfeuchtern fehlten, ohne dass irgendwo ein Fehler stand.
+
+    In diesem Fall zählt, was das Gerät zieht. Das ist auch dann die ehrlichere
+    Zahl, wenn die Ursache nicht die Konfiguration ist, sondern eine Grenze des
+    Geräts selbst.
+    """
+    if observed_max is not None and observed_max < ladder.min_w:
+        return max(observed_max, basis)
+    return target.w
 
 
 def _build_battery_view(

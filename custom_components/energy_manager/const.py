@@ -113,6 +113,22 @@ Wechsel unterbricht bei den meisten Boxen das Laden. Beides verlangt eine eigene
 gleichmäßig.
 """
 
+CONF_PHASES_ENTITY: Final = "phases_entity"
+"""Entität, die die aktuelle Phasenzahl meldet. Hat Vorrang vor ``phases``.
+
+Die Phasenzahl ist keine Konstante: Wer seine Wallbox zwischen ein- und
+dreiphasig umstellt, ändert damit die Leistung jeder Stromstufe um den Faktor 3.
+Ein festes Feld steht danach falsch da, und die Leiter ebenso — bis es jemand
+von Hand nachzieht.
+
+Erwartet wird ein **schlichter Zahlwert**: 1, 2 oder 3. Geräte, die einen
+eigenen Dialekt sprechen (go-e meldet den Phasenmodus als 0/1/2, wobei 2 für
+drei Phasen steht), bekommen einen Template-Sensor davor — dieselbe Regel wie
+bei der Schaltentität. Die Integration lernt keine Gerätedialekte.
+
+Fehlt die Entität oder ist ihr Wert unbrauchbar, gilt ``phases``.
+"""
+
 CONF_LEVEL_MAP: Final = "level_map"
 """Bei einer ``select``-Steuerentität: Leistung in W je Option.
 

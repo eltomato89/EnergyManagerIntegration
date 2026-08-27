@@ -358,3 +358,60 @@ class TestWirkung:
         assert status.attributes["observed_max_w"] == 2100
         assert status.attributes["level_capped"] is True
         assert status.attributes["max_level_w"] == 3000
+
+
+class TestUnterDerKleinstenStufe:
+    """Das Gerät erreicht nicht einmal seine kleinste Stufe.
+
+    ``cap_ladder`` kann hier nicht mehr helfen: Sie kappt auf eine Stufe über dem
+    Beobachteten und kommt bauartbedingt nicht unter die erste. Ohne eine eigene
+    Regel legte die Kaskade dauerhaft die Mindeststufe zurück, obwohl das Gerät
+    einen Bruchteil zieht — und tiefer priorisierte Verbraucher verhungern still.
+
+    Beobachtet an einer Wallbox mit falsch eingetragener Phasenzahl: kleinste
+    Stufe 4140 W, tatsächliche Aufnahme 1779 W.
+    """
+
+    async def test_der_anspruch_ist_das_beobachtete_maximum(
+        self, hass: HomeAssistant, dienste: dict
+    ) -> None:
+        entry = make_entry(regelbar(), pumpe())
+        # Der Heizstab läuft, erreicht aber nur 400 W — unter seiner kleinsten
+        # Stufe von 1000 W. 1000 W Überschuss stehen zur Verfügung.
+        await setup(
+            hass,
+            entry,
+            grid="-1000",
+            option="s1",
+            leistung="400",
+            switches={"switch.heizstab": STATE_ON, "switch.pumpe": STATE_OFF},
+        )
+        await evaluate(hass, entry)
+
+        heizstab = view(entry, "Heizstab")
+        assert heizstab.observed_max_w == 400
+        # Ohne die Regel gingen 1000 - 400 = 600 W ab und die Pumpe (500 W)
+        # bliebe aus. Mit ihr ist der Anspruch das Beobachtete, also 0 zusätzlich.
+        assert heizstab.headroom_w == 1000
+        assert view(entry, "Pumpe").status.value == "off_ready"
+
+    async def test_oberhalb_der_kleinsten_stufe_gilt_weiter_die_zielstufe(
+        self, hass: HomeAssistant, dienste: dict
+    ) -> None:
+        """Die Ausnahme greift nur unterhalb der Mindeststufe."""
+        entry = make_entry(regelbar(), pumpe())
+        await setup(
+            hass,
+            entry,
+            grid="-1500",
+            option="s1",
+            leistung="1000",
+            switches={"switch.heizstab": STATE_ON, "switch.pumpe": STATE_OFF},
+        )
+        await evaluate(hass, entry)
+
+        heizstab = view(entry, "Heizstab")
+        # Erreichbar 2500 -> Stufe 2000, Mehrbedarf 1000. Bleiben 500.
+        assert heizstab.target is not None
+        assert heizstab.target.w == 2000
+        assert heizstab.headroom_w == 500
