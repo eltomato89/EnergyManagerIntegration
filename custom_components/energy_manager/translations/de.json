@@ -46,7 +46,6 @@
           "battery_charge_entity": "Ladeleistung",
           "battery_discharge_entity": "Entladeleistung",
           "battery_mode": "Entladung im Überschuss",
-          "battery_min_soc": "Mindestladestand",
           "battery_reserve_w": "Batteriereserve",
           "battery_max_charge_w": "Maximale Ladeleistung"
         },
@@ -54,15 +53,13 @@
           "battery_power_entity": "Ein bidirektionaler Sensor: positiv beim Laden, negativ beim Entladen.",
           "battery_charge_entity": "Alternative zum bidirektionalen Sensor: zwei stets positive Sensoren.",
           "battery_mode": "Ladeleistung gilt stets als verfügbar. Diese Einstellung bestimmt, ob eine Entladung den Überschuss verringert.",
-          "battery_min_soc": "Unterhalb dieses Ladestands hat das Laden Vorrang; es wird kein Überschuss ausgewiesen.",
           "battery_reserve_w": "Leistung, die immer der Batterie vorbehalten bleibt. Sie wird auf die maximale Ladeleistung angerechnet, nicht zu ihr addiert.",
           "battery_max_charge_w": "Lässt die Batterie als verschiebbare Last an der Prioritätsreihenfolge teilnehmen und begrenzt zugleich, wie viel Überschuss sie insgesamt bekommt. Höher priorisierte Verbraucher werden zuerst versorgt und bleiben eingeschaltet; die Batterie legt an ihrem Rang bis zu dieser Leistung zurück, abzüglich einer bereits eingetragenen Reserve; nur der Rest steht tiefer priorisierten Verbrauchern zur Verfügung. 0 schaltet die Teilnahme ab."
         }
       }
     },
     "error": {
-      "battery_entity_required": "Die maximale Ladeleistung wirkt nur mit einem Messwert der Batterie. Ohne Lade-, Entlade- oder Ladestandssensor lässt sich weder erkennen, ob geladen wird, noch ob die Batterie voll ist. Erforderlich ist eine der Batterie-Entitäten in diesem Formular.",
-      "soc_entity_required": "Der Mindestladestand wirkt nur mit einem Ladestandssensor. Ohne ihn bleibt die Grenze ohne Wirkung."
+      "battery_entity_required": "Die maximale Ladeleistung wirkt nur mit einem Messwert der Batterie. Ohne Lade-, Entlade- oder Ladestandssensor lässt sich weder erkennen, ob geladen wird, noch ob die Batterie voll ist. Erforderlich ist eine der Batterie-Entitäten in diesem Formular."
     },
     "abort": {
       "single_instance_allowed": "Energy Manager ist bereits eingerichtet.",
@@ -219,6 +216,9 @@
       },
       "battery_priority": {
         "name": "Priorität Batterie"
+      },
+      "battery_min_soc": {
+        "name": "Mindestladestand Batterie"
       }
     },
     "switch": {

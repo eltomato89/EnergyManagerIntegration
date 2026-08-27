@@ -8,7 +8,8 @@
     },
     "number": {
       "priority": { "default": "mdi:sort-numeric-variant" },
-      "battery_priority": { "default": "mdi:sort-numeric-variant" }
+      "battery_priority": { "default": "mdi:sort-numeric-variant" },
+      "battery_min_soc": { "default": "mdi:battery-charging-low" }
     },
     "switch": {
       "automation": {

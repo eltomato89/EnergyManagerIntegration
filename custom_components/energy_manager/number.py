@@ -1,14 +1,15 @@
-"""Priorität je Verbraucher."""
+"""Stellgrößen: Priorität je Verbraucher und die Vorgaben der Batterie."""
 
 from __future__ import annotations
 
-from homeassistant.components.number import NumberEntity, NumberMode
+from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import SUBENTRY_TYPE_CONSUMER
+from .const import CONF_BATTERY_SOC_ENTITY, SUBENTRY_TYPE_CONSUMER
 from .coordinator import EnergyManagerCoordinator
 from .entity import ConsumerEntity, EnergyManagerEntity
 from .models import ConsumerConfig
@@ -27,6 +28,15 @@ async def async_setup_entry(
     # im Dashboard verschieben kann.
     if coordinator.battery_load() is not None:
         async_add_entities([BatteryPriorityNumber(coordinator)])
+
+    # Die Ladevorranggrenze hängt an einer anderen Bedingung als der Rang: Sie
+    # wirkt in der Überschussformel und braucht dafür nur einen Ladestand — die
+    # maximale Ladeleistung, an der die Teilnahme als verschiebbare Last hängt,
+    # ist hier ohne Belang. Ohne Ladestandssensor gibt es die Entität nicht,
+    # denn dann bliebe sie ohne Wirkung, und ein wirkungsloser Regler ist
+    # schlimmer als keiner.
+    if entry.data.get(CONF_BATTERY_SOC_ENTITY):
+        async_add_entities([BatteryMinSocNumber(coordinator)])
 
     for subentry_id, subentry in entry.subentries.items():
         if subentry.subentry_type != SUBENTRY_TYPE_CONSUMER:
@@ -88,3 +98,34 @@ class BatteryPriorityNumber(EnergyManagerEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         await self.coordinator.async_set_battery_priority(value)
+
+
+class BatteryMinSocNumber(EnergyManagerEntity, NumberEntity):
+    """Ladestand, unterhalb dessen das Laden der Batterie Vorrang hat.
+
+    Als Entität und nicht als Formularfeld, weil die Grenze keine Beschreibung
+    der Anlage ist, sondern eine Vorgabe, die sich mit dem Tag ändert: Bei guter
+    Vorhersage darf ein Verbraucher schon am Vormittag bei niedrigem Ladestand
+    anlaufen, an einem trüben Tag nicht. Als Feld ließe sich das nicht
+    automatisieren.
+
+    0 schaltet die Regel ab — dann liegt jeder Ladestand über der Grenze.
+    """
+
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_device_class = NumberDeviceClass.BATTERY
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_native_min_value = 0
+    _attr_native_max_value = 100
+    _attr_native_step = 1
+    _attr_mode = NumberMode.SLIDER
+
+    def __init__(self, coordinator: EnergyManagerCoordinator) -> None:
+        super().__init__(coordinator, "battery_min_soc")
+
+    @property
+    def native_value(self) -> float:
+        return self.coordinator.battery_min_soc
+
+    async def async_set_native_value(self, value: float) -> None:
+        await self.coordinator.async_set_battery_min_soc(value)

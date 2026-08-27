@@ -48,7 +48,20 @@ CONF_BATTERY_INVERT: Final = "battery_invert"
 CONF_BATTERY_CHARGE_ENTITY: Final = "battery_charge_entity"
 CONF_BATTERY_DISCHARGE_ENTITY: Final = "battery_discharge_entity"
 CONF_BATTERY_MODE: Final = "battery_mode"
+# Ladestand, unterhalb dessen das Laden Vorrang hat. Steht **nicht** in den
+# Eintragsdaten, sondern im Laufzeitzustand hinter einer eigenen Entität: Er ist
+# keine Beschreibung der Anlage, sondern eine Vorgabe, die sich mit dem Tag
+# ändert — bei guter Vorhersage darf ein Verbraucher schon bei niedrigem
+# Ladestand anlaufen, an einem trüben Tag nicht. Über ein Formularfeld wäre das
+# nicht zu automatisieren.
+#
+# Der Schlüssel bleibt bestehen, weil ältere Einträge ihn noch führen; er wird
+# beim ersten Laden einmalig übernommen.
 CONF_BATTERY_MIN_SOC: Final = "battery_min_soc"
+
+# Ohne Vorgabe gibt es keine Ladevorrangregel: 0 heißt, dass jeder Ladestand
+# über der Grenze liegt.
+DEFAULT_BATTERY_MIN_SOC: Final = 0.0
 CONF_BATTERY_RESERVE_W: Final = "battery_reserve_w"
 # W, die die Batterie höchstens aus dem Überschuss zieht, wenn sie als
 # verschiebbare Last an der Prioritätsreihenfolge teilnimmt. 0 (oder nicht

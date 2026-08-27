@@ -46,7 +46,6 @@
           "battery_charge_entity": "Charge power",
           "battery_discharge_entity": "Discharge power",
           "battery_mode": "Discharging in the surplus",
-          "battery_min_soc": "Minimum state of charge",
           "battery_reserve_w": "Battery reserve",
           "battery_max_charge_w": "Maximum charge power"
         },
@@ -54,15 +53,13 @@
           "battery_power_entity": "A bidirectional sensor: positive when charging, negative when discharging.",
           "battery_charge_entity": "Alternative to the bidirectional sensor: two always-positive sensors.",
           "battery_mode": "Charging power always counts as available. This setting determines whether discharging reduces the surplus.",
-          "battery_min_soc": "Below this state of charge, charging takes precedence and no surplus is reported.",
           "battery_reserve_w": "Power always kept for the battery. It counts towards the maximum charge power rather than adding to it.",
           "battery_max_charge_w": "Lets the battery take part in the priority order as a shiftable load, and at the same time caps how much surplus it receives in total. Higher-priority loads are served first and stay on; at its rank the battery sets aside up to this power, less any reserve already configured; only the remainder is available to lower-priority loads. 0 disables participation."
         }
       }
     },
     "error": {
-      "battery_entity_required": "Maximum charge power only takes effect with a battery reading. Without a charge, discharge or state-of-charge sensor there is no way to tell whether the battery is charging or full. One of the battery entities in this form is required.",
-      "soc_entity_required": "Minimum state of charge only takes effect with a state-of-charge sensor. Without one the limit has no effect."
+      "battery_entity_required": "Maximum charge power only takes effect with a battery reading. Without a charge, discharge or state-of-charge sensor there is no way to tell whether the battery is charging or full. One of the battery entities in this form is required."
     },
     "abort": {
       "single_instance_allowed": "Energy Manager is already set up.",
@@ -219,6 +216,9 @@
       },
       "battery_priority": {
         "name": "Battery priority"
+      },
+      "battery_min_soc": {
+        "name": "Battery minimum state of charge"
       }
     },
     "switch": {

@@ -25,8 +25,6 @@ from homeassistant.core import callback
 
 from .const import (
     CONF_BATTERY_MAX_CHARGE_W,
-    CONF_BATTERY_MIN_SOC,
-    CONF_BATTERY_SOC_ENTITY,
     CONF_CONSUMER_TYPE,
     CONF_CONTROL_ENTITY,
     CONF_DAILY_TARGET,
@@ -139,16 +137,16 @@ class EnergyManagerConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             geplant = {**self._data, **clean(user_input)}
 
-            # Beide Angaben brauchen einen Messwert, um überhaupt zu wirken.
-            # Ohne diese Prüfung stünde eine Zahl im Formular, die stillschweigend
+            # Die Angabe braucht einen Messwert, um überhaupt zu wirken. Ohne
+            # diese Prüfung stünde eine Zahl im Formular, die stillschweigend
             # nichts tut — dieselbe Art Fehler wie eine falsche Entität, nur
             # ohne jede Rückmeldung.
+            #
+            # Für den Mindestladestand gilt dasselbe, nur an anderer Stelle: Die
+            # Entität dafür entsteht erst gar nicht, wenn kein Ladestandssensor
+            # eingetragen ist.
             if geplant.get(CONF_BATTERY_MAX_CHARGE_W) and not has_battery(geplant):
                 errors[CONF_BATTERY_MAX_CHARGE_W] = "battery_entity_required"
-            if geplant.get(CONF_BATTERY_MIN_SOC) is not None and not geplant.get(
-                CONF_BATTERY_SOC_ENTITY
-            ):
-                errors[CONF_BATTERY_MIN_SOC] = "soc_entity_required"
 
             if not errors:
                 self._data = geplant

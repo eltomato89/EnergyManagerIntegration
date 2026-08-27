@@ -249,6 +249,33 @@ so no control entity is needed; a `number.…_battery_priority` holds its rank, 
 like any load. Leave the charge power empty (the default) and the battery stays what it was: a
 correction term in the surplus, with every load ranked ahead of it.
 
+### Charging priority, adjustable
+
+Below a given state of charge, charging the battery takes precedence: no surplus is reported to the
+loads at all. That threshold is not a property of your system — it changes with the day. With a
+very good forecast you may want the loads to start in the late morning at a low state of charge; on
+an overcast day you may not.
+
+It is therefore a `number.…_battery_min_soc` entity rather than a form field, and an automation can
+set it like any other number:
+
+```yaml
+# Lower the threshold when a lot of yield is still expected today
+action: number.set_value
+target:
+  entity_id: number.energy_manager_battery_min_soc
+data:
+  value: 20
+```
+
+`0` switches the rule off — every state of charge is then above the threshold, which is the
+behaviour of an installation that never set one. Without a state-of-charge sensor the entity is not
+created: the threshold would have nothing to compare against, and a control that does nothing is
+worse than no control at all.
+
+Upgrading from a version that had this as a form field? The value is carried over once, on first
+start, and the field is gone from the form.
+
 ## Why is nothing happening?
 
 The most common question — and without an answer, an absent switching action cannot be told apart
@@ -291,6 +318,7 @@ One hub device plus one device per load:
 | `sensor.…_surplus_unsmoothed` | Unsmoothed raw value, for diagnosis |
 | `sensor.…_status` | State of the automation |
 | `number.…_battery_priority` | Rank of the battery as a shiftable load — only when a maximum charge power is set |
+| `number.…_battery_min_soc` | Charging-priority threshold — only when a state-of-charge sensor is set |
 
 **Per load**
 

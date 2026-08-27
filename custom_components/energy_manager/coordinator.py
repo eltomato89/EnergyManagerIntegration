@@ -65,6 +65,7 @@ from .const import (
     CONF_SMOOTHING_WINDOW,
     CONF_SWITCH_ENTITY,
     DEBOUNCE_COOLDOWN,
+    DEFAULT_BATTERY_MIN_SOC,
     DEFAULT_BATTERY_PRIORITY,
     DEFAULT_SETTLE_TIME,
     DEFAULT_SMOOTHING_WINDOW,
@@ -143,6 +144,11 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         # Neuladen der Verbraucher nicht mit weggeräumt werden darf.
         self._battery_priority = DEFAULT_BATTERY_PRIORITY
 
+        # Der Mindestladestand liegt aus demselben Grund hier und nicht in den
+        # Eintragsdaten: Er ist eine Vorgabe, die sich mit dem Tag ändert, und
+        # wird über eine eigene Entität gestellt.
+        self._battery_min_soc = DEFAULT_BATTERY_MIN_SOC
+
         self._store: Store[dict[str, Any]] = Store(
             hass,
             STORAGE_VERSION,
@@ -193,7 +199,24 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         }
         self.automation_enabled = bool(stored.get("automation_enabled", False))
         self._battery_priority = float(stored.get("battery_priority", DEFAULT_BATTERY_PRIORITY))
+        self._battery_min_soc = self._restore_min_soc(stored)
         self.reload_consumers()
+
+    def _restore_min_soc(self, stored: dict[str, Any]) -> float:
+        """Der Mindestladestand, beim ersten Mal aus der alten Konfiguration.
+
+        Bis zu dieser Fassung stand er als Formularfeld in den Eintragsdaten.
+        Wer ihn dort eingetragen hat, soll ihn nach dem Update unverändert
+        wiederfinden — deshalb die einmalige Übernahme statt eines Rückfalls auf
+        die Vorgabe. Ab dem ersten Speichern gilt nur noch der Laufzeitwert; der
+        alte Eintrag verfällt beim nächsten Neukonfigurieren von selbst, weil das
+        Formular ihn nicht mehr kennt.
+        """
+        if (gespeichert := stored.get("battery_min_soc")) is not None:
+            return float(gespeichert)
+
+        data = dict(self.config_entry.data) if self.config_entry else {}
+        return float(data.get(CONF_BATTERY_MIN_SOC) or DEFAULT_BATTERY_MIN_SOC)
 
     @callback
     def reload_consumers(self) -> None:
@@ -841,7 +864,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         available = apply_reserve(
             smoothed,
             read_percent(self.hass, data.get(CONF_BATTERY_SOC_ENTITY)),
-            data.get(CONF_BATTERY_MIN_SOC),
+            self._battery_min_soc,
             data.get(CONF_BATTERY_RESERVE_W, 0),
         )
 
@@ -895,7 +918,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
                 battery_mode=data.get(CONF_BATTERY_MODE, "charge_only"),
                 battery_soc=read_percent(self.hass, data.get(CONF_BATTERY_SOC_ENTITY)),
                 consumption_includes_battery=data.get(CONF_CONSUMPTION_INCLUDES_BATTERY, False),
-                battery_min_soc=data.get(CONF_BATTERY_MIN_SOC),
+                battery_min_soc=self._battery_min_soc,
                 battery_reserve_w=data.get(CONF_BATTERY_RESERVE_W, 0),
             )
         )
@@ -1095,6 +1118,22 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         self.schedule_save()
         await self.async_request_refresh_now()
 
+    @property
+    def battery_min_soc(self) -> float:
+        return self._battery_min_soc
+
+    async def async_set_battery_min_soc(self, value: float) -> None:
+        """Setzt die Ladevorranggrenze und wertet sofort neu aus.
+
+        Sofort und nicht erst beim nächsten Durchlauf: Die Grenze greift in der
+        Überschussformel, und wer sie herunterstellt, weil die Vorhersage gut
+        ist, erwartet nicht, dass die Verbraucher erst eine Runde später
+        anlaufen.
+        """
+        self._battery_min_soc = value
+        self.schedule_save()
+        await self.async_request_refresh_now()
+
     # -- Speichern -----------------------------------------------------------
 
     @callback
@@ -1107,6 +1146,7 @@ class EnergyManagerCoordinator(DataUpdateCoordinator[ManagerState]):
         return {
             "automation_enabled": self.automation_enabled,
             "battery_priority": self._battery_priority,
+            "battery_min_soc": self._battery_min_soc,
             "consumers": {key: value.as_dict() for key, value in self.runtime.items()},
         }
 

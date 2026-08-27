@@ -19,7 +19,6 @@ from .const import (
     CONF_BATTERY_DISCHARGE_ENTITY,
     CONF_BATTERY_INVERT,
     CONF_BATTERY_MAX_CHARGE_W,
-    CONF_BATTERY_MIN_SOC,
     CONF_BATTERY_MODE,
     CONF_BATTERY_POWER_ENTITY,
     CONF_BATTERY_RESERVE_W,
@@ -146,15 +145,10 @@ BATTERY_SCHEMA = vol.Schema(
                 mode=selector.SelectSelectorMode.LIST,
             )
         ),
-        vol.Optional(CONF_BATTERY_MIN_SOC): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=0,
-                max=100,
-                step=1,
-                unit_of_measurement="%",
-                mode=selector.NumberSelectorMode.SLIDER,
-            )
-        ),
+        # Der Mindestladestand steht **nicht** hier, sondern hinter einer
+        # eigenen Entität: Er ist keine Beschreibung der Anlage, sondern eine
+        # Vorgabe, die sich mit dem Tag ändert. Über ein Formularfeld ließe sie
+        # sich nicht automatisieren.
         vol.Optional(CONF_BATTERY_RESERVE_W, default=0): watts(20000),
         vol.Optional(CONF_BATTERY_MAX_CHARGE_W, default=0): watts(20000),
     }

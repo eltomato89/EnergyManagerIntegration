@@ -238,15 +238,18 @@ class TestStummeAngaben:
         assert result["type"] is FlowResultType.FORM
         assert result["errors"] == {CONF_BATTERY_MAX_CHARGE_W: "battery_entity_required"}
 
-    async def test_mindestladestand_ohne_ladestandssensor(self, hass: HomeAssistant) -> None:
-        result = await self._bis_batterie(hass)
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            {CONF_BATTERY_POWER_ENTITY: "sensor.batterie", CONF_BATTERY_MIN_SOC: 20},
-        )
+    async def test_der_mindestladestand_steht_nicht_mehr_im_formular(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Er ist eine Vorgabe, die sich mit dem Tag ändert, keine Beschreibung
+        der Anlage — und liegt deshalb hinter einer eigenen Entität.
 
-        assert result["type"] is FlowResultType.FORM
-        assert result["errors"] == {CONF_BATTERY_MIN_SOC: "soc_entity_required"}
+        Stünde er hier weiterhin, gäbe es zwei Orte für denselben Wert, und wer
+        ihn im Formular änderte, sähe nichts geschehen.
+        """
+        result = await self._bis_batterie(hass)
+
+        assert CONF_BATTERY_MIN_SOC not in result["data_schema"].schema
 
     async def test_die_eingabe_bleibt_nach_dem_fehler_stehen(self, hass: HomeAssistant) -> None:
         """Sonst verschwindet genau der Wert, der korrigiert werden soll."""

@@ -99,6 +99,11 @@ class SurplusSensor(EnergyManagerEntity, SensorEntity):
             "grid_w": surplus.grid_w,
             "battery_w": surplus.battery_w,
             "battery_soc": self.coordinator.battery_soc(),
+            # Die Ladevorranggrenze steht hier und nicht im Block der
+            # Batterielast weiter unten: Sie wirkt in der Überschussformel und
+            # damit auch dann, wenn die Batterie nicht als verschiebbare Last
+            # teilnimmt. 0 heißt, dass die Regel nicht greift.
+            "battery_min_soc": self.coordinator.battery_min_soc,
             "battery_correction_w": surplus.battery_correction,
             "degraded": surplus.degraded,
             "coverage": round(data.coverage, 2),
